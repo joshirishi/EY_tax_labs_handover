@@ -1,0 +1,12 @@
+@media (max-width: 599px) {
+  .journey-tabs-rail {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px 4px !important;
+  }
+  .journey-tabs-rail button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 6px 4px !important;
+    gap: 4px !important;
+  }
+}

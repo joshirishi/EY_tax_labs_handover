@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Responsible AI Control Room | EY.ai Tax Labs</title>
+<style>
+@font-face{font-family:'EYInterstate:Light';src:local('EYInterstate Light'),local('EYInterstate-Light'),url('/fonts/EYInterstate-Light.woff') format('woff');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'EYInterstate:Regular';src:local('EYInterstate Regular'),local('EYInterstate-Regular'),local('EYInterstate'),url('/fonts/EYInterstate-Regular.woff') format('woff');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'EYInterstate:Bold';src:local('EYInterstate Bold'),local('EYInterstate-Bold'),url('/fonts/EYInterstate-Bold.woff') format('woff');font-weight:700;font-style:normal;font-display:swap}
+:root{
+  --yellow:#FFE600;
+  --ink:#1A1A24;
+  --panel:#2E2E38;
+  --text:#FFFFFF;
+  --muted:#C4C4CD;
+  --subtle:rgba(255,255,255,0.5);
+  --line:rgba(255,255,255,0.12);
+  --green:#00C864;
+  --amber:#FF7D1E;
+  --red:#FF4136;
+  --surface:rgba(255,255,255,0.06);
+  --font-bold:'EYInterstate:Bold',Arial,'Helvetica Neue',sans-serif;
+  --font-reg:'EYInterstate:Regular',Arial,'Helvetica Neue',sans-serif;
+  --font-light:'EYInterstate:Light',Arial,'Helvetica Neue',sans-serif;
+  --rail:min(90%,1280px);
+  --hdr:56px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+html,body{
+  height:100%;
+  overflow:hidden;
+  font-family:var(--font-reg);
+  background:var(--ink);
+  color:var(--text);
+}
+
+body{
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── topline ── */
+.topline{height:6px;background:var(--yellow);flex-shrink:0;position:relative;z-index:100}
+
+/* ── header ── */
+.header{
+  flex-shrink:0;
+  height:var(--hdr);
+  background:rgba(26,26,36,.94);
+  backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;
+  padding:0 5vw;
+  z-index:90;
+}
+.header-row{display:flex;align-items:center;gap:22px;width:100%}
+.brand{font-family:var(--font-bold);font-size:15px;white-space:nowrap}
+.brand span{color:var(--yellow)}
+.progress-wrap{flex:1;min-width:0}
+.progress-label{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-bottom:5px}
+.progress-track{height:6px;border-radius:99px;background:rgba(255,255,255,0.1);overflow:hidden}
+.progress{width:0;height:100%;background:var(--yellow);transition:.35s ease}
+.score-chip{border:1px solid rgba(255,230,0,.4);background:rgba(255,230,0,.08);color:var(--yellow);border-radius:99px;padding:7px 14px;font-family:var(--font-bold);font-size:13px;white-space:nowrap}
+
+/* ── screens wrapper ── */
+#screens{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+}
+.screen{
+  position:absolute;
+  inset:0;
+  display:none;
+}
+.screen.active{display:flex;flex-direction:column}
+
+/* ── rail ── */
+.rail{width:var(--rail);margin:0 auto;padding:0 24px}
+
+/* ── tag pill ── */
+.tag{
+  display:inline-flex;
+  border:1px solid rgba(255,230,0,.35);
+  color:var(--yellow);
+  background:rgba(255,230,0,.08);
+  padding:6px 13px;
+  border-radius:99px;
+  font-size:11px;
+  font-family:var(--font-bold);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+}
+
+/* ══════════════════════════════
+   INTRO SCREEN
+══════════════════════════════ */
+
+/* ambient yellow scrim — mirrors ClosureAiReinforcement hero scrim pattern */
+/* NOTE: #intro stays position:absolute (from .screen) — do NOT add position:relative here */
+#intro{background:var(--ink)}
+#intro::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,230,0,.07) 0%,transparent 50%,rgba(255,230,0,.03) 100%);
+  pointer-events:none;z-index:0;
+}
+.intro-hero,.quick-strip{position:relative;z-index:1}
+
+.intro-hero{flex:1;display:flex;align-items:center;padding:28px 0}
+.intro-grid{display:grid;grid-template-columns:1.4fr .6fr;gap:32px;align-items:center}
+.intro-left{display:flex;flex-direction:column;gap:18px}
+
+/* typeScale.display: 64px / 700 / -0.025em */
+.intro-left h1{font-family:var(--font-bold);font-size:clamp(48px,6vw,80px);line-height:.95;letter-spacing:-0.025em}
+.intro-left h1 span{color:var(--yellow)}
+
+/* typeScale.body + colors.onDarkMuted rgba(255,255,255,0.72) */
+.intro-left .lead{font-family:var(--font-light);font-size:clamp(15px,1.5vw,17px);line-height:1.65;color:rgba(255,255,255,.72);max-width:540px;letter-spacing:-0.01em}
+
+/* eyebrow tag — must not stretch in flex column */
+.intro-left .tag{align-self:flex-start}
+/* tag suffix */
+.tag-sub{opacity:.6;font-family:var(--font-reg);letter-spacing:0;text-transform:none}
+
+/* CTA pulse — colors.yellow at 15% (≈ yellowAlpha12) */
+@keyframes cta-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,230,0,0)}50%{box-shadow:0 0 0 8px rgba(255,230,0,.15)}}
+.btn-enter{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--yellow);color:var(--ink);
+  font-family:var(--font-bold);font-size:15px;
+  padding:13px 26px;border-radius:6px;border:none;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;align-self:flex-start;letter-spacing:.01em;
+  animation:cta-pulse 2.5s ease-in-out infinite;
+}
+.btn-enter:hover{transform:translateY(-2px);animation:none;box-shadow:0 12px 28px rgba(255,230,0,.25)}
+
+/* rules card — EY card pattern: yellow top border (3px) + offBlack + borderOnDark */
+.rules-card{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--yellow);border-radius:12px;padding:22px}
+.rules-card h3{font-family:var(--font-bold);font-size:13px;color:var(--yellow);letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.decision-key{display:flex;flex-direction:column;gap:8px}
+
+/* per-row tints using exact token values: frameGreen / frameOrange / error */
+.key{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;font-size:14px;border-left:2px solid transparent}
+.key[data-d="proceed"]{background:rgba(0,200,100,.10);border-left-color:#00C864}
+.key[data-d="controls"]{background:rgba(255,125,30,.10);border-left-color:#FF7D1E}
+.key[data-d="stop"]{background:rgba(255,65,54,.10);border-left-color:#FF4136}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rules-note{color:var(--muted);font-size:12px;line-height:1.55;margin-top:14px}
+
+/* quick strip — yellow number badges */
+.quick-strip{flex-shrink:0;background:var(--panel);border-top:1px solid var(--line);padding:18px 0}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
+.quick-item{display:flex;align-items:center;gap:10px;padding:12px 18px;background:var(--panel);color:var(--muted);font-size:12px;line-height:1.45}
+.quick-item b{color:#fff;display:block;margin-bottom:2px;font-family:var(--font-bold);font-size:12px}
+.q-num{width:26px;height:26px;min-width:26px;border-radius:50%;background:var(--yellow);color:var(--ink);font-family:var(--font-bold);font-size:11px;display:grid;place-items:center;flex-shrink:0}
+
+/* ══════════════════════════════
+   SCENARIO VIEW
+══════════════════════════════ */
+#main{background:var(--ink)}
+
+.scenario-card{
+  display:none;
+  flex-direction:column;
+  height:100%;
+}
+.scenario-card.active{display:flex;animation:enter .3s ease}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* scenario head */
+.scenario-head{
+  flex-shrink:0;
+  background:var(--ink);
+  border-bottom:1px solid var(--line);
+  padding:20px 0;
+}
+.head-inner{display:flex;gap:16px;align-items:flex-start}
+.number{
+  width:48px;height:48px;min-width:48px;
+  border-radius:10px;
+  display:grid;place-items:center;
+  background:var(--yellow);
+  color:var(--ink);
+  font-size:17px;
+  font-family:var(--font-bold);
+}
+.head-text h2{
+  font-family:var(--font-bold);
+  font-size:clamp(18px,2.2vw,26px);
+  letter-spacing:-.02em;
+  margin-bottom:5px;
+}
+.scenario-copy{
+  color:var(--muted);
+  font-size:clamp(12px,1.2vw,14px);
+  line-height:1.55;
+  max-width:900px;
+}
+
+/* questions panel */
+.questions-panel{
+  flex:1;
+  background:var(--panel);
+  overflow:hidden;
+  padding:16px 0;
+}
+.questions-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:1fr 1fr;
+  gap:14px;
+  height:100%;
+}
+.question{
+  background:var(--ink);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px 16px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.q-label{
+  color:var(--yellow);
+  font-size:10px;
+  font-family:var(--font-bold);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  flex-shrink:0;
+}
+.options-list{flex:1;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+.option{position:relative}
+.option input{position:absolute;opacity:0;width:0;height:0}
+.option-label{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:var(--muted);
+  border:1px solid var(--line);
+  background:rgba(255,255,255,0.03);
+  padding:7px 11px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:.15s;
+  font-size:clamp(11px,1.1vw,13px);
+  line-height:1.3;
+}
+.option-label:hover{border-color:rgba(255,230,0,.35);background:rgba(255,230,0,.04)}
+.option input:checked + .option-label{
+  border-color:var(--yellow);
+  background:rgba(255,230,0,.07);
+  color:var(--text);
+}
+.option-letter{
+  width:20px;height:20px;min-width:20px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.08);
+  display:grid;place-items:center;
+  font-family:var(--font-bold);
+  font-size:10px;
+  color:var(--muted);
+  flex-shrink:0;
+}
+.option input:checked + .option-label .option-letter{
+  background:var(--yellow);
+  color:var(--ink);
+}
+
+/* submit strip */
+.submit-strip{
+  flex-shrink:0;
+  background:var(--ink);
+  border-top:1px solid var(--line);
+  padding:14px 0;
+}
+.submit-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.warn-msg{color:var(--amber);font-size:12px;font-family:var(--font-reg);min-height:18px}
+.btn-submit{
+  background:var(--yellow);
+  color:var(--ink);
+  font-family:var(--font-bold);
+  font-size:14px;
+  padding:11px 24px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  transition:.2s;
+  white-space:nowrap;
+  letter-spacing:.01em;
+}
+.btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(255,230,0,.18)}
+.btn-submit:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* feedback panel */
+.feedback-panel{
+  flex:1;
+  background:var(--panel);
+  overflow:hidden;
+  padding:16px 0;
+  display:none;
+}
+.feedback-panel.show{display:block}
+.feedback-inner{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+  height:100%;
+}
+.fb-left,.fb-right{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  overflow:hidden;
+}
+.fb-section-label{
+  color:var(--yellow);
+  font-size:10px;
+  font-family:var(--font-bold);
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  flex-shrink:0;
+  margin-bottom:2px;
+}
+.answer-row{
+  background:var(--ink);
+  border-radius:10px;
+  border:1px solid var(--line);
+  border-left:3px solid var(--line);
+  padding:9px 12px;
+  flex-shrink:0;
+}
+.answer-row.correct{border-left-color:var(--green)}
+.answer-row.wrong{border-left-color:var(--red)}
+.answer-row-q{
+  font-size:10px;
+  font-family:var(--font-bold);
+  color:var(--yellow);
+  letter-spacing:.07em;
+  text-transform:uppercase;
+  margin-bottom:3px;
+}
+.answer-row-verdict{
+  font-size:12px;
+  font-family:var(--font-bold);
+  margin-bottom:2px;
+}
+.answer-row.correct .answer-row-verdict{color:var(--green)}
+.answer-row.wrong .answer-row-verdict{color:var(--red)}
+.answer-row-expected{font-size:11px;color:var(--muted);line-height:1.35}
+
+.rationale-card{
+  background:var(--ink);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px 16px;
+  flex:1;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.rationale-block{display:flex;flex-direction:column;gap:5px}
+.rationale-block + .rationale-block{border-top:1px solid rgba(255,255,255,0.08);padding-top:10px}
+.rationale-text{
+  font-size:clamp(11px,1.1vw,13px);
+  color:var(--muted);
+  line-height:1.5;
+}
+.controls-list{
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.controls-list li{
+  font-size:clamp(11px,1.1vw,12px);
+  color:var(--muted);
+  padding-left:14px;
+  position:relative;
+  line-height:1.4;
+}
+.controls-list li::before{
+  content:'→';
+  position:absolute;left:0;
+  color:var(--yellow);
+  font-size:10px;
+}
+
+.fb-score-row{
+  flex-shrink:0;
+  text-align:right;
+  padding-top:6px;
+}
+.fb-score{
+  font-family:var(--font-bold);
+  font-size:clamp(22px,2.5vw,32px);
+  color:var(--yellow);
+}
+.fb-score-label{
+  font-size:11px;
+  color:var(--muted);
+  font-family:var(--font-bold);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+/* nav strip (after submit) */
+.nav-strip{
+  flex-shrink:0;
+  background:var(--ink);
+  border-top:1px solid var(--line);
+  padding:12px 0;
+  display:none;
+}
+.nav-strip.show{display:flex;justify-content:flex-end}
+.btn-next{
+  background:var(--yellow);
+  color:var(--ink);
+  font-family:var(--font-bold);
+  font-size:14px;
+  padding:11px 24px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  transition:.2s;
+  letter-spacing:.01em;
+}
+.btn-next:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(255,230,0,.18)}
+
+/* ══════════════════════════════
+   SUMMARY SCREEN
+══════════════════════════════ */
+#summary{background:var(--ink);overflow-y:auto}
+
+.summary-inner{
+  padding:36px 0 48px;
+}
+.summary-card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:28px 32px;
+}
+.score-big{
+  font-size:clamp(52px,7vw,72px);
+  font-family:var(--font-bold);
+  color:var(--yellow);
+  line-height:1;
+  margin:16px 0 8px;
+}
+.band{
+  font-size:20px;
+  font-family:var(--font-bold);
+  margin-bottom:8px;
+}
+.band-desc{
+  font-size:15px;
+  color:var(--muted);
+  line-height:1.6;
+  max-width:560px;
+  margin-bottom:22px;
+}
+.summary-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  margin-bottom:22px;
+}
+.takeaway{
+  border:1px solid var(--line);
+  border-top:3px solid var(--yellow);
+  background:var(--surface);
+  padding:18px;
+  border-radius:14px;
+}
+.takeaway h3{
+  color:var(--yellow);
+  font-family:var(--font-bold);
+  font-size:13px;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+.takeaway p{color:var(--muted);font-size:13px;line-height:1.55}
+.scorecard-label{
+  font-family:var(--font-bold);
+  color:var(--yellow);
+  font-size:12px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+.review-row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 12px;
+  border-radius:8px;
+  font-size:13px;
+}
+.review-row:nth-child(odd){background:rgba(255,255,255,0.04)}
+.review-row span:last-child{color:var(--yellow);font-family:var(--font-bold);white-space:nowrap}
+.summary-btns{display:flex;gap:12px;margin:20px 0 16px;flex-wrap:wrap}
+.btn-primary{
+  background:var(--yellow);
+  color:var(--ink);
+  font-family:var(--font-bold);
+  font-size:14px;
+  padding:11px 22px;
+  border-radius:6px;
+  border:none;
+  cursor:pointer;
+  transition:.2s;
+}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(255,230,0,.18)}
+.btn-ghost{
+  background:transparent;
+  color:var(--yellow);
+  font-family:var(--font-bold);
+  font-size:14px;
+  padding:11px 22px;
+  border-radius:6px;
+  border:1px solid rgba(255,230,0,.4);
+  cursor:pointer;
+  transition:.2s;
+}
+.btn-ghost:hover{background:rgba(255,230,0,.06)}
+.disclaimer{
+  font-size:11px;
+  color:var(--subtle);
+  line-height:1.6;
+  max-width:780px;
+}
+
+/* ── print styles ── */
+@media print{
+  /* force color rendering in print */
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  /* hide non-summary UI */
+  .topline,.header,#intro,#main,.confetti{display:none!important}
+  /* show summary even if JS hasn't added .active */
+  #screens,#summary{position:static!important;display:block!important;overflow:visible!important}
+  body,html{height:auto;overflow:visible}
+  /* summary card: dark bg so yellow text stays readable */
+  .summary-card{background:#1A1A24!important;color:#fff!important;border:none;border-radius:0;padding:32px}
+  .btn-ghost{background:#2E2E38!important;color:#FFE600!important;border:1px solid rgba(255,230,0,.4)!important}
+  .btn-primary{background:#FFE600!important;color:#1A1A24!important}
+  .summary-btns{margin-top:16px}
+  /* hide the retake button — not useful on paper */
+  .btn-primary{display:none!important}
+}
+
+/* ── confetti ── */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:200}
+.piece{position:absolute;top:-20px;width:8px;height:15px;animation:fall 1.8s linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(740deg)}}
+
+/* ── responsive ── */
+@media(max-width:900px){
+  .intro-grid{grid-template-columns:1fr}
+  .rules-card{display:none}
+  .quick-grid{grid-template-columns:repeat(2,1fr)}
+  .questions-grid{grid-template-columns:1fr;grid-template-rows:repeat(4,1fr)}
+  .feedback-inner{grid-template-columns:1fr}
+  .summary-grid{grid-template-columns:1fr}
+  .header-row{flex-wrap:wrap}
+  .progress-wrap{order:3;min-width:100%}
+}
+@media(max-width:560px){
+  .quick-grid{grid-template-columns:1fr}
+  .intro-left h1{font-size:38px}
+  .summary-btns{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div class="topline"></div>
+
+<header class="header">
+  <div class="header-row">
+    <div class="brand"><span>EY.ai</span> Tax Labs</div>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progressText">Scenario 1 of 10</span>
+        <span id="completionText">0% complete</span>
+      </div>
+      <div class="progress-track"><div class="progress" id="progress"></div></div>
+    </div>
+    <div class="score-chip">Score: <span id="score">0</span> / 40</div>
+  </div>
+</header>
+
+<div id="screens">
+
+  <!-- ══ SCREEN 1: INTRO ══ -->
+  <section class="screen active" id="intro">
+    <div class="intro-hero">
+      <div class="rail">
+        <div class="intro-grid">
+          <div class="intro-left">
+            <span class="tag">Interactive assessment <span class="tag-sub">· 10 scenarios</span></span>
+            <h1>Responsible AI<br><span>Control Room</span></h1>
+            <p class="lead">Participants act as the <b>AI Review Committee</b> for a tax function. Review each AI-use request, identify the risk, select the decision, choose the missing control, and identify who remains accountable.</p>
+            <button class="btn-enter" onclick="startAssessment()">Enter the Control Room <span aria-hidden="true">→</span></button>
+          </div>
+          <aside class="rules-card">
+            <h3>Your three decisions</h3>
+            <div class="decision-key">
+              <div class="key" data-d="proceed"><i class="dot" style="background:var(--green)"></i><b>Proceed</b></div>
+              <div class="key" data-d="controls"><i class="dot" style="background:var(--amber)"></i><b>Proceed with controls</b></div>
+              <div class="key" data-d="stop"><i class="dot" style="background:var(--red)"></i><b>Stop and escalate</b></div>
+            </div>
+            <p class="rules-note">Some AI activities are not inherently prohibited. The correct response is often to identify the safeguards required.</p>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <div class="quick-strip">
+      <div class="rail">
+        <div class="quick-grid">
+          <div class="quick-item"><span class="q-num">01</span><div><b>What is the risk?</b>Identify the material exposure.</div></div>
+          <div class="quick-item"><span class="q-num">02</span><div><b>What decision?</b>Proceed, control, or escalate.</div></div>
+          <div class="quick-item"><span class="q-num">03</span><div><b>What control?</b>Select the missing safeguard.</div></div>
+          <div class="quick-item"><span class="q-num">04</span><div><b>Who is accountable?</b>Keep human ownership clear.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SCREEN 2: SCENARIOS ══ -->
+  <div class="screen" id="main"></div>
+
+  <!-- ══ SCREEN 3: SUMMARY ══ -->
+  <section class="screen" id="summary">
+    <div class="rail">
+      <div class="summary-inner">
+        <div class="summary-card">
+          <span class="tag">Assessment complete</span>
+          <div class="score-big" id="finalScore">0 / 40</div>
+          <div class="band" id="band"></div>
+          <p class="band-desc" id="bandText"></p>
+          <div class="summary-grid">
+            <div class="takeaway">
+              <h3>Decision habit</h3>
+              <p>Before using AI, ask whether the purpose, data, sources, reviewer and verification method are clear.</p>
+            </div>
+            <div class="takeaway">
+              <h3>Final rule</h3>
+              <p><b>Use AI to extend professional capability—never to transfer professional accountability.</b></p>
+            </div>
+          </div>
+          <div class="scorecard-label">Scenario scorecard</div>
+          <div id="reviewList"></div>
+          <div class="summary-btns">
+            <button class="btn-primary" onclick="restart()">Retake assessment</button>
+            <button class="btn-ghost" onclick="window.print()">Print results</button>
+          </div>
+          <p class="disclaimer">This learning exercise is a practical governance aid. It does not provide legal, regulatory or tax advice; certify any AI tool or Agent; approve use of particular data; or replace applicable organisational, client, privacy, security, compliance and review requirements.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /#screens -->
+
+<div class="confetti" id="confetti"></div>
+
+<script>
+const scenarios = [{"title": "The confidential prompt", "scenario": "A tax professional wants to upload a complete client tax assessment order, containing names, PAN details and transaction information, into an AI website discovered through an internet search. The tool gives strong document summaries.", "decision": ["Proceed because the document is already available to the tax team", "Remove the client's name and proceed", "Stop and confirm whether the tool and intended data use are approved", "Proceed, but delete the conversation afterwards"], "decision_correct": 2, "risk": ["Only document formatting risk", "Potential disclosure of client, taxpayer and transaction information in an unapproved environment", "No risk because the tax team already has the document", "Only a risk if the output is inaccurate"], "risk_correct": 1, "control": ["Use an approved AI environment, confirm permitted data use and minimise inputs", "Delete the conversation after use", "Add a disclaimer to the prompt", "Ask AI not to retain the information"], "control_correct": 0, "account": ["The AI tool provider", "The tax professional and the responsible reviewer under applicable organisational procedures", "The client alone", "No one, if the output is not shared"], "account_correct": 1, "why": "Deleting a conversation later does not establish that the information was permitted in that environment. Removing one identifier may not adequately protect taxpayer or transaction information.", "controls": ["Use an approved AI environment", "Confirm permitted data use", "Minimise the input", "Remove unnecessary identifiers", "Use only the information required for the task"]}, {"title": "The perfect citation", "scenario": "AI drafts a note on a tax issue and cites a recent High Court decision. The citation looks authentic, but the reviewer cannot locate the judgment.", "decision": ["Retain it because the reasoning is convincing", "Remove the citation but retain the conclusion", "Ask AI whether the citation is correct", "Independently verify the judgment and reassess the entire conclusion"], "decision_correct": 3, "risk": ["The note may be too long", "The cited authority may be fabricated, misquoted or inapplicable, undermining the analysis", "The style may not suit the audience", "The AI may have used too many sources"], "risk_correct": 1, "control": ["Locate and read the primary authority, verify relevance and reassess the conclusion", "Replace the citation with a general disclaimer", "Ask the same AI to confirm its answer", "Remove all citations from the note"], "control_correct": 0, "account": ["The court database", "The qualified tax professional approving the note", "The AI platform", "The person who first typed the prompt, regardless of review"], "account_correct": 1, "why": "Removing the questionable citation does not establish that the remaining analysis is correct. Asking the same AI to validate its earlier response is not independent verification.", "controls": ["Locate and read the primary authority", "Verify that the authority supports the statement", "Check whether the law is current and relevant", "Reassess the conclusion after verification"]}, {"title": "The efficient tax Agent", "scenario": "A no-code Agent has been designed to retrieve documents for tax assessments. During testing, the Agent also drafts a response to the tax authority—even though drafting responses was not included in its approved purpose.", "decision": ["Accept the improvement because it saves additional time", "Allow the Agent to draft, but add a disclaimer", "Stop the test, record the behaviour and review the Agent's instructions and boundaries", "Permit the drafting if the final response is reviewed"], "decision_correct": 2, "risk": ["The Agent colour scheme may be inconsistent", "The Agent is acting beyond its approved purpose and may create uncontrolled consequential output", "The Agent may retrieve documents too slowly", "The draft may be too formal"], "risk_correct": 1, "control": ["Reconfirm purpose, define permitted and prohibited activities, add stop/escalation rules and retest", "Add a disclaimer to every draft", "Let each user decide whether the extra function is useful", "Rename the Agent to include drafting"], "control_correct": 0, "account": ["The Agent itself", "The business owner and qualified human reviewer responsible under the approved governance process", "The tax authority", "The connected repository owner only"], "account_correct": 1, "why": "Human review does not automatically make activity outside the Agent's defined purpose acceptable.", "controls": ["Reconfirm the Agent's purpose", "Define permitted and prohibited activities", "Add stopping and escalation rules", "Retest representative scenarios", "Require human approval before consequential use"]}, {"title": "The technically correct draft", "scenario": "AI produces an apparently accurate technical note, but the user did not provide the relevant assessment year or jurisdiction.", "decision": ["Use it because the technical proposition is generally correct", "Add the missing information manually to the final note", "Ask AI to identify its assumptions and regenerate the draft using confirmed facts", "Make the language less definitive"], "decision_correct": 2, "risk": ["The analysis may be based on unstated assumptions and may apply the wrong law or period", "The note may be too cautious", "The document may contain too many headings", "The prompt may be too short"], "risk_correct": 0, "control": ["Identify missing facts, separate facts from assumptions, confirm jurisdiction and period, then reapply the law", "Use softer wording", "Add more examples without changing the facts", "Ask AI to choose the most likely jurisdiction"], "control_correct": 0, "account": ["The user and qualified reviewer responsible for the final technical output", "The AI provider", "The person who supplied the template", "No one if the document is labelled draft"], "account_correct": 0, "why": "Softer language does not correct an analysis based on incomplete facts.", "controls": ["Identify missing facts", "Separate facts from assumptions", "Confirm jurisdiction and period", "Reapply the law to the verified facts", "Conduct qualified human review"]}, {"title": "The outdated knowledge source", "scenario": "A Tax Knowledge Agent retrieves a policy from a connected repository. A newer version exists within the tax team but has not been added to the Agent's approved knowledge sources.", "decision": ["Use the Agent's answer because it came from an approved repository", "Use both versions and let AI select the most relevant one", "Pause reliance, identify the authoritative version and update the knowledge process", "Ask the Agent to mention that the policy may be outdated"], "decision_correct": 2, "risk": ["Reliance on outdated or conflicting knowledge may produce an incorrect output", "The Agent may have too many users", "The policy title may be unclear", "The output may be too concise"], "risk_correct": 0, "control": ["Assign source ownership, identify the authoritative version, manage conflicts and establish periodic review", "Let AI rank documents by length", "Keep both documents without labels", "Add a generic caution to every response"], "control_correct": 0, "account": ["The defined knowledge owner and the qualified professional approving reliance", "The repository software", "The author of the older document only", "The Agent"], "account_correct": 0, "why": "An approved repository is not, by itself, proof that every connected document is current or authoritative.", "controls": ["Assign ownership of knowledge sources", "Address outdated and conflicting documents", "Define a periodic review process", "Require escalation when sources conflict"]}, {"title": "The polished client email", "scenario": "Copilot produces a polished client email containing a definitive tax conclusion. The underlying analysis has not yet been reviewed.", "decision": ["Send it because the email is marked as a draft", "Replace definitive language with \"may\" and send it", "Complete the technical review and obtain appropriate approval before sending", "Ask Copilot to include a general disclaimer"], "decision_correct": 2, "risk": ["An unverified conclusion may be communicated externally and treated as professional advice", "The email may be too polished", "The email may not contain enough bullet points", "The client may know AI was used"], "risk_correct": 0, "control": ["Verify the analysis and sources, apply professional judgment and obtain appropriate approval before sending", "Add a disclaimer and send", "Ask AI to reduce confidence", "Change the subject line"], "control_correct": 0, "account": ["The professional responsible for the communication and final approval", "Copilot", "The email recipient", "The mail system administrator"], "account_correct": 0, "why": "A disclaimer does not replace verification, professional judgment or approval.", "controls": ["Complete technical review", "Verify authorities and facts", "Apply professional judgment", "Obtain appropriate approval before external communication"]}, {"title": "The unreperformed calculation", "scenario": "AI analyses a tax provision and produces a liability calculation from a spreadsheet. The result appears reasonable, but no one has independently checked the formula, units, period or source figures.", "decision": ["Proceed because the result is within the expected range", "Ask AI to confirm that the calculation is correct", "Proceed with controls: independently reproduce the calculation before reliance", "Stop all future use of AI for calculations"], "decision_correct": 2, "risk": ["A plausible result may conceal errors in inputs, formulas, units or period", "The spreadsheet may be visually plain", "The output may take too long to generate", "The tax provision may be too complex for a table"], "risk_correct": 0, "control": ["Reperform the calculation, verify source figures, formulas, period, currency and units", "Add a note that numbers are approximate", "Round the result to reduce apparent precision", "Compare only with last year's total"], "control_correct": 0, "account": ["The qualified professional approving the calculation", "The spreadsheet application", "The AI model", "The person who designed the original spreadsheet only"], "account_correct": 0, "why": "A result that looks reasonable is not evidence that the underlying inputs and calculation logic are correct.", "controls": ["Verify source figures", "Reperform formulas independently", "Check period, currency and units", "Document material assumptions", "Obtain qualified review"]}, {"title": "The broad-access Agent", "scenario": "A new Agent needs three approved tax folders to answer recurring questions. To make setup easier, the builder connects the Agent to the entire tax SharePoint, including restricted folders unrelated to the Agent's purpose.", "decision": ["Proceed because all content belongs to the tax function", "Proceed if users promise not to ask about restricted matters", "Proceed with controls by limiting sources and permissions to what the purpose requires", "Stop and abandon the Agent permanently"], "decision_correct": 2, "risk": ["The Agent has broader data access than its approved purpose requires", "The Agent name is too generic", "The Agent may respond slowly", "Users may prefer search"], "risk_correct": 0, "control": ["Apply least-necessary access, connect only approved relevant sources and test permission behaviour", "Add a warning in the welcome message", "Rely on users to avoid restricted questions", "Hide restricted folder names from prompts"], "control_correct": 0, "account": ["The Agent's business owner and those approving sources and permissions", "Every SharePoint author", "The Agent", "No one because the folders are internal"], "account_correct": 0, "why": "Internal availability does not mean every source is appropriate for every Agent, purpose or user group.", "controls": ["Limit knowledge sources to the approved purpose", "Confirm user permissions", "Test access behaviour", "Assign a business owner", "Review sources when the Agent changes"]}, {"title": "The conflicting authorities", "scenario": "AI summarises two supplied tax authorities that appear to support different positions. Instead of showing the conflict, the output selects one position and presents it as settled.", "decision": ["Proceed because AI selected the stronger authority", "Remove the less favourable authority from the source pack", "Proceed with controls: require the conflict to be surfaced and escalated for qualified review", "Ask AI to make the selected conclusion more persuasive"], "decision_correct": 2, "risk": ["Material contrary information is concealed, creating an incomplete and potentially misleading analysis", "The answer may contain too many caveats", "The output may not fit on one page", "The sources may use different fonts"], "risk_correct": 0, "control": ["Require conflicting sources and alternative interpretations to be shown, then obtain qualified review", "Ask for a shorter answer", "Use majority voting between AI responses", "Choose the most recent-looking document without verification"], "control_correct": 0, "account": ["The qualified professional assessing the authorities and approving the conclusion", "The AI model", "The author of the preferred authority", "The prompt template"], "account_correct": 0, "why": "Responsible review requires material exceptions, limitations and contrary views to be considered rather than suppressed.", "controls": ["Surface conflicting sources", "Verify each authority", "Assess applicability to the facts", "Escalate unresolved conflict", "Apply independent professional judgment"]}, {"title": "The recurring error pattern", "scenario": "During a pilot, several users report that an Agent repeatedly misclassifies documents. The Agent owner corrects individual outputs but does not record the incidents or change the Agent's instructions.", "decision": ["Continue because each output is corrected by a human", "Ask users to be more careful", "Stop or limit reliance, record the pattern, investigate the cause, update controls and retest", "Delete the incorrect outputs and restart the pilot"], "decision_correct": 2, "risk": ["A recurring control failure may continue and affect future outputs despite individual corrections", "The pilot may receive negative feedback", "The Agent may need a new icon", "The users may become slower"], "risk_correct": 0, "control": ["Document incidents, investigate instructions and sources, correct the design, retest and monitor", "Add a general disclaimer", "Train users to ignore the classification", "Remove the feedback option"], "control_correct": 0, "account": ["The Agent owner and governance roles responsible for monitoring and remediation", "Each end user alone", "The Agent", "The documents being classified"], "account_correct": 0, "why": "Correcting isolated outputs does not address a repeated design, source or instruction problem. Responsible AI requires monitoring, issue handling and reassessment.", "controls": ["Record errors and patterns", "Investigate root cause", "Update instructions, sources or controls", "Retest representative scenarios", "Monitor after remediation"]}];
+
+let current = 0, score = 0;
+let earned = Array(scenarios.length).fill(null);
+let submitted = Array(scenarios.length).fill(false);
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function optionGroup(label, key, options, idx) {
+  const opts = options.map((o, i) => `
+    <label class="option">
+      <input type="radio" name="${key}-${idx}" value="${i}">
+      <span class="option-label"><span class="option-letter">${String.fromCharCode(65+i)}</span>${esc(o)}</span>
+    </label>`).join('');
+  return `<div class="question">
+    <div class="q-label">${label}</div>
+    <div class="options-list">${opts}</div>
+  </div>`;
+}
+
+function render() {
+  const root = document.getElementById('main');
+  root.innerHTML = scenarios.map((s, i) => `
+    <article class="scenario-card ${i === 0 ? 'active' : ''}" id="card-${i}">
+      <div class="scenario-head">
+        <div class="rail">
+          <div class="head-inner">
+            <div class="number">${String(i+1).padStart(2,'0')}</div>
+            <div class="head-text">
+              <h2>${esc(s.title)}</h2>
+              <p class="scenario-copy">${esc(s.scenario)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="questions-panel" id="qpanel-${i}">
+        <div class="rail" style="height:100%">
+          <div class="questions-grid">
+            ${optionGroup('Q1 — What is the risk?','risk',s.risk,i)}
+            ${optionGroup('Q2 — What decision should be taken?','decision',s.decision,i)}
+            ${optionGroup('Q3 — What control is missing?','control',s.control,i)}
+            ${optionGroup('Q4 — Who should remain accountable?','account',s.account,i)}
+          </div>
+        </div>
+      </div>
+
+      <div class="feedback-panel" id="feedback-${i}"></div>
+
+      <div class="submit-strip" id="submitstrip-${i}">
+        <div class="rail">
+          <div class="submit-row">
+            <span class="warn-msg" id="warn-${i}"></span>
+            <button class="btn-submit" id="submitbtn-${i}" onclick="submitScenario(${i})">Submit committee decision</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-strip" id="nav-${i}">
+        <div class="rail"></div>
+      </div>
+    </article>`).join('');
+}
+
+function selected(name, i) {
+  const el = document.querySelector(`input[name="${name}-${i}"]:checked`);
+  return el ? Number(el.value) : null;
+}
+
+function submitScenario(i) {
+  if (submitted[i]) return;
+  const s = scenarios[i];
+  const ans = {
+    risk: selected('risk', i),
+    decision: selected('decision', i),
+    control: selected('control', i),
+    account: selected('account', i)
+  };
+  if (Object.values(ans).some(v => v === null)) {
+    document.getElementById(`warn-${i}`).textContent = 'Please answer all four questions before submitting.';
+    return;
+  }
+
+  const keys = ['risk','decision','control','account'];
+  let pts = 0;
+  keys.forEach(k => { if (ans[k] === s[`${k}_correct`]) pts++; });
+  earned[i] = pts;
+  score += pts;
+  submitted[i] = true;
+
+  document.getElementById('score').textContent = score;
+  document.querySelectorAll(`#card-${i} input`).forEach(el => el.disabled = true);
+
+  const labels = {risk:'Risk',decision:'Decision',control:'Missing control',account:'Accountability'};
+  const reviews = keys.map(k => {
+    const ok = ans[k] === s[`${k}_correct`];
+    return `<div class="answer-row ${ok ? 'correct' : 'wrong'}">
+      <div class="answer-row-q">${labels[k]}</div>
+      <div class="answer-row-verdict">${ok ? '✓ Correct' : '✗ Review'}</div>
+      <div class="answer-row-expected">Expected: ${esc(s[k][s[`${k}_correct`]])}</div>
+    </div>`;
+  }).join('');
+
+  const resultLabel = pts === 4 ? 'Committee decision cleared' : pts >= 2 ? 'Partially cleared — review controls' : 'Control gap detected';
+
+  const fp = document.getElementById(`feedback-${i}`);
+  fp.innerHTML = `
+    <div class="rail" style="height:100%">
+      <div class="feedback-inner">
+        <div class="fb-left">
+          <div class="fb-section-label">Assessment review — ${resultLabel}</div>
+          ${reviews}
+          <div class="fb-score-row">
+            <div class="fb-score">${pts} / 4</div>
+            <div class="fb-score-label">points this scenario</div>
+          </div>
+        </div>
+        <div class="fb-right">
+          <div class="rationale-card">
+            <div class="rationale-block">
+              <div class="fb-section-label">Why this matters</div>
+              <p class="rationale-text">${esc(s.why)}</p>
+            </div>
+            <div class="rationale-block">
+              <div class="fb-section-label">Controls to apply</div>
+              <ul class="controls-list">${s.controls.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  fp.classList.add('show');
+
+  document.getElementById(`qpanel-${i}`).style.display = 'none';
+  document.getElementById(`submitstrip-${i}`).style.display = 'none';
+
+  const navStrip = document.getElementById(`nav-${i}`);
+  const navRail = navStrip.querySelector('.rail');
+  navRail.innerHTML = i < scenarios.length - 1
+    ? `<button class="btn-next" onclick="nextScenario(${i})">Next scenario →</button>`
+    : `<button class="btn-next" onclick="finish()">View committee score →</button>`;
+  navStrip.classList.add('show');
+
+  updateProgress(i + 1);
+}
+
+function nextScenario(i) {
+  document.getElementById(`card-${i}`).classList.remove('active');
+  current = i + 1;
+  document.getElementById(`card-${current}`).classList.add('active');
+  updateProgress(i + 1);
+}
+
+function updateProgress(done) {
+  const pct = Math.round(done / scenarios.length * 100);
+  document.getElementById('progress').style.width = pct + '%';
+  document.getElementById('progressText').textContent =
+    done < scenarios.length ? `Scenario ${done + 1} of ${scenarios.length}` : 'All scenarios reviewed';
+  document.getElementById('completionText').textContent = pct + '% complete';
+}
+
+function startAssessment() {
+  showScreen('main');
+  updateProgress(0);
+}
+
+function finish() {
+  showScreen('summary');
+  document.getElementById('finalScore').textContent = `${score} / ${scenarios.length * 4}`;
+  const ratio = score / (scenarios.length * 4);
+  let band, text;
+  if (ratio >= .9) {
+    band = 'Governance-ready judgment';
+    text = 'Strong control awareness across risk, decisions, safeguards and accountability.';
+    confetti();
+  } else if (ratio >= .7) {
+    band = 'Sound judgment with targeted gaps';
+    text = 'Good foundation. Review the scenarios where one or more control dimensions were missed.';
+  } else if (ratio >= .5) {
+    band = 'Developing control awareness';
+    text = 'Revisit the decision logic, especially verification, data protection, Agent boundaries and human accountability.';
+  } else {
+    band = 'Governance refresher recommended';
+    text = 'Retake the exercise after reviewing the Responsible AI Governance Playbook.';
+  }
+  document.getElementById('band').textContent = band;
+  document.getElementById('bandText').textContent = text;
+  document.getElementById('reviewList').innerHTML =
+    scenarios.map((s, i) => `<div class="review-row"><span>${i+1}. ${esc(s.title)}</span><span>${earned[i]} / 4</span></div>`).join('');
+  updateProgress(scenarios.length);
+}
+
+function confetti() {
+  const root = document.getElementById('confetti');
+  for (let i = 0; i < 80; i++) {
+    const p = document.createElement('i');
+    p.className = 'piece';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.background = ['#ffe600','#35d07f','#5ba6ff','#b184ff','#ff6b6b'][Math.floor(Math.random()*5)];
+    p.style.animationDelay = Math.random() * .7 + 's';
+    p.style.transform = `rotate(${Math.random()*180}deg)`;
+    root.appendChild(p);
+  }
+  setTimeout(() => root.innerHTML = '', 2600);
+}
+
+function restart() { location.reload(); }
+
+render();
+</script>
+</body>
+</html>

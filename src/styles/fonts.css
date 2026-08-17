@@ -1,0 +1,116 @@
+/*
+ * EY Interstate Font Declarations
+ *
+ * Licensed files live in /public/fonts/ (copied from /Fonts/).
+ * local() sources allow the font to load from the OS if already installed.
+ *
+ * Available files:
+ *   public/fonts/EYInterstate-Light.woff
+ *   public/fonts/EYInterstate-Regular.woff
+ *   public/fonts/EYInterstate-Bold.woff
+ *   public/fonts/EYInterstate-Italic.woff
+ *   public/fonts/EYInterstate-LightItalic.woff
+ *   public/fonts/EYInterstate-BoldItalic.woff
+ */
+
+/* ── EY Interstate: Light ───────────────────────────────────────────────── */
+@font-face {
+  font-family: 'EYInterstate:Light';
+  src: local('EYInterstate Light'), local('EYInterstate-Light'),
+       url('/fonts/EYInterstate-Light.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── EY Interstate: Regular ─────────────────────────────────────────────── */
+@font-face {
+  font-family: 'EYInterstate:Regular';
+  src: local('EYInterstate Regular'), local('EYInterstate-Regular'),
+       local('EYInterstate'),
+       url('/fonts/EYInterstate-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── EY Interstate: Bold ────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'EYInterstate:Bold';
+  src: local('EYInterstate Bold'), local('EYInterstate-Bold'),
+       url('/fonts/EYInterstate-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── EY Interstate: Italics ─────────────────────────────────────────────── */
+@font-face {
+  font-family: 'EYInterstate:Light';
+  src: local('EYInterstate Light Italic'), local('EYInterstate-LightItalic'),
+       url('/fonts/EYInterstate-LightItalic.woff') format('woff');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EYInterstate:Regular';
+  src: local('EYInterstate Italic'), local('EYInterstate-Italic'),
+       url('/fonts/EYInterstate-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'EYInterstate:Bold';
+  src: local('EYInterstate Bold Italic'), local('EYInterstate-BoldItalic'),
+       url('/fonts/EYInterstate-BoldItalic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/*
+ * Remap Inter Figma-notation → EY Interstate
+ *
+ * The Figma export uses font-['Inter:*'] for some elements. These @font-face
+ * rules redirect those references to EY Interstate so the entire UI renders
+ * in a single consistent brand typeface without modifying Figma import files.
+ */
+@font-face {
+  font-family: 'Inter:Regular';
+  src: local('EYInterstate Regular'), local('EYInterstate-Regular'),
+       local('EYInterstate'),
+       url('/fonts/EYInterstate-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter:Medium';
+  src: local('EYInterstate Regular'), local('EYInterstate-Regular'),
+       local('EYInterstate'),
+       url('/fonts/EYInterstate-Regular.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter:Bold';
+  src: local('EYInterstate Bold'), local('EYInterstate-Bold'),
+       url('/fonts/EYInterstate-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Global default body font ───────────────────────────────────────────── */
+@layer base {
+  body {
+    font-family: 'EYInterstate:Regular', sans-serif;
+  }
+}

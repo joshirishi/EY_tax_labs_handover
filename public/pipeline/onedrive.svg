@@ -1,0 +1,11 @@
+<svg viewBox="0 0 96 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="onedriveGrad" x1="1" y1="55" x2="95" y2="25" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#0364B8"/>
+<stop offset="0.4" stop-color="#0078D4"/>
+<stop offset="0.72" stop-color="#1490DF"/>
+<stop offset="1" stop-color="#28A8EA"/>
+</linearGradient>
+</defs>
+<path id="cloud" d="M24 63C11.297 63 1 52.703 1 40C1 28.474 9.499 18.907 20.6 17.24C24.35 7.507 33.87 1 45 1C59.336 1 71.216 11.826 72.79 25.77C83.196 27.14 91 35.973 91 46.5C91 58.098 81.598 67.5 70 67.5H24V63Z" fill="url(#onedriveGrad)"/>
+</svg>

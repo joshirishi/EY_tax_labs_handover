@@ -1,0 +1,284 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Global content rail — keep in sync with layout.contentWidth in tokens.ts */
+  --ey-content-width: min(90%, 1440px);
+  --ey-content-inline-pad: calc((100% - var(--ey-content-width)) / 2);
+
+  /* EY Primary — replaces default shadcn neutrals */
+  --font-size: 16px;
+  --background: #FFFFFF;
+  --foreground: #2E2E38;
+  --card: #FFFFFF;
+  --card-foreground: #2E2E38;
+  --popover: #FFFFFF;
+  --popover-foreground: #2E2E38;
+  --primary: #1A1A24;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F6F6FA;
+  --secondary-foreground: #1A1A24;
+  --muted: #F6F6FA;
+  --muted-foreground: #747480;
+  --accent: #FFE600;
+  --accent-foreground: #1A1A24;
+  --destructive: #FF4136;
+  --destructive-foreground: #FFFFFF;
+  --border: #C4C4CD;
+  --input: transparent;
+  --input-background: #F6F6FA;
+  --switch-background: #C4C4CD;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #747480;
+  --chart-1: #FFE600;
+  --chart-2: #4696FF;
+  --chart-3: #00C864;
+  --chart-4: #FF7D1E;
+  --chart-5: #B400FF;
+  --radius: 0.625rem;
+  --sidebar: #F6F6FA;
+  --sidebar-foreground: #2E2E38;
+  --sidebar-primary: #1A1A24;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #FFE600;
+  --sidebar-accent-foreground: #1A1A24;
+  --sidebar-border: #C4C4CD;
+  --sidebar-ring: #747480;
+}
+
+.dark {
+  --background: #1A1A24;
+  --foreground: #FFFFFF;
+  --card: #2E2E38;
+  --card-foreground: #FFFFFF;
+  --popover: #2E2E38;
+  --popover-foreground: #FFFFFF;
+  --primary: #FFE600;
+  --primary-foreground: #1A1A24;
+  --secondary: #2E2E38;
+  --secondary-foreground: #FFFFFF;
+  --muted: #2E2E38;
+  --muted-foreground: #C4C4CD;
+  --accent: #FFE600;
+  --accent-foreground: #1A1A24;
+  --destructive: #FF4136;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: #2E2E38;
+  --ring: #747480;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: #FFE600;
+  --chart-2: #4696FF;
+  --chart-3: #00C864;
+  --chart-4: #FF7D1E;
+  --chart-5: #B400FF;
+  --sidebar: #1A1A24;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFE600;
+  --sidebar-primary-foreground: #1A1A24;
+  --sidebar-accent: #2E2E38;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --sidebar-ring: #747480;
+}
+
+/* ── EY Brand dark module tokens ──────────────────────────────────────────── */
+:root {
+  --ey-body-gradient: linear-gradient(135deg, #1A1A24, #1A1A24 55%, #1A1A24);
+  --ey-bg-body: #1A1A24;
+  --ey-bg-body-alt: #1A1A24;
+  --ey-bg-raised: #1A1A24;
+  --ey-bg-card: #2E2E38;
+  --ey-bg-card-alt: #2E2E38;
+  --ey-bg-nav: rgba(26, 26, 36, 0.94);
+  --ey-bg-surface: rgba(255, 255, 255, 0.06);
+  --ey-brand-yellow: #ffe600;
+  --ey-brand-yellow-pale: #FFE600;
+  --ey-brand-yellow-warm: #FFE600;
+  --ey-brand-yellow-alpha-12: rgba(255, 230, 0, 0.12);
+  --ey-brand-yellow-alpha-28: rgba(255, 230, 0, 0.28);
+  --ey-on-dark: #ffffff;
+  --ey-on-dark-72: rgba(255, 255, 255, 0.72);
+  --ey-on-dark-55: rgba(255, 255, 255, 0.55);
+  --ey-on-dark-20: rgba(255, 255, 255, 0.20);
+  --ey-on-dark-12: rgba(255, 255, 255, 0.12);
+  --ey-on-dark-08: rgba(255, 255, 255, 0.08);
+  --ey-app-word: #4696FF;
+  --ey-app-excel: #00C864;
+  --ey-app-ppt: #FF3C00;
+  --ey-app-outlook: #4696FF;
+  --ey-app-copilot: #B400FF;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  /* EY brand dark module colors */
+  --color-ey-bg-body: var(--ey-bg-body);
+  --color-ey-bg-card: var(--ey-bg-card);
+  --color-ey-bg-card-alt: var(--ey-bg-card-alt);
+  --color-ey-bg-surface: var(--ey-bg-surface);
+  --color-ey-brand-yellow: var(--ey-brand-yellow);
+  --color-ey-on-dark: var(--ey-on-dark);
+  --color-ey-app-word: var(--ey-app-word);
+  --color-ey-app-excel: var(--ey-app-excel);
+  --color-ey-app-ppt: var(--ey-app-ppt);
+  --color-ey-app-outlook: var(--ey-app-outlook);
+  --color-ey-app-copilot: var(--ey-app-copilot);
+
+  /* ── EY Design System — canonical brand palette ── */
+  --color-ey-yellow:           #FFE600;
+  --color-ey-off-white:        #F6F6FA;
+  --color-ey-gray-02:          #C4C4CD;
+  --color-ey-gray-01:          #747480;
+  --color-ey-off-black:        #2E2E38;
+  --color-ey-confident-black:  #1A1A24;
+  /* Spectrum / Frame accent colors */
+  --color-ey-frame-orange:     #FF7D1E;
+  --color-ey-frame-red:        #FF3C00;
+  --color-ey-frame-magenta:    #FF32FF;
+  --color-ey-frame-purple:     #B400FF;
+  --color-ey-frame-lime:       #B4FF00;
+  --color-ey-frame-green:      #00C864;
+  --color-ey-frame-teal:       #32FFFF;
+  --color-ey-frame-blue:       #4696FF;
+  --color-ey-error:            #FF4136;
+  --color-ey-eyebrow-gold:     #B89B00;
+  --color-ey-eyebrow-gold-dark: #7A6800;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /**
+  * Default typography styles for HTML elements (h1-h4, p, label, button, input).
+  * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.
+  */
+
+  html {
+    font-size: var(--font-size);
+  }
+
+  h1 {
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h2 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h3 {
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  h4 {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  label {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  button {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+  }
+
+  input {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-normal);
+    line-height: 1.5;
+  }
+}
+
+/* Global content rail — change --ey-content-width (synced from layout.contentWidth) */
+.ey-content-rail {
+  width: var(--ey-content-width);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Prompting Techniques Wizard + Advanced Framework Shell — stacks the fixed-height
+   two-column shells into a single column on small screens. pt-wizard: 760px;
+   af-shell: 650px — preserved on all viewports; inner nav + detail pane scroll independently. */
+@media (max-width: 900px) {
+  .pt-wizard,
+  .af-shell {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* PromptStackBuilder — anatomy-style prompt strength meter */
+.pt-wizard-strength__track {
+  background: var(--secondary);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.pt-wizard-strength__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--destructive),
+    var(--ey-brand-yellow),
+    var(--chart-3)
+  );
+  transition: width 0.5s ease;
+}
