@@ -6,9 +6,9 @@ import {
   ChevronRight, ClipboardList, Compass, Copy,
   Ban, CornerUpLeft, DollarSign, ExternalLink, FileText, FolderOpen,
   Globe, Grid3x3, Hexagon, Image, Italic, LayoutTemplate, LineChart, Link2, BookOpen,
-  List, ListOrdered, Mail, Megaphone, Menu, MessagesSquare, Mic, MoreHorizontal, PenLine,
-  Pencil, Percent, Pin, Play, Plus, PlusSquare, Rocket, Search, Send, ShieldCheck, Sparkles,
-  Target, Timer, Trash2, Type, Underline, Users, X, XCircle, ZoomIn, ZoomOut,
+  List, ListOrdered, Mail, Megaphone, Menu, MessagesSquare, Mic, Monitor, MoreHorizontal, PenLine,
+  Pencil, Percent, Pin, Play, Plus, PlusSquare, Power, Rocket, Search, Send, ShieldCheck, Sparkles,
+  Target, Timer, Trash2, Type, Underline, Users, Video, X, XCircle, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
 import { SiteHeader } from "../design-kit/SiteHeader";
@@ -54,6 +54,7 @@ const TABS = [
   { id: "excel",   label: "Excel Formulas",   color: C.excelGreen, appColor: C.excelGreen, logo: "/pipeline/excel.svg" },
   { id: "ppt",     label: "PowerPoint Decks", color: C.pptOrange,  appColor: C.pptOrange,  logo: "/pipeline/powerpoint.svg" },
   { id: "outlook", label: "Outlook Threads",  color: C.outlookBlue,appColor: C.outlookBlue,logo: "/pipeline/outlook.svg" },
+  { id: "teams",   label: "Teams Meetings",   color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/teams.svg" },
   { id: "m365",    label: "M365 Chat",        color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/copilot-icon.svg" },
   { id: "agent",   label: "M365 Agent",       color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/m365-agent-icon.svg" },
 ] as const;
@@ -66,32 +67,39 @@ const APP_NAME: Record<TabId, string> = {
   excel: "Excel",
   ppt: "PowerPoint",
   outlook: "Outlook",
+  teams: "Teams",
   m365: "M365 Chat",
   agent: "M365 Agent",
 };
 
 // ── Laptop stage — "What you can do" popping app widget (ported from Module1) ─
-// The 5 apps with live prompt content below "pop" with a floating animation and
-// jump straight to their tab section. M365 Agent sits on the stage itself;
-// remaining apps without prompt content show as a muted "coming soon" dock.
+// Live apps with prompt content below "pop" and jump to their tab.
+// M365 Agent sits on the stage itself; remaining apps stay in the muted dock.
+// 7 live apps sit on one ellipse around the laptop so none pile on a corner.
+const LAPTOP_TILE = 64;
+const LAPTOP_ORBIT = { cx: 280, cy: 200, rx: 232, ry: 156 };
+
+function laptopOrbitPos(angleDeg: number, delay: string): React.CSSProperties {
+  const r = (angleDeg * Math.PI) / 180;
+  return {
+    top: Math.round(LAPTOP_ORBIT.cy + LAPTOP_ORBIT.ry * Math.sin(r) - LAPTOP_TILE / 2),
+    left: Math.round(LAPTOP_ORBIT.cx + LAPTOP_ORBIT.rx * Math.cos(r) - LAPTOP_TILE / 2),
+    animationDelay: delay,
+  };
+}
+
+const LAPTOP_ORBIT_STEP = 360 / 7;
 const LAPTOP_CORE_APPS: { id: TabId; label: string; logo: string; pos: React.CSSProperties }[] = [
-  { id: "word",    label: "Word",        logo: "/pipeline/word.svg",         pos: { top: 47, left: 42 } },
-  { id: "excel",   label: "Excel",       logo: "/pipeline/excel.svg",        pos: { top: 34, right: 68, animationDelay: "0.4s" } },
-  { id: "ppt",     label: "PowerPoint",  logo: "/pipeline/powerpoint.svg",   pos: { bottom: 121, right: 25, animationDelay: "0.8s" } },
-  { id: "outlook", label: "Outlook",     logo: "/pipeline/outlook.svg",      pos: { bottom: 121, left: 35, animationDelay: "1.2s" } },
-  { id: "m365",    label: "M365 Chat",   logo: "/pipeline/copilot-icon.svg", pos: { top: 0, left: "44%", animationDelay: "1.6s" } },
+  { id: "m365",    label: "M365 Chat",   logo: "/pipeline/copilot-icon.svg",    pos: laptopOrbitPos(-90, "0s") },
+  { id: "excel",   label: "Excel",       logo: "/pipeline/excel.svg",           pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP, "0.4s") },
+  { id: "ppt",     label: "PowerPoint",  logo: "/pipeline/powerpoint.svg",      pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 2, "0.8s") },
+  { id: "agent",   label: "M365 Agent",  logo: "/pipeline/m365-agent-icon.svg", pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 3, "1.2s") },
+  { id: "outlook", label: "Outlook",     logo: "/pipeline/outlook.svg",         pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 4, "1.6s") },
+  { id: "teams",   label: "Teams",       logo: "/pipeline/teams.svg",           pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 5, "2s") },
+  { id: "word",    label: "Word",        logo: "/pipeline/word.svg",            pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 6, "2.4s") },
 ];
 
-// M365 Agent — stage tile opens the agent prompt tab (same white tile as other apps).
-const LAPTOP_STAGE_AGENT = {
-  id: "agent" as TabId,
-  label: "M365 Agent",
-  logo: "/pipeline/m365-agent-icon.svg",
-  pos: { bottom: 34, left: 0, right: 0, marginLeft: "auto", marginRight: "auto", animationDelay: "2s" } as React.CSSProperties,
-};
-
 const LAPTOP_COMING_SOON_APPS: { label: string; logo: string }[] = [
-  { label: "MS Teams",   logo: "/pipeline/teams.svg" },
   { label: "SharePoint", logo: "/pipeline/sharepoint.svg" },
   { label: "OneDrive",   logo: "/pipeline/onedrive.svg" },
   { label: "OneNote",    logo: "/pipeline/onenote.svg" },
@@ -196,6 +204,27 @@ const SECTION_DATA: Record<TabId, {
     ],
     screenshotSide: "left",
     altBg: false,
+  },
+  teams: {
+    eyebrow: "MEETING INTELLIGENCE",
+    eyebrowColor: C.teamsViolet,
+    h2: "Copilot in Teams",
+    subtitle: "Set Copilot in the meeting options, collect participant acceptance, then open the pane during the call to recap the chat, list open items, and confirm decisions.",
+    useCases: [
+      { icon: Calendar, title: "Meeting Options before the call", body: "Open the meeting in Calendar, then Meeting options, and choose whether Copilot can run during and after the call." },
+      { icon: Users, title: "Participants' acceptance of Copilot on the call", body: "When Copilot or transcription starts, each person on the call must accept before Copilot can use the conversation." },
+      { icon: Power, title: "Ability to turn Copilot on and off during the call", body: "Use the meeting toolbar to turn Copilot off if the discussion should not be captured, then turn it back on when needed." },
+      { icon: Sparkles, title: "Selecting Copilot while on the call", body: "Select Copilot on the meeting bar to open the pane and ask for a recap, open items, or decisions." },
+    ],
+    panelSubtitle: "Use Copilot in the meeting pane the same way the Teams recording shows in chat.",
+    prompts: [
+      { label: "Summarise this chat", text: "Summarise this chat" },
+      { label: "What are open items?", text: "What are open items?" },
+      { label: "What decisions were made?", text: "What decisions were made?" },
+      { label: "What decisions were made in this chat?", text: "What decisions were made in this chat?" },
+    ],
+    screenshotSide: "right",
+    altBg: true,
   },
   m365: {
     eyebrow: "COLLATE INFORMATION ACROSS M365",
@@ -907,6 +936,7 @@ const APP_ACCENT: Record<TabId, string> = {
   excel: C.excelGreen,
   ppt: C.pptOrange,
   outlook: C.outlookBlue,
+  teams: C.teamsViolet,
   m365: C.teamsViolet,
   agent: C.wordBlue,
 };
@@ -916,6 +946,7 @@ const RIBBON_TABS: Record<TabId, string[]> = {
   excel: ["File", "Home", "Insert", "Formulas", "Data", "Review", "View"],
   ppt: ["File", "Home", "Insert", "Design", "Transitions", "Slide Show", "Review", "View"],
   outlook: ["File", "Home", "View", "Help"],
+  teams: ["Chat", "Calendar", "Teams", "Calls"],
   m365: ["Chat"],
   agent: ["File", "Home", "Insert", "Review", "View"],
 };
@@ -925,6 +956,7 @@ const COPILOT_HEADING: Record<TabId, string> = {
   excel: "Let's edit your workbook",
   ppt: "Let's edit your presentation",
   outlook: "What can I help with?",
+  teams: "What can I help with?",
   m365: "What can I help with?",
   agent: "Let's edit your document",
 };
@@ -934,6 +966,7 @@ const COPILOT_PLACEHOLDER: Record<TabId, string> = {
   excel: "Describe what you'd like to edit",
   ppt: "Create a presentation about…",
   outlook: "Message Copilot",
+  teams: "Message Copilot",
   m365: "Message Copilot",
   agent: "Describe what you'd like to edit",
 };
@@ -948,13 +981,14 @@ const DOC_TITLES: Partial<Record<TabId, string>> = {
 function MsTitleBar({ tabId }: { tabId: TabId }) {
   const accent = APP_ACCENT[tabId];
   const isMail = tabId === "outlook";
-  const title = isMail ? "Mail — Outlook" : (DOC_TITLES[tabId] ?? `${APP_NAME[tabId]}`);
+  const isTeams = tabId === "teams";
+  const title = isMail ? "Mail — Outlook" : isTeams ? "Meeting — Teams" : (DOC_TITLES[tabId] ?? `${APP_NAME[tabId]}`);
   return (
     <div style={{
       background: C.white, borderBottom: `1px solid ${C.gray02}`,
       display: "flex", alignItems: "center", gap: 12, padding: "6px 12px", flexShrink: 0, minHeight: 40,
     }}>
-      {!isMail && (
+      {!isMail && !isTeams && (
         <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01, flexShrink: 0 }}>AutoSave Off</span>
       )}
       <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: accent, flexShrink: 0 }} />
@@ -968,7 +1002,7 @@ function MsTitleBar({ tabId }: { tabId: TabId }) {
       }}>
         <Search size={12} strokeWidth={1.75} color={C.gray01} aria-hidden />
         <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01 }}>
-          {isMail ? "Search emails" : "Search"}
+          {isMail ? "Search emails" : isTeams ? "Search meetings" : "Search"}
         </span>
       </div>
       <span style={{
@@ -990,6 +1024,7 @@ function MsRibbon({ tabId }: { tabId: TabId }) {
     tabId === "ppt" ? [PlusSquare, LayoutTemplate, Type, Image, Play]
     : tabId === "excel" ? [Bold, Italic, Grid3x3, DollarSign, Percent]
     : tabId === "outlook" ? [Plus, CornerUpLeft, Archive, Trash2]
+    : tabId === "teams" ? [Video, Mic, Users, Monitor]
     : [Bold, Italic, Underline, AlignLeft, List, ListOrdered];
   return (
     <div style={{ background: C.white, borderBottom: `1px solid ${C.gray02}`, flexShrink: 0 }}>
@@ -998,11 +1033,11 @@ function MsRibbon({ tabId }: { tabId: TabId }) {
           <span key={tab} style={{
             fontFamily: i === 1 || tab === "Home" ? F.bold : F.regular,
             fontSize: 11, color: C.offBlack, padding: "6px 10px",
-            borderBottom: tab === "Home" || (tabId === "outlook" && tab === "Home") ? `2px solid ${accent}` : "2px solid transparent",
+            borderBottom: tab === "Home" || (tabId === "outlook" && tab === "Home") || (tabId === "teams" && tab === "Chat") ? `2px solid ${accent}` : "2px solid transparent",
           }}>{tab}</span>
         ))}
         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px" }}>
-          <Sparkles size={13} strokeWidth={1.75} color={accent} aria-hidden />
+          <img src="/pipeline/copilot-icon.svg" alt="" width={13} height={13} style={{ objectFit: "contain", display: "block" }} />
           <span style={{ fontFamily: F.bold, fontSize: 11, color: accent }}>Copilot</span>
         </span>
       </div>
@@ -1029,10 +1064,10 @@ function CopilotComposer({
     <div style={{
       padding: "10px 12px 8px", background: C.white,
       border: `1px solid ${C.gray02}`, borderRadius: 12,
-      minHeight: 76, display: "flex", flexDirection: "column",
+      height: 108, display: "flex", flexDirection: "column",
     }}>
       <p style={{
-        margin: 0, flex: 1, fontFamily: F.regular, fontSize: 12, lineHeight: 1.5,
+        margin: 0, flex: 1, minHeight: 0, fontFamily: F.regular, fontSize: 12, lineHeight: 1.5,
         color: typedText ? C.offBlack : C.gray01, overflow: "auto",
       }}>
         {typedText || COPILOT_PLACEHOLDER[tabId]}
@@ -1159,7 +1194,7 @@ function CopilotSidePane({
         <p style={{ margin: 0, fontFamily: F.bold, fontSize: 18, color: C.offBlack, lineHeight: 1.25 }}>
           {COPILOT_HEADING[tabId]}
         </p>
-        {!isMail && (
+        {!isMail && tabId !== "teams" && (
           <span style={{
             marginTop: 8, fontFamily: F.regular, fontSize: 11, color: C.gray01,
             display: "inline-flex", alignItems: "center", gap: 4,
@@ -1169,25 +1204,12 @@ function CopilotSidePane({
         )}
       </div>
 
-      {isMail ? (
-        <>
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 12px 12px" }}>
-            <CopilotSuggestionCards prompts={prompts} activeIndex={activeIndex} onSelect={onSelect} accent={accent} />
-          </div>
-          <div style={{ padding: "0 12px 10px", flexShrink: 0 }}>
-            <CopilotComposer tabId={tabId} typedText={typedText} accent={accent} />
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ padding: "4px 12px 12px", flexShrink: 0 }}>
-            <CopilotComposer tabId={tabId} typedText={typedText} accent={accent} />
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "0 12px 8px" }}>
-            <CopilotSuggestionCards prompts={prompts} activeIndex={activeIndex} onSelect={onSelect} accent={accent} />
-          </div>
-        </>
-      )}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 12px 12px" }}>
+        <CopilotSuggestionCards prompts={prompts} activeIndex={activeIndex} onSelect={onSelect} accent={accent} />
+      </div>
+      <div style={{ padding: "0 12px 10px", flexShrink: 0 }}>
+        <CopilotComposer tabId={tabId} typedText={typedText} accent={accent} />
+      </div>
 
       <div style={{
         padding: "8px 12px 12px", flexShrink: 0, display: "flex",
@@ -1480,6 +1502,7 @@ function MockStatusBar({ tabId }: { tabId: TabId }) {
   const left =
     tabId === "ppt" ? ["Slide 3 of 12", "Notes", "Accessibility: Good to go"]
     : tabId === "outlook" ? ["Items: 142", "All folders up to date"]
+    : tabId === "teams" ? ["In a meeting", "Transcription on"]
     : ["184 words", "1,124 characters", "English (US)"];
   return (
     <div style={{
@@ -1491,7 +1514,74 @@ function MockStatusBar({ tabId }: { tabId: TabId }) {
       </div>
       {tabId === "outlook"
         ? <span style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>Connected to Microsoft Exchange</span>
+        : tabId === "teams"
+        ? <span style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>Copilot available</span>
         : <MockZoom />}
+    </div>
+  );
+}
+
+function TeamsWorkspace() {
+  const rail: { icon: LucideIcon; on?: boolean }[] = [
+    { icon: MessagesSquare },
+    { icon: Calendar, on: true },
+    { icon: Users },
+    { icon: Video },
+  ];
+  const people = [
+    { initials: "PR", name: "Presenter" },
+    { initials: "RK", name: "Reviewer" },
+    { initials: "AM", name: "Organiser" },
+    { initials: "EY", name: "You" },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+      <div style={{
+        width: 44, flexShrink: 0, background: C.offWhite, borderRight: `1px solid ${C.gray02}`,
+        display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, gap: 4,
+      }}>
+        {rail.map(({ icon: Icon, on }) => (
+          <span key={Icon.displayName ?? Icon.name} style={{
+            width: 32, height: 32, borderRadius: 8,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            background: on ? C.white : "transparent",
+            boxShadow: on ? `inset 0 0 0 1.5px ${C.teamsViolet}` : "none",
+            color: on ? C.teamsViolet : C.gray01,
+          }}>
+            <Icon size={16} strokeWidth={1.75} aria-hidden />
+          </span>
+        ))}
+      </div>
+      <div style={{
+        flex: 1, minWidth: 0, background: C.dark, padding: 16,
+        display: "flex", flexDirection: "column", gap: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ margin: 0, fontFamily: F.bold, fontSize: 14, color: C.white }}>Weekly huddle</p>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: C.onDarkMuted }}>
+            <Mic size={14} strokeWidth={1.75} aria-hidden />
+            <Video size={14} strokeWidth={1.75} aria-hidden />
+            <Monitor size={14} strokeWidth={1.75} aria-hidden />
+            <Sparkles size={14} strokeWidth={1.75} color={C.yellow} aria-hidden />
+          </span>
+        </div>
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, minHeight: 0 }}>
+          {people.map(p => (
+            <div key={p.initials} style={{
+              background: C.offBlack, borderRadius: 12, border: `1px solid ${C.borderOnDark}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+              minHeight: 0,
+            }}>
+              <span style={{
+                width: 44, height: 44, borderRadius: 22, background: C.white,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontFamily: F.bold, fontSize: 13, color: C.offBlack,
+              }}>{p.initials}</span>
+              <span style={{ fontFamily: F.regular, fontSize: 12, color: C.onDarkMuted }}>{p.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1509,6 +1599,7 @@ function CopilotAppMock({
     tabId === "excel" ? <ExcelWorkspace />
     : tabId === "ppt" ? <PptWorkspace />
     : tabId === "outlook" ? <OutlookWorkspace />
+    : tabId === "teams" ? <TeamsWorkspace />
     : <WordWorkspace />;
 
   return (
@@ -3397,7 +3488,7 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
   return (
     <div style={{ position: "relative", zIndex: 1, width: 560, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
       {/* Laptop mockup + popping apps */}
-      <div style={{ position: "relative", width: "100%", minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "relative", width: "100%", minHeight: 430, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {/* Keyboard base */}
         <div style={{ position: "absolute", bottom: 38, width: "94%", maxWidth: 472, height: 50, background: `linear-gradient(180deg, ${C.dark2}, ${C.dark})`, borderRadius: "6px 6px 20px 20px", transform: "rotateX(55deg)", boxShadow: "0 24px 44px rgba(0,0,0,0.5)" }} />
         {/* Laptop screen */}
@@ -3439,36 +3530,11 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
             <span style={{ position: "absolute", bottom: -22, fontSize: 11, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", fontFamily: F.regular, fontWeight: 700 }}>{app.label}</span>
           </button>
         ))}
-
-        {/* M365 Agent — stage tile; same white backdrop as other popping apps */}
-        <button
-          onClick={() => onOpenApp(LAPTOP_STAGE_AGENT.id)}
-          title={`Open ${LAPTOP_STAGE_AGENT.label} tax use cases`}
-          style={{
-            position: "absolute",
-            width: 64, height: 64,
-            borderRadius: 18,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: "1px solid rgba(255,255,255,0.5)",
-            cursor: "pointer",
-            background: C.white,
-            boxShadow: "0 14px 30px rgba(0,0,0,0.4)",
-            zIndex: 20,
-            animation: "laptopStageFloat 5s ease-in-out infinite",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            ...LAPTOP_STAGE_AGENT.pos,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12) translateY(-3px)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "none"; }}
-        >
-          <img src={LAPTOP_STAGE_AGENT.logo} alt={LAPTOP_STAGE_AGENT.label} style={{ width: 40, height: 40, objectFit: "contain" }} />
-          <span style={{ position: "absolute", bottom: -22, fontSize: 11, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", fontFamily: F.regular, fontWeight: 700 }}>{LAPTOP_STAGE_AGENT.label}</span>
-        </button>
       </div>
 
       {/* Coming-soon dock — apps without prompt content yet. Real logos are
           shown at reduced opacity so they stay muted/inert rather than
-          competing with the 5 live, popping apps. */}
+          competing with the live, popping apps. */}
       <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", maxWidth: 500 }}>
         {LAPTOP_COMING_SOON_APPS.map(app => (
           <div
@@ -3476,8 +3542,8 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
             title={`${app.label} — coming soon`}
             style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 66, cursor: "default" }}
           >
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <img src={app.logo} alt={app.label} style={{ width: 24, height: 24, objectFit: "contain", opacity: 0.6 }} />
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <img src={app.logo} alt={app.label} style={{ width: 24, height: 24, objectFit: "contain", opacity: 0.85 }} />
             </div>
             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textAlign: "center", lineHeight: 1.2, fontFamily: F.regular, fontWeight: 700 }}>{app.label}</span>
           </div>
@@ -3934,7 +4000,7 @@ export default function M365CopilotHub({
         <h2 style={{ fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking, marginBottom: 12, color: C.dark2 }}>Sample Prompt Repository for using Copilot in Tax</h2>
         <p style={{ fontSize: 15, color: C.gray01, marginBottom: 32 }}>Select your preferred M365 application tool below to view optimized, compliant corporate-ready prompts.</p>
         {/* Tab row — centered. Dark container from tokens: offBlack (#2E2E38) */}
-        <div style={{ display: "inline-flex", gap: 8, background: C.dark2, borderRadius: 12, padding: 8 }}>
+        <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 8, background: C.dark2, borderRadius: 12, padding: 8 }}>
           {TABS.map(t => (
             <button
               key={t.id}

@@ -1821,7 +1821,7 @@ function Hero() {
   return (
     <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
       <p className="font-['EYInterstate:Bold',sans-serif] font-bold leading-[1.15] relative shrink-0 text-[#2e2e38] text-[28px] sm:text-[36px] md:text-[48px] md:leading-[56px] w-full max-w-full">
-        Phase 1 — Foundational Training
+        Module 1 — Foundational Training
       </p>
       <p className="font-['EYInterstate:Regular',sans-serif] font-normal leading-[24px] min-w-full relative shrink-0 text-[#747480] text-[16px] w-[min-content]">
         Select card below to begin

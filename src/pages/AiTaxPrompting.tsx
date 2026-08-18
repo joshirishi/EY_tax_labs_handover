@@ -920,7 +920,7 @@ function PromptStackBuilder() {
 
 /**
  * Progressive disclosure — Figma 3978:2179 (side-by-side unlock).
- * 0 See Outcome → 1 Show missing → 2 Reveal Strong (CTA moves right) → 3 Strong unlocked
+ * 0 See Outcome → 1 Generic outcome → 2 Synced click-reveal (missing ↔ strong fields) → 3 Full strong brief
  */
 type BriefBeat = 0 | 1 | 2 | 3;
 
@@ -944,27 +944,89 @@ const BRIEF_CTA_STYLE: CSSProperties = {
 /** Outcome row: 14px pad + 28px header + 6px gap + ~20px body + 14px pad */
 const BRIEF_OUTCOME_MIN_HEIGHT = 83;
 
-const MISSING_TAG_STAGGER_MS = 320;
-const MISSING_TAG_ANIM_MS = 320;
-const MISSING_TAGS_COMPLETE_MS = (4 - 1) * MISSING_TAG_STAGGER_MS + MISSING_TAG_ANIM_MS;
+function BriefRevealTile({
+  side,
+  disabled,
+  onClick,
+}: {
+  side: "weak" | "strong";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const isWeak = side === "weak";
+  const accent = isWeak ? C.destructive : C.success;
+  return (
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      aria-label={isWeak ? "Show weak brief" : "Show strong brief"}
+      style={{
+        minHeight: 403,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        padding: 32,
+        background: disabled ? C.offWhite : C.white,
+        border: `1px dashed ${disabled ? C.gray02 : `${accent}55`}`,
+        borderTop: `3px solid ${disabled ? C.gray02 : accent}`,
+        borderRadius: 12,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.7 : 1,
+      }}
+    >
+      <span
+        style={{
+          color: disabled ? C.gray01 : accent,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "1px",
+          fontFamily: F.bold,
+        }}
+      >
+        {isWeak ? "WEAK BRIEF" : "STRONG BRIEF"}
+      </span>
+      <p
+        style={{
+          margin: 0,
+          maxWidth: 280,
+          textAlign: "center",
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: C.gray01,
+          fontFamily: F.regular,
+        }}
+      >
+        {disabled
+          ? "Open the weak brief first, then click here."
+          : "Click to open this brief."}
+      </p>
+    </button>
+  );
+}
 
 function TeamBriefingSection() {
   const missingItems = ["What issue?", "Which jurisdiction?", "What output?", "By when?"];
   const [beat, setBeat] = useState<BriefBeat>(0);
-  const [tagsReady, setTagsReady] = useState(false);
+  const [revealedStep, setRevealedStep] = useState(0);
+  // 0 neither card · 1 weak · 2 weak + strong. Existing beat flow starts after both are open.
+  const [shownBriefs, setShownBriefs] = useState<0 | 1 | 2>(0);
 
   useEffect(() => {
-    if (beat !== 2) {
-      setTagsReady(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setTagsReady(true), MISSING_TAGS_COMPLETE_MS);
-    return () => window.clearTimeout(timer);
+    setRevealedStep(beat === 2 ? 1 : 0);
   }, [beat]);
+
+  const canAdvance = revealedStep < STRONG_BRIEF_FIELDS.length;
+  const advanceStep = () => setRevealedStep((s) => Math.min(s + 1, STRONG_BRIEF_FIELDS.length));
+  const tagsReady = revealedStep >= missingItems.length;
 
   const showGeneric = beat >= 1;
   const showMissing = beat >= 2;
   const showStrong = beat >= 3;
+  const showProgressiveRight = showMissing && revealedStep > 0;
   const ctaOnLeft = beat === 0 || beat === 1;
   const ctaOnRight = beat === 2 && tagsReady;
 
@@ -990,7 +1052,10 @@ function TeamBriefingSection() {
             alignItems: "stretch",
           }}
         >
-          {/* ── Weak Brief (always visible; discloses outcome + missing) ── */}
+          {/* Weak Brief — hidden until the first tile is clicked */}
+          {shownBriefs < 1 ? (
+            <BriefRevealTile side="weak" onClick={() => setShownBriefs(1)} />
+          ) : (
           <div
             style={{
               border: `1px solid ${C.destructive}33`,
@@ -1048,22 +1113,44 @@ function TeamBriefingSection() {
                     Missing:
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {missingItems.map((item, idx) => (
-                      <div
-                        key={item}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          padding: "7px 12px",
-                          background: C.destructive + "0d",
-                          borderRadius: 6,
-                          animation: `briefFieldIn 0.32s ease ${idx * 0.32}s both`,
-                        }}
-                      >
-                        <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, fontFamily: F.bold }}>{item}</span>
-                      </div>
-                    ))}
+                    {missingItems.slice(0, Math.min(revealedStep, missingItems.length)).map((item, idx) => {
+                      const isActive = canAdvance && idx === revealedStep - 1 && revealedStep <= missingItems.length;
+                      const nextItem = missingItems[revealedStep];
+                      const itemStyle: CSSProperties = {
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        padding: "7px 12px",
+                        background: C.destructive + "0d",
+                        borderRadius: 6,
+                        animation: "briefFieldIn 0.32s ease both",
+                        border: isActive ? `1px dashed ${C.destructive}55` : "1px solid transparent",
+                        width: "100%",
+                        textAlign: "left",
+                      };
+
+                      if (isActive) {
+                        return (
+                          <button
+                            key={item}
+                            type="button"
+                            onClick={advanceStep}
+                            aria-label={nextItem ? `Reveal next: ${nextItem}` : undefined}
+                            style={{ ...itemStyle, cursor: "pointer" }}
+                          >
+                            <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, fontFamily: F.bold }}>{item}</span>
+                            <ChevronRight size={14} strokeWidth={2} color={C.destructive} aria-hidden />
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <div key={item} style={itemStyle}>
+                          <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, fontFamily: F.bold }}>{item}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1120,50 +1207,125 @@ function TeamBriefingSection() {
               </div>
             </div>
           </div>
+          )}
 
-          {/* ── Strong Brief (locked → revealed) ── */}
-          {!showStrong ? (
+          {/* Strong Brief — hidden until the second tile is clicked */}
+          {shownBriefs < 2 ? (
+            <BriefRevealTile
+              side="strong"
+              disabled={shownBriefs < 1}
+              onClick={() => setShownBriefs(2)}
+            />
+          ) : !showStrong ? (
             <div
               style={{
-                background: C.offWhite,
-                border: `1px dashed ${C.gray02}`,
-                borderTop: `3px solid ${C.gray02}`,
-                borderRadius: 10,
+                background: showProgressiveRight ? C.white : C.offWhite,
+                border: showProgressiveRight ? `1px solid ${C.success}33` : `1px dashed ${C.gray02}`,
+                borderTop: showProgressiveRight ? `3px solid ${C.success}` : `3px solid ${C.gray02}`,
+                borderRadius: showProgressiveRight ? 12 : 10,
                 minHeight: 403,
                 display: "flex",
                 flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 16,
-                padding: 32,
+                alignItems: showProgressiveRight ? "stretch" : "center",
+                justifyContent: showProgressiveRight ? "flex-start" : "center",
+                gap: showProgressiveRight ? 18 : 16,
+                padding: showProgressiveRight ? 22 : 32,
+                overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 22,
-                  background: C.white,
-                  border: `1px solid ${C.gray02}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Lock size={20} strokeWidth={1.75} color={C.gray01} aria-hidden />
-              </div>
+              {showProgressiveRight ? (
+                <>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 16,
+                        background: C.success + "0d",
+                        border: `1px solid ${C.success}33`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Lock size={16} strokeWidth={1.75} color={C.success} aria-hidden />
+                    </div>
+                    <span style={{ color: C.success, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
+                      STRONG BRIEF
+                    </span>
+                  </div>
 
-              {ctaOnRight ? (
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setBeat(3); }}
-                  style={BRIEF_CTA_STYLE}
-                >
-                  Reveal Strong Brief
-                  <ArrowRight size={16} strokeWidth={2} aria-hidden />
-                </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, flex: 1 }}>
+                    {STRONG_BRIEF_FIELDS.slice(0, revealedStep).map((field, idx) => {
+                      const isActive = idx === revealedStep - 1 && canAdvance;
+                      const nextField = STRONG_BRIEF_FIELDS[revealedStep];
+                      const rowStyle: CSSProperties = {
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "7px 12px",
+                        background: C.success + "0d",
+                        borderRadius: 6,
+                        animation: "briefFieldIn 0.32s ease both",
+                        border: isActive ? `1px dashed ${C.success}55` : "1px solid transparent",
+                        width: "100%",
+                        textAlign: "left",
+                      };
+
+                      if (isActive) {
+                        return (
+                          <button
+                            key={field.label}
+                            type="button"
+                            onClick={advanceStep}
+                            aria-label={nextField ? `Reveal next: ${nextField.label} ${nextField.value}` : undefined}
+                            style={{ ...rowStyle, cursor: "pointer" }}
+                          >
+                            <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, minWidth: 82, flexShrink: 0, fontFamily: F.bold }}>{field.label}</span>
+                            <span style={{ color: C.offBlack, fontSize: 12, fontWeight: 400, flex: 1, fontFamily: F.regular }}>{field.value}</span>
+                            <ChevronRight size={14} strokeWidth={2} color={C.success} aria-hidden />
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <div key={field.label} style={rowStyle}>
+                          <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, minWidth: 82, flexShrink: 0, fontFamily: F.bold }}>{field.label}</span>
+                          <span style={{ color: C.offBlack, fontSize: 12, fontWeight: 400, flex: 1, fontFamily: F.regular }}>{field.value}</span>
+                          <Check size={14} strokeWidth={2.5} color={C.success} aria-hidden />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {ctaOnRight && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setBeat(3); }}
+                      style={{ ...BRIEF_CTA_STYLE, alignSelf: "center" }}
+                    >
+                      Reveal Strong Brief
+                      <ArrowRight size={16} strokeWidth={2} aria-hidden />
+                    </button>
+                  )}
+                </>
               ) : (
                 <>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      background: C.white,
+                      border: `1px solid ${C.gray02}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Lock size={20} strokeWidth={1.75} color={C.gray01} aria-hidden />
+                  </div>
                   <span
                     style={{
                       background: C.gray02,
@@ -1382,7 +1544,7 @@ function AiLazyProSection() {
               </div>
               <div style={{ background: C.destructive + "0a", border: `1px dashed ${C.destructive}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
                 <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ WHAT YOU GET BACK</div>
-                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A generic 300-word wall of text. Wrong tone. Wrong audience. Needs complete rewriting. <strong style={{ color: C.destructive }}>30 minutes wasted.</strong></p>
+                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A generic 300-word wall of text. Wrong tone. Wrong audience. Needs complete rewriting. <strong style={{ color: C.destructive }}>30 minutes lost.</strong></p>
               </div>
             </div>
           </div>

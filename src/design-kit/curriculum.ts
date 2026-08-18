@@ -44,7 +44,7 @@ export interface CurriculumPhase {
   modules: CurriculumModule[];
 }
 
-export const PHASE_LABEL = "Phase 1: Foundational Training Workshops";
+export const PHASE_LABEL = "Module 1: Foundational Training Workshops";
 export const PHASE_PATH = "/phase1";
 /**
  * Current top-level unit in the Tax Labs journey (user-facing label: "Module").

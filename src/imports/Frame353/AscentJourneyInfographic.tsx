@@ -1299,17 +1299,20 @@ function AscentCanvas({
   );
 
   /**
-   * Accordion: opening a marker closes the others. With all seven open the
-   * callouts crowded each other and it stopped being clear which box belonged
-   * to which step, so only one stays open at a time. Clicking the open marker
-   * again collapses it.
+   * Persist every marker the user has opened, in order. Opening a later box
+   * keeps the earlier ones (the first box stays when the second opens).
+   * Clicking an already-open marker closes only that one.
    */
   const toggleCallout = (calloutIndex: CalloutIndex) => {
-    setOpenCallouts((prev) =>
-      prev.has(calloutIndex) && prev.size === 1
-        ? new Set<CalloutIndex>()
-        : new Set<CalloutIndex>([calloutIndex]),
-    );
+    setOpenCallouts((prev) => {
+      const next = new Set(prev);
+      if (next.has(calloutIndex)) {
+        next.delete(calloutIndex);
+        return next;
+      }
+      next.add(calloutIndex);
+      return next;
+    });
   };
 
   // The glow reaches as far as the furthest marker still open, so closing the

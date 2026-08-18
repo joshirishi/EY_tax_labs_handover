@@ -55,7 +55,7 @@ function syncSubnavScrollOffset(height: number) {
 }
 
 const FOCUS_RING = `2px solid ${colors.yellow}`;
-const WORKSHOP_LABEL = getCurrentPhase().label.replace(/^Phase \d+: /, "");
+const WORKSHOP_LABEL = getCurrentPhase().label.replace(/^(Phase|Module) \d+: /, "");
 
 function applyFocusRing(e: React.FocusEvent<HTMLElement>) {
   e.currentTarget.style.outline = FOCUS_RING;
@@ -125,12 +125,12 @@ export function ModuleHeader(props: ModuleHeaderProps) {
     : false;
 
   const workshopDisplayLabel = overridePhaseLabel
-    ? overridePhaseLabel.replace(/^Phase \d+: /, "")
+    ? overridePhaseLabel.replace(/^(Phase|Module) \d+: /, "")
     : WORKSHOP_LABEL;
 
   const current = currentModuleId ? getModule(currentModuleId) : null;
   const pageTitle = isPhaseOverview
-    ? (overridePhaseLabel ? overridePhaseLabel.replace(/^Phase \d+: /, "") : "Foundational AI Training")
+    ? (overridePhaseLabel ? overridePhaseLabel.replace(/^(Phase|Module) \d+: /, "") : "Foundational AI Training")
     : current!.title;
   // Picker button shows WHERE YOU ARE: the current module on module pages, the
   // workshop name on the phase-overview page. The trailing page-title span was

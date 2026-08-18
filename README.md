@@ -25,7 +25,7 @@ pnpm typecheck  # TypeScript check
 | Path | What it is |
 |------|------------|
 | `/` | Four-phase journey home |
-| `/phase1` | Phase 1 module hub |
+| `/phase1` | Module 1 hub — Foundational Training |
 | `/foundational` | Foundational Concepts of AI |
 | `/ai-tax-prompting` | AI Tax Prompting |
 | `/copilot-hub` | M365 Copilot Hub |
