@@ -2,17 +2,19 @@
  * EY Tax Labs — The Ascent journey infographic (full artboard)
  * Figma node 3743:16946 — header copy, journey path, callouts, stages, banner.
  *
- * Fixed 1536×530 artboard, scales to container width via ResizeObserver.
+ * Fixed 1536×450 artboard, scales to container width via ResizeObserver.
  */
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { CirclePlay } from "lucide-react";
 import { colors, fonts, typeScale } from "@/design-kit";
 
 const W = 1536;
-/** Tall enough for module 1.1 title label (≈446px) to clear the bottom milestone banner. */
-const H = 530;
-const BANNER_HEIGHT = 76;
+const H = 490;
+const BANNER_HEIGHT = 44;
 const BANNER_TOP = H - BANNER_HEIGHT;
+const BANNER_FONT_SIZE = typeScale.label.size;
+
 const ASSET = {
   cleanBackground: "/ascent/clean-background.png",
   flag: "/ascent/Flag.png",
@@ -40,22 +42,21 @@ const JOURNEY_PATH_LAYOUT = {
   svgInset: { top: 0.5256, right: 0.1442, bottom: 0.5285, left: 0.1434 },
 } as const;
 
-/** Artboard centers for module 1.1 + 6 stages (button center = left/top + half size). */
+/** Artboard centers for base camp + 5 stages (button center = left/top + half size). */
 const PROGRESS_MARKER_CENTERS = [
-  { x: 179, y: 389 }, // module 1.1 (156 + 23, 366 + 23)
-  { x: 379, y: 315 }, // stage 1 — module 1.2
-  { x: 574, y: 280 }, // stage 2 — module 1.3
-  { x: 789, y: 260 }, // stage 3 — phase 2
-  { x: 1038, y: 247 }, // stage 4 — phase 3
-  { x: 1184, y: 222 }, // stage 5 — phase 4 (path terminus)
-  { x: 1241, y: 114 }, // stage 6 — summit
+  { x: 179, y: 389 }, // base camp (156 + 23, 366 + 23)
+  { x: 379, y: 315 }, // stage 1
+  { x: 574, y: 280 }, // stage 2
+  { x: 789, y: 260 }, // stage 3
+  { x: 1038, y: 247 }, // stage 4
+  { x: 1241, y: 114 }, // stage 5
 ] as const;
 
-/** 0 = none (dim baseline only), 1 = module 1.1, 2–7 = stages 1–6 / full path. */
-type ProgressLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** 0 = none (dim baseline only), 1 = base camp, 2–6 = stages 1–5 / full path. */
+type ProgressLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
-/** Max progress level — full yellow path when user selects summit (level 7). */
-const DEFAULT_PROGRESS: ProgressLevel = 7;
+/** Max progress level — full yellow path when user selects summit (level 6). */
+const DEFAULT_PROGRESS: ProgressLevel = 6;
 
 const PATH_REVEAL_MS = 650;
 
@@ -67,7 +68,7 @@ const PATH_REVEAL_MS = 650;
  * lit rather than moving it. Deselecting back to an earlier marker shortens
  * this value, and the stroke recoils along the same path.
  *
- *   level 1 (module 1.1) → stops[1]  (lit through the first span)
+ *   level 1 (base camp) → stops[1]  (lit through the first span)
  *   level 2 (stage 1)   → stops[2]
  *   …
  *   level 6 (summit)    → the whole path
@@ -130,372 +131,24 @@ function distAt(path: SVGPathElement, len: number, tx: number, ty: number) {
 }
 
 const CALLOUTS = [
-  { left: 140, top: 250, width: 149, quote: "I am confident in the foundational concepts of AI and ready to reimagine tax with AI-powered ways of working." },
-  { left: 305, top: 188, width: 175, quote: "I understand prompt elements and techniques and can effectively communicate with AI." },
-  { left: 498, top: 115, width: 165, quote: "I understand M365 Copilot Chat and Agents and can use them to work smarter and faster." },
-  { left: 685, top: 95, width: 145, quote: "I can now identify AI opportunities in tax workflows and know when to use prompts or agents." },
-  // Upper-right callouts — wider x gaps + diagonal stagger so all seven can stay open.
-  { left: 848, top: 125, width: 125, quote: "I can confidently design prompts and Agents to solve business and tax challenges." },
-  { left: 995, top: 38, width: 110, quote: "I can use AI responsibly while ensuring compliance and governance." },
-  { left: 1125, top: 10, width: 115, quote: "I am an AI-enabled tax professional. I can confidently and responsibly use AI across the tax lifecycle to deliver greater value.", rounded: 4 },
+  { left: 140, top: 250, width: 149, quote: "Everyone is talking about AI, but I don't know where to start." },
+  { left: 290, top: 195, width: 187, quote: "AI feels a lot less intimidating now. I finally understand how prompts and Microsoft 365 Copilot work." },
+  { left: 502, top: 123, width: 167, quote: "I can clearly see where AI fits across our tax processes. Some use cases need prompts. Others need Agents." },
+  { left: 722, top: 106, width: 150, quote: "I never thought I could build an Agent without coding. I'm starting to solve tax problems differently." },
+  { left: 953, top: 114, width: 170, quote: "AI has become part of how I work. I rely on it to research, analyze and get work done faster." },
+  { left: 1247, top: 8, width: 180, quote: "I am an AI-enabled tax professional. I can confidently and responsibly use AI across the tax lifecycle to deliver greater value.", rounded: 4 },
 ] as const;
 
 const STAGE_NODES = [
-  { left: 359, top: 295, icon: ASSET.iconSearch, alt: "Laying the Foundation" },
-  { left: 554, top: 260, icon: ASSET.iconCpu, alt: "Discovering Opportunities" },
-  { left: 769, top: 240, icon: ASSET.iconTrendingUp, alt: "Building Solutions" },
-  { left: 1018, top: 227, icon: ASSET.iconSearch, alt: "Embedding Confidence" },
-  { left: 1164, top: 202, icon: ASSET.iconCpu, alt: "Embedding Confidence" },
+  { left: 359, top: 295, icon: ASSET.iconBookOpen, alt: "Laying the Foundation" },
+  { left: 554, top: 260, icon: ASSET.iconSearch, alt: "Discovering Opportunities" },
+  { left: 769, top: 240, icon: ASSET.iconCpu, alt: "Building Solutions" },
+  { left: 1018, top: 227, icon: ASSET.iconTrendingUp, alt: "Embedding Confidence" },
   { left: 1221, top: 94, icon: ASSET.iconShield, alt: "Peak Performance" },
 ] as const;
 
 /** Vertical gap between marker button bottom and its title label box. */
 const TITLE_LABEL_GAP = 8;
-
-/** Keep callouts, title pills, and CTAs inside the artboard and above the banner. */
-const ARTBOARD_SAFE = { left: 16, right: 16, top: 10, bottom: 10 } as const;
-const OVERLAY_MAX_BOTTOM = BANNER_TOP - 12;
-const CALLOUT_EST_HEIGHT = 100;
-const OVERLAY_GAP = 10;
-
-type BoxRect = { left: number; top: number; width: number; height: number };
-
-function clampBoxLeft(left: number, width: number): number {
-  return Math.max(ARTBOARD_SAFE.left, Math.min(left, W - ARTBOARD_SAFE.right - width));
-}
-
-function clampBoxTop(top: number, height: number): number {
-  return Math.max(ARTBOARD_SAFE.top, Math.min(top, OVERLAY_MAX_BOTTOM - height));
-}
-
-function clampBox(rect: BoxRect): BoxRect {
-  return {
-    ...rect,
-    left: clampBoxLeft(rect.left, rect.width),
-    top: clampBoxTop(rect.top, rect.height),
-  };
-}
-
-function boxesOverlap(a: BoxRect, b: BoxRect, gap = OVERLAY_GAP): boolean {
-  return (
-    a.left < b.left + b.width + gap &&
-    a.left + a.width + gap > b.left &&
-    a.top < b.top + b.height + gap &&
-    a.top + a.height + gap > b.top
-  );
-}
-
-/** Estimate wrapped callout height from quote length — used for overlap resolution. */
-function estimateCalloutHeight(quote: string, width: number): number {
-  const innerWidth = Math.max(width - 24, 80);
-  const charsPerLine = Math.max(10, Math.floor(innerWidth / 5.2));
-  const lines = Math.ceil(quote.length / charsPerLine);
-  return 12 + 14 + 4 + lines * 15 + 12 + 16;
-}
-
-/** Nudge a callout until it clears fixed obstacles (other callouts, title pills). */
-function resolveCalloutBox(desired: BoxRect, obstacles: BoxRect[]): BoxRect {
-  let box = clampBox(desired);
-  const preferUp = desired.top < BANNER_TOP / 2;
-  const maxDown = preferUp ? desired.top + 36 : OVERLAY_MAX_BOTTOM;
-
-  for (let attempt = 0; attempt < 64; attempt++) {
-    const blocker = obstacles.find((o) => boxesOverlap(box, o));
-    if (!blocker) return box;
-
-    if (preferUp) {
-      const above = clampBox({ ...box, top: blocker.top - box.height - OVERLAY_GAP });
-      if (!obstacles.some((o) => boxesOverlap(above, o))) {
-        box = above;
-        continue;
-      }
-
-      const upLeft = clampBox({
-        ...box,
-        left: blocker.left - box.width - OVERLAY_GAP,
-      });
-      if (!obstacles.some((o) => boxesOverlap(upLeft, o))) {
-        box = upLeft;
-        continue;
-      }
-    }
-
-    const belowTop = blocker.top + blocker.height + OVERLAY_GAP;
-    if (belowTop <= maxDown) {
-      const below = clampBox({ ...box, top: belowTop });
-      if (!obstacles.some((o) => boxesOverlap(below, o))) {
-        box = below;
-        continue;
-      }
-    }
-
-    const toLeft = clampBox({
-      ...box,
-      left: blocker.left - box.width - OVERLAY_GAP,
-    });
-    if (!obstacles.some((o) => boxesOverlap(toLeft, o))) {
-      box = toLeft;
-      continue;
-    }
-
-    const toRight = clampBox({
-      ...box,
-      left: blocker.left + blocker.width + OVERLAY_GAP,
-    });
-    if (!obstacles.some((o) => boxesOverlap(toRight, o))) {
-      box = toRight;
-      continue;
-    }
-
-    if (box.top + 12 <= maxDown) {
-      box = clampBox({ ...box, top: box.top + 12 });
-    } else {
-      break;
-    }
-  }
-
-  return box;
-}
-
-/** Base-camp marker geometry, mirroring ModuleStartMarker's own position/size. */
-const BASE_MARKER_BOX: BoxRect = { left: 156, top: 366, width: 46, height: 46 };
-/** StageNode renders at `size-10`. */
-const STAGE_MARKER_SIZE = 40;
-
-/**
- * Hit-box of the marker a callout belongs to. Callouts have to treat every
- * marker as an obstacle — otherwise a box lands on top of the very circle it
- * is describing, which is both a visual collision and makes the callout's
- * owning step ambiguous.
- */
-function getMarkerBox(
-  index: CalloutIndex,
-  stageNodes: readonly AscentStageNodeEntry[],
-): BoxRect | null {
-  if (index === 0) return BASE_MARKER_BOX;
-  const node = stageNodes[index - 1];
-  if (!node) return null;
-  return {
-    left: node.left,
-    top: node.top,
-    width: STAGE_MARKER_SIZE,
-    height: STAGE_MARKER_SIZE,
-  };
-}
-
-/** Total area by which a box intrudes on the obstacles it hits. */
-function overlapArea(box: BoxRect, obstacles: BoxRect[]): number {
-  return obstacles.reduce((sum, o) => {
-    const ox = Math.min(box.left + box.width, o.left + o.width) - Math.max(box.left, o.left);
-    const oy = Math.min(box.top + box.height, o.top + o.height) - Math.max(box.top, o.top);
-    return ox > 0 && oy > 0 ? sum + ox * oy : sum;
-  }, 0);
-}
-
-/**
- * Place a callout in a ring of candidate slots around its own marker, taking
- * the first that clears every obstacle.
- *
- * The previous approach nudged a hand-tuned start position 12px at a time and
- * gave up after 64 tries, which for the taller callouts meant returning a box
- * still sitting on a marker. Searching discrete slots around the marker instead
- * both guarantees the callout reads as belonging to that marker and copes with
- * quote text of any length. Falls back to the least-overlapping candidate so a
- * genuinely impossible case degrades gracefully rather than landing on a circle.
- */
-function placeCalloutNearMarker(
-  desired: BoxRect,
-  marker: BoxRect,
-  obstacles: BoxRect[],
-): BoxRect {
-  const GAP = 22;
-  const mx = marker.left + marker.width / 2;
-  const my = marker.top + marker.height / 2;
-  const w = desired.width;
-  const h = desired.height;
-  const above = marker.top - h - GAP;
-  const below = marker.top + marker.height + GAP;
-  const leftOf = marker.left - w - GAP;
-  const rightOf = marker.left + marker.width + GAP;
-  const centreX = mx - w / 2;
-  const centreY = my - h / 2;
-
-  const candidates: BoxRect[] = [
-    { left: centreX, top: above, width: w, height: h },
-    { left: leftOf, top: above, width: w, height: h },
-    { left: rightOf, top: above, width: w, height: h },
-    { left: leftOf, top: centreY, width: w, height: h },
-    { left: rightOf, top: centreY, width: w, height: h },
-    { left: centreX, top: below, width: w, height: h },
-    { left: leftOf, top: below, width: w, height: h },
-    { left: rightOf, top: below, width: w, height: h },
-    { left: leftOf, top: ARTBOARD_SAFE.top, width: w, height: h },
-    { left: rightOf, top: ARTBOARD_SAFE.top, width: w, height: h },
-  ].map(clampBox);
-
-  for (const candidate of candidates) {
-    if (!obstacles.some((o) => boxesOverlap(candidate, o))) return candidate;
-  }
-
-  let best = candidates[0];
-  let bestArea = Number.POSITIVE_INFINITY;
-  for (const candidate of candidates) {
-    const area = overlapArea(candidate, obstacles);
-    if (area < bestArea) {
-      bestArea = area;
-      best = candidate;
-    }
-  }
-  return best;
-}
-
-/** Resolve non-overlapping boxes for every open callout (labels and markers are fixed obstacles). */
-function resolveOpenCalloutLayout(
-  callouts: readonly AscentCalloutEntry[],
-  stageTitleLabels: readonly AscentStageTitleEntry[],
-  openCallouts: ReadonlySet<CalloutIndex>,
-  stageNodes: readonly AscentStageNodeEntry[],
-): Map<CalloutIndex, BoxRect> {
-  const layout = new Map<CalloutIndex, BoxRect>();
-  const obstacles: BoxRect[] = [];
-
-  // Every marker is an obstacle, not just the open ones — a callout must never
-  // cover any circle on the path.
-  for (let i = 0 as CalloutIndex; i <= 6; i = (i + 1) as CalloutIndex) {
-    const markerBox = getMarkerBox(i, stageNodes);
-    if (markerBox) obstacles.push(markerBox);
-  }
-
-  openCallouts.forEach((index) => {
-    const label = stageTitleLabels[index];
-    const callout = callouts[index];
-    if (label && callout) {
-      obstacles.push(getTitleLabelBox(label, callout));
-    }
-  });
-
-  [...openCallouts].sort((a, b) => a - b).forEach((index) => {
-    const callout = callouts[index];
-    if (!callout) return;
-
-    const desired: BoxRect = {
-      left: callout.left,
-      top: callout.top,
-      width: callout.width,
-      height: estimateCalloutHeight(callout.quote, callout.width),
-    };
-    const marker = getMarkerBox(index, stageNodes);
-    const resolved = marker
-      ? placeCalloutNearMarker(desired, marker, obstacles)
-      : resolveCalloutBox(desired, obstacles);
-
-    layout.set(index, resolved);
-    obstacles.push(resolved);
-  });
-
-  return layout;
-}
-
-/** Rough title-pill height — wraps on long stage names (e.g. Closure & AI Reinforcement). */
-function estimateTitleLabelHeight(title: string, width: number): number {
-  const charsPerLine = Math.max(8, Math.floor(Math.max(width - 8, 60) / 5.8));
-  const lines = Math.ceil(title.length / charsPerLine);
-  return 12 + lines * 14;
-}
-
-/** Nudge the continue CTA down/right until it clears open callouts and title pills. */
-function resolveCtaBox(desired: BoxRect, obstacles: BoxRect[]): BoxRect {
-  let box = clampBox(desired);
-
-  for (let attempt = 0; attempt < 48; attempt++) {
-    const blocker = obstacles.find((o) => boxesOverlap(box, o));
-    if (!blocker) return box;
-
-    const below = clampBox({
-      ...box,
-      top: blocker.top + blocker.height + OVERLAY_GAP,
-    });
-    if (!obstacles.some((o) => boxesOverlap(below, o))) {
-      box = below;
-      continue;
-    }
-
-    const toRight = clampBox({
-      ...box,
-      left: blocker.left + blocker.width + OVERLAY_GAP,
-    });
-    if (!obstacles.some((o) => boxesOverlap(toRight, o))) {
-      box = toRight;
-      continue;
-    }
-
-    box = clampBox({ ...box, top: box.top + 12 });
-  }
-
-  return box;
-}
-
-const CTA_MARKER_GAP = 10;
-const CTA_MAX_WIDTH = 212;
-const CTA_MIN_HEIGHT = STAGE_MARKER_SIZE;
-const CTA_H_PAD = 16;
-const CTA_V_PAD = 8;
-const CTA_FONT_SIZE = 12;
-const CTA_CHAR_WIDTH = 7.35;
-const CTA_LINE_HEIGHT = 15;
-
-function estimateCtaDimensions(label: string): { width: number; height: number } {
-  const text = label.toUpperCase();
-  const width = CTA_MAX_WIDTH;
-  const innerWidth = width - CTA_H_PAD * 2 - 18;
-  const charsPerLine = Math.max(10, Math.floor(innerWidth / CTA_CHAR_WIDTH));
-  const lines = Math.max(1, Math.ceil(text.length / charsPerLine));
-  const height = Math.max(CTA_MIN_HEIGHT, CTA_V_PAD * 2 + lines * CTA_LINE_HEIGHT);
-  return { width, height };
-}
-
-/** Place continue CTA beside the next marker on one horizontal row. */
-function resolveInlineCtaBox(
-  marker: BoxRect,
-  ctaWidth: number,
-  ctaHeight: number,
-  obstacles: BoxRect[],
-): BoxRect {
-  const rowTop = marker.top + (marker.height - ctaHeight) / 2;
-  const baseLeft = marker.left + marker.width + CTA_MARKER_GAP;
-
-  for (let dx = 0; dx <= 240; dx += 12) {
-    const candidate = clampBox({
-      left: baseLeft + dx,
-      top: rowTop,
-      width: ctaWidth,
-      height: ctaHeight,
-    });
-    if (!obstacles.some((o) => boxesOverlap(candidate, o))) {
-      return candidate;
-    }
-  }
-
-  const leftOfMarker = clampBox({
-    left: marker.left - CTA_MARKER_GAP - ctaWidth,
-    top: rowTop,
-    width: ctaWidth,
-    height: ctaHeight,
-  });
-  if (!obstacles.some((o) => boxesOverlap(leftOfMarker, o))) {
-    return leftOfMarker;
-  }
-
-  return resolveCtaBox(
-    {
-      left: marker.left,
-      top: marker.top + marker.height + OVERLAY_GAP,
-      width: ctaWidth,
-      height: ctaHeight,
-    },
-    obstacles,
-  );
-}
 
 /**
  * Title labels sit below each marker and share the callout's left edge + width
@@ -506,104 +159,12 @@ const STAGE_TITLE_LABELS = [
   { title: "Laying the Foundation", markerTop: 295, markerSize: 40, calloutIndex: 1 },
   { title: "Discovering Opportunities", markerTop: 260, markerSize: 40, calloutIndex: 2 },
   { title: "Building Solutions", markerTop: 240, markerSize: 40, calloutIndex: 3 },
-  { title: "Embedding Confidence", markerTop: 227, markerSize: 40, calloutIndex: 4, labelLeft: 978, labelWidth: 120 },
-  { title: "Embedding Confidence", markerTop: 202, markerSize: 40, calloutIndex: 5, labelLeft: 1132, labelTop: 250, labelWidth: 105 },
-  { title: "Peak Performance", markerTop: 94, markerSize: 40, calloutIndex: 6, labelLeft: 1310, labelTop: 152, labelWidth: 105 },
+  { title: "Embedding Confidence", markerTop: 227, markerSize: 40, calloutIndex: 4 },
+  { title: "Peak Performance", markerTop: 94, markerSize: 40, calloutIndex: 5 },
 ] as const;
 
-/** null = hidden; 0 = module 1.1 callout … 6 = summit callout. */
-type CalloutIndex = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-
-export type AscentCalloutEntry = { left: number; top: number; width: number; quote: string; rounded?: number };
-export type AscentStageNodeEntry = { left: number; top: number; icon: string; alt: string };
-export type AscentStageTitleEntry = {
-  title: string;
-  markerTop: number;
-  markerSize: number;
-  calloutIndex: CalloutIndex;
-  /** Override pill left — keeps crowded summit labels off the path. */
-  labelLeft?: number;
-  labelTop?: number;
-  labelWidth?: number;
-};
-
-function getTitleLabelBox(label: AscentStageTitleEntry, callout: AscentCalloutEntry): BoxRect {
-  const width = label.labelWidth ?? callout.width;
-  const left = label.labelLeft ?? callout.left;
-  const top = label.labelTop ?? label.markerTop + label.markerSize + TITLE_LABEL_GAP;
-  return clampBox({
-    left,
-    top,
-    width,
-    height: estimateTitleLabelHeight(label.title, width),
-  });
-}
-
-function buildOpenOverlayObstacles(
-  callouts: readonly AscentCalloutEntry[],
-  stageTitleLabels: readonly AscentStageTitleEntry[],
-  openCallouts: ReadonlySet<CalloutIndex>,
-  calloutLayout?: Map<CalloutIndex, BoxRect>,
-): BoxRect[] {
-  const obstacles: BoxRect[] = [];
-
-  openCallouts.forEach((index) => {
-    const callout = callouts[index];
-    if (!callout) return;
-
-    const resolved = calloutLayout?.get(index);
-    obstacles.push(
-      resolved ??
-        clampBox({
-          left: callout.left,
-          top: callout.top,
-          width: callout.width,
-          height: estimateCalloutHeight(callout.quote, callout.width),
-        }),
-    );
-
-    const label = stageTitleLabels[index];
-    if (!label) return;
-
-    obstacles.push(getTitleLabelBox(label, callout));
-  });
-
-  return obstacles;
-}
-
-export type AscentOverrides = {
-  callouts?: readonly AscentCalloutEntry[];
-  stageNodes?: readonly AscentStageNodeEntry[];
-  stageTitleLabels?: readonly AscentStageTitleEntry[];
-  /** Open all callouts by default and show full path glow */
-  defaultAllOpen?: boolean;
-  /**
-   * Callout indices open on first render (0 = module 1.1 … 6 = summit).
-   * Drives path progress + banner milestones. Ignored when `defaultAllOpen`.
-   */
-  defaultOpenCallouts?: readonly CalloutIndex[];
-  /** CTA button rendered below the last stage marker */
-  lastNodeCtaLabel?: string;
-  onLastNodeCta?: () => void;
-  /**
-   * Primary continue CTA on the *next* trek step (first unopened stage).
-   * When the path is complete, sits under the summit instead.
-   * Prefer this over the old footer WhatsNext pattern.
-   */
-  nextStepCtaLabel?: string;
-  onNextStepCta?: () => void;
-  /**
-   * When set, the module 1.1 start marker also advances the learner — same job as module
-   * footer WhatsNext buttons (e.g. continue to 1.2 / 1.3).
-   * Prefer `onNextStepCta` on the next trek marker instead.
-   */
-  onBaseCampCta?: () => void;
-  /**
-   * Module-end trek progress — furthest reached callout (0 = module 1.1 … 6 = summit).
-   * When set, only the immediately next marker stays prominent; all later markers are subdued.
-   */
-  progressThrough?: CalloutIndex;
-};
+/** null = hidden; 0 = base camp callout … 5 = summit stage callout. */
+type CalloutIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** Marker at callout index i is reached when activeProgress >= i + 1. */
 function getNextCalloutIndex(activeProgress: ProgressLevel): CalloutIndex | null {
@@ -611,46 +172,11 @@ function getNextCalloutIndex(activeProgress: ProgressLevel): CalloutIndex | null
   return activeProgress as CalloutIndex;
 }
 
-type MarkerProgressState = {
-  isActive: boolean;
-  isReached: boolean;
-  isNext: boolean;
-  isSubdued: boolean;
-};
-
-/** Trek marker visuals — module progress uses fixed curriculum position; hub uses live toggle state. */
-function getMarkerProgressState(
-  calloutIndex: CalloutIndex,
-  progressThrough: CalloutIndex | undefined,
-  activeProgress: ProgressLevel,
-  nextCalloutIndex: CalloutIndex | null,
-  openCallouts: ReadonlySet<CalloutIndex>,
-): MarkerProgressState {
-  const isActive = openCallouts.has(calloutIndex);
-
-  if (progressThrough !== undefined) {
-    return {
-      isActive,
-      isReached: calloutIndex <= progressThrough,
-      isNext: calloutIndex === progressThrough + 1,
-      isSubdued: calloutIndex > progressThrough + 1,
-    };
-  }
-
-  return {
-    isActive,
-    isReached: activeProgress >= ((calloutIndex + 1) as ProgressLevel),
-    isNext: nextCalloutIndex === calloutIndex,
-    isSubdued: false,
-  };
-}
-
 type MarkerVisualInput = {
   isActive: boolean;
   isReached: boolean;
   isHovered: boolean;
   isNext: boolean;
-  isSubdued: boolean;
 };
 
 type MarkerVisualStyles = {
@@ -660,23 +186,13 @@ type MarkerVisualStyles = {
   transform: string;
 };
 
-/** Computes marker button visuals for default, hover, active, visited, next, and subdued states. */
+/** Computes marker button visuals for default, hover, active, and visited states. */
 function getMarkerVisualStyles({
   isActive,
   isReached,
   isHovered,
   isNext,
-  isSubdued,
 }: MarkerVisualInput): MarkerVisualStyles {
-  if (isSubdued) {
-    return {
-      background: colors.confidentBlack,
-      borderColor: colors.borderOnDark,
-      boxShadow: "none",
-      transform: "scale(1)",
-    };
-  }
-
   let background: string = colors.confidentBlack;
   const borderColor = colors.yellow;
   let boxShadow = "0px 0px 6px 0px rgba(255, 230, 0, 0.25)";
@@ -721,7 +237,6 @@ function JourneyMarkerButton({
   isActive,
   isReached,
   isNext,
-  isSubdued,
   onClick,
   ariaLabel,
   children,
@@ -731,38 +246,26 @@ function JourneyMarkerButton({
   isActive: boolean;
   isReached: boolean;
   isNext: boolean;
-  isSubdued: boolean;
   onClick: () => void;
   ariaLabel: string;
   children: React.ReactNode;
 }) {
   const [isHovered, setIsHovered] = useState(false);
-  const visual = getMarkerVisualStyles({
-    isActive,
-    isReached,
-    isHovered: isSubdued ? false : isHovered,
-    isNext,
-    isSubdued,
-  });
-  const showNextPulse = isNext && !isActive && !isSubdued;
+  const visual = getMarkerVisualStyles({ isActive, isReached, isHovered, isNext });
+  const showNextPulse = isNext && !isActive;
 
   return (
     <button
       type="button"
-      onClick={isSubdued ? undefined : onClick}
-      disabled={isSubdued}
+      onClick={onClick}
       aria-label={ariaLabel}
       aria-expanded={isActive}
-      aria-disabled={isSubdued || undefined}
       data-active={isActive || undefined}
       data-reached={isReached || undefined}
       data-next={showNextPulse || undefined}
-      data-subdued={isSubdued || undefined}
-      onMouseEnter={() => {
-        if (!isSubdued) setIsHovered(true);
-      }}
+      onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`absolute flex items-center justify-center border-2 border-solid transition-[background-color,border-color,box-shadow,transform,opacity] duration-[650ms] ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${isSubdued ? "cursor-default" : "cursor-pointer"} ${shapeClassName}`}
+      className={`absolute flex cursor-pointer items-center justify-center border-2 border-solid transition-[background-color,border-color,box-shadow,transform] duration-[650ms] ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${shapeClassName}`}
       style={{
         ...positionStyle,
         background: visual.background,
@@ -770,8 +273,6 @@ function JourneyMarkerButton({
         outlineColor: colors.yellow,
         boxShadow: visual.boxShadow,
         transform: visual.transform,
-        opacity: isSubdued ? 0.38 : 1,
-        zIndex: isSubdued ? 5 : 10,
       }}
     >
       {showNextPulse ? (
@@ -849,7 +350,6 @@ function StageTitleLabel({
         width,
         paddingLeft: 4,
         paddingRight: 4,
-        zIndex: 10,
         background: colors.confidentBlack,
         border: `1px solid ${colors.yellow}`,
         borderRadius: 4,
@@ -874,20 +374,16 @@ function StageTitleLabel({
   );
 }
 
-function ModuleStartMarker({
+function BaseCampStartMarker({
   isActive,
   isReached,
   isNext,
-  isSubdued,
   onClick,
-  advancesJourney,
 }: {
   isActive: boolean;
   isReached: boolean;
   isNext: boolean;
-  isSubdued: boolean;
   onClick: () => void;
-  advancesJourney?: boolean;
 }) {
   return (
     <JourneyMarkerButton
@@ -896,21 +392,10 @@ function ModuleStartMarker({
       isActive={isActive}
       isReached={isReached}
       isNext={isNext}
-      isSubdued={isSubdued}
       onClick={onClick}
-      ariaLabel={
-        advancesJourney
-          ? "Base Camp — continue to the next module"
-          : "Base Camp — start of journey"
-      }
+      ariaLabel="Base Camp — start of journey"
     >
-      <div
-        className="relative size-[18px] shrink-0 overflow-clip"
-        style={{ opacity: isSubdued ? 0.55 : 1 }}
-        aria-hidden
-      >
-        <img alt="" className="absolute inset-0 block size-full max-w-none" src={ASSET.iconBookOpen} />
-      </div>
+      <CirclePlay size={22} strokeWidth={1.75} color={colors.yellow} aria-hidden />
     </JourneyMarkerButton>
   );
 }
@@ -923,7 +408,6 @@ function StageNode({
   isActive,
   isReached,
   isNext,
-  isSubdued,
   onClick,
 }: {
   left: number;
@@ -933,7 +417,6 @@ function StageNode({
   isActive: boolean;
   isReached: boolean;
   isNext: boolean;
-  isSubdued: boolean;
   onClick: () => void;
 }) {
   return (
@@ -943,15 +426,10 @@ function StageNode({
       isActive={isActive}
       isReached={isReached}
       isNext={isNext}
-      isSubdued={isSubdued}
       onClick={onClick}
       ariaLabel={alt}
     >
-      <div
-        className="relative size-[18px] shrink-0 overflow-clip"
-        style={{ opacity: isSubdued ? 0.55 : 1 }}
-        aria-hidden
-      >
+      <div className="relative size-[18px] shrink-0 overflow-clip" aria-hidden>
         <img alt="" className="absolute inset-0 block size-full max-w-none" src={icon} />
       </div>
     </JourneyMarkerButton>
@@ -978,6 +456,13 @@ function HeaderTitleBlock() {
           <img alt="" className="block size-full max-w-none" src={ASSET.accentLine} />
         </div>
       </div>
+
+      <p
+        className="min-w-full text-[14px] leading-[20px]"
+        style={{ fontFamily: fonts.regular, color: colors.gray02 }}
+      >
+        Evolving into an AI-enabled tax professional.
+      </p>
     </div>
   );
 }
@@ -1027,8 +512,6 @@ function JourneyPath({ progressLevel }: { progressLevel: ProgressLevel }) {
         top: JOURNEY_PATH_LAYOUT.top,
         width: JOURNEY_PATH_LAYOUT.width,
         height: JOURNEY_PATH_LAYOUT.height,
-        zIndex: 1,
-        isolation: "isolate",
       }}
       data-name="journey-path-container"
       data-node-id="3811:4139"
@@ -1184,133 +667,59 @@ function JourneyPath({ progressLevel }: { progressLevel: ProgressLevel }) {
   );
 }
 
-const BANNER_MILESTONES = [
-  { phrase: "From uncertainty to impact", revealAt: 2 as ProgressLevel },
-  { phrase: "From learning to leading", revealAt: 5 as ProgressLevel },
-  {
-    phrase: "From user to AI-enabled tax professional",
-    revealAt: 7 as ProgressLevel,
-  },
-] as const;
-
-const milestonePhraseStyle: CSSProperties = {
-  fontFamily: fonts.regular,
-  fontSize: typeScale.subheading.size,
-  fontWeight: typeScale.subheading.weight,
-  letterSpacing: typeScale.subheading.tracking,
-  textTransform: "none",
-  color: colors.yellow,
-  margin: 0,
-  lineHeight: 1.45,
+const bannerTextStyle = {
+  fontFamily: fonts.bold,
+  fontSize: BANNER_FONT_SIZE,
+  fontWeight: typeScale.label.weight,
+  letterSpacing: typeScale.label.tracking,
+  textTransform: "uppercase" as const,
 };
 
-function MilestoneBox({
-  phrase,
-  isRevealed,
-  summitPulse,
-}: {
-  phrase: string;
-  isRevealed: boolean;
-  summitPulse: boolean;
-}) {
-  return (
-    <div
-      className={`relative flex min-h-[52px] flex-1 flex-col justify-center ${summitPulse ? "ascent-banner-summit-pulse" : ""}`}
-      style={{
-        minWidth: 0,
-        padding: "14px 20px",
-        background: colors.eyBgCard,
-        borderRadius: "var(--radius-sm)",
-        border: `1px solid ${isRevealed ? "rgba(255,230,0,0.45)" : "rgba(255,255,255,0.18)"}`,
-        boxShadow: isRevealed
-          ? "0 6px 20px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.06)"
-          : "0 4px 14px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.05)",
-        transition: `border-color ${PATH_REVEAL_MS}ms ease, box-shadow ${PATH_REVEAL_MS}ms ease`,
-      }}
-    >
-      <div
-        className="absolute left-0 top-0 h-[3px] w-full"
-        style={{ background: isRevealed ? colors.yellow : "rgba(255,255,255,0.22)" }}
-        aria-hidden
-      />
-      <p style={milestonePhraseStyle}>{phrase}</p>
-      <div
-        className="absolute bottom-0 left-0 h-0.5"
-        style={{
-          background: colors.yellow,
-          width: isRevealed ? "100%" : "0%",
-          transition: `width ${PATH_REVEAL_MS}ms ease`,
-        }}
-        aria-hidden
-      />
-    </div>
-  );
-}
+const BANNER_PHRASES = [
+  "From uncertainty to impact",
+  "From learning to leading",
+  "From user to AI-enabled tax professional",
+] as const;
 
-function BottomBanner({ activeProgress }: { activeProgress: ProgressLevel }) {
+const bannerBoxStyle: CSSProperties = {
+  ...bannerTextStyle,
+  color: colors.yellow,
+  background: colors.confidentBlack,
+  padding: "10px 16px",
+  borderRadius: "var(--radius-sm)",
+};
+
+function BottomBanner() {
   return (
     <div
-      className="absolute left-0 flex w-full items-center px-6"
+      className="absolute left-0 flex w-full items-center justify-center"
       style={{
         top: BANNER_TOP,
         height: BANNER_HEIGHT,
       }}
-      data-name="bottom-banner"
     >
-      <div className="flex w-full items-stretch gap-5">
-        {BANNER_MILESTONES.map((milestone, index) => (
-          <MilestoneBox
-            key={milestone.phrase}
-            phrase={milestone.phrase}
-            isRevealed={activeProgress >= milestone.revealAt}
-            summitPulse={index === 2 && activeProgress >= DEFAULT_PROGRESS}
-          />
+      <div className="flex items-center gap-3">
+        {BANNER_PHRASES.map((phrase) => (
+          <p key={phrase} className="m-0 shrink-0 whitespace-nowrap" style={bannerBoxStyle}>
+            {phrase}
+          </p>
         ))}
       </div>
     </div>
   );
 }
 
-function AscentCanvas({
-  callouts: calloutsOverride,
-  stageNodes: stageNodesOverride,
-  stageTitleLabels: stageTitleLabelsOverride,
-  defaultAllOpen,
-  defaultOpenCallouts,
-  lastNodeCtaLabel,
-  onLastNodeCta,
-  nextStepCtaLabel,
-  onNextStepCta,
-  onBaseCampCta,
-  progressThrough,
-}: AscentOverrides = {}) {
-  const callouts = calloutsOverride ?? CALLOUTS;
-  const stageNodes = stageNodesOverride ?? STAGE_NODES;
-  const stageTitleLabels = stageTitleLabelsOverride ?? STAGE_TITLE_LABELS;
+function AscentCanvas() {
   /** Every marker the user has opened. Callouts persist until clicked again. */
   const [openCallouts, setOpenCallouts] = useState<ReadonlySet<CalloutIndex>>(
-    () => {
-      if (defaultAllOpen) return new Set<CalloutIndex>([0, 1, 2, 3, 4, 5, 6]);
-      if (defaultOpenCallouts && defaultOpenCallouts.length > 0) {
-        return new Set<CalloutIndex>(defaultOpenCallouts);
-      }
-      return new Set<CalloutIndex>([0]);
-    },
+    () => new Set<CalloutIndex>([0]),
   );
 
-  /**
-   * Persist every marker the user has opened, in order. Opening a later box
-   * keeps the earlier ones (the first box stays when the second opens).
-   * Clicking an already-open marker closes only that one.
-   */
   const toggleCallout = (calloutIndex: CalloutIndex) => {
     setOpenCallouts((prev) => {
       const next = new Set(prev);
-      if (next.has(calloutIndex)) {
-        next.delete(calloutIndex);
-        return next;
-      }
-      next.add(calloutIndex);
+      if (next.has(calloutIndex)) next.delete(calloutIndex);
+      else next.add(calloutIndex);
       return next;
     });
   };
@@ -1323,61 +732,10 @@ function AscentCanvas({
       : ((Math.max(...openCallouts) + 1) as ProgressLevel);
 
   const nextCalloutIndex = getNextCalloutIndex(activeProgress);
-  const moduleNextCalloutIndex =
-    progressThrough !== undefined && progressThrough < 6
-      ? ((progressThrough + 1) as CalloutIndex)
-      : null;
-  const ctaTargetCalloutIndex =
-    progressThrough !== undefined ? moduleNextCalloutIndex : nextCalloutIndex;
-
-  const openCalloutLayout = useMemo(
-    () => resolveOpenCalloutLayout(callouts, stageTitleLabels, openCallouts, stageNodes),
-    [callouts, stageTitleLabels, openCallouts, stageNodes],
-  );
-
-  /**
-   * Leader lines: an elbow from each open callout to its own marker, so the
-   * pairing is explicit rather than inferred from proximity.
-   */
-  const leaderLines = useMemo(() => {
-    const lines: {
-      index: CalloutIndex;
-      path: string;
-      endX: number;
-      endY: number;
-    }[] = [];
-    openCalloutLayout.forEach((box, index) => {
-      const marker = getMarkerBox(index, stageNodes);
-      if (!marker) return;
-      const mx = marker.left + marker.width / 2;
-      const my = marker.top + marker.height / 2;
-      const boxCx = box.left + box.width / 2;
-      // Leave from whichever edge faces the marker, so the line never crosses
-      // back over the callout it came from.
-      const startX = mx < box.left ? box.left : mx > box.left + box.width ? box.left + box.width : boxCx;
-      const startY = my < box.top ? box.top : my > box.top + box.height ? box.top + box.height : box.top + box.height;
-      const midY = startY + (my - startY) / 2;
-      lines.push({
-        index,
-        path: `M ${startX} ${startY} L ${startX} ${midY} L ${mx} ${midY} L ${mx} ${my}`,
-        endX: mx,
-        endY: my,
-      });
-    });
-    return lines;
-  }, [openCalloutLayout, stageNodes]);
-
-  const baseCampState = getMarkerProgressState(
-    0,
-    progressThrough,
-    activeProgress,
-    nextCalloutIndex,
-    openCallouts,
-  );
 
   return (
     <div
-      className="relative size-full"
+      className="relative size-full overflow-clip"
       style={{ background: colors.confidentBlack }}
       data-name="the-ascent-journey-infographic"
       data-node-id="3743:16946"
@@ -1402,26 +760,9 @@ function AscentCanvas({
           pointer-events: none;
           animation: ascent-marker-next-glow 2s ease-in-out infinite;
         }
-        @keyframes ascent-banner-summit-pulse {
-          0% {
-            border-color: ${colors.yellowAlpha12};
-            box-shadow: 0 0 0 0 rgba(255, 230, 0, 0);
-          }
-          50% {
-            border-color: ${colors.yellow};
-            box-shadow: 0 0 10px 2px rgba(255, 230, 0, 0.4);
-          }
-          100% {
-            border-color: ${colors.yellowAlpha12};
-            box-shadow: 0 0 0 0 rgba(255, 230, 0, 0);
-          }
-        }
-        .ascent-banner-summit-pulse {
-          animation: ascent-banner-summit-pulse 250ms ease-out;
-        }
       `}</style>
       {/* Mountain photograph — hiker + sunset baked into clean-background.png */}
-      <div className="absolute left-0 top-0 w-full overflow-clip" style={{ height: BANNER_TOP }}>
+      <div className="absolute left-0 top-0 w-full" style={{ height: BANNER_TOP }}>
         <img
           alt=""
           className="pointer-events-none absolute inset-0 size-full max-w-none object-cover object-center"
@@ -1432,30 +773,18 @@ function AscentCanvas({
       <HeaderTitleBlock />
       <JourneyPath progressLevel={activeProgress} />
 
-      {/* Summit flag — anchored to Phase 4 node center */}
+      {/* Summit flag — anchored to Stage 5 (Peak Performance) node center */}
       <div className="absolute left-[1221px]" style={{ top: 40 }}>
         <img alt="" className="block h-16 w-auto" src={ASSET.flag} />
       </div>
 
       {/* Thought-bubble callouts — every opened marker stays visible */}
-      {callouts.map((callout, index) => {
-        if (!openCallouts.has(index as CalloutIndex)) return null;
-
-        const resolved = openCalloutLayout.get(index as CalloutIndex);
-        const left = resolved?.left ?? clampBoxLeft(callout.left, callout.width);
-        const top =
-          resolved?.top ??
-          clampBoxTop(callout.top, estimateCalloutHeight(callout.quote, callout.width));
-
-        return (
+      {CALLOUTS.map((callout, index) =>
+        openCallouts.has(index as CalloutIndex) ? (
           <div
             key={callout.quote}
             className="absolute"
-            style={{
-              left,
-              top,
-              zIndex: 10 + index,
-            }}
+            style={{ left: callout.left, top: callout.top }}
           >
             <CalloutBox
               quote={callout.quote}
@@ -1463,177 +792,58 @@ function AscentCanvas({
               rounded={"rounded" in callout ? callout.rounded : 12}
             />
           </div>
-        );
-      })}
+        ) : null,
+      )}
 
       {/* Stage title labels — shown below markers only while that callout is open */}
-      {stageTitleLabels.map((label) => {
-        const { title, calloutIndex } = label;
+      {STAGE_TITLE_LABELS.map(({ title, markerTop, markerSize, calloutIndex }) => {
         if (!openCallouts.has(calloutIndex)) return null;
 
-        const callout = callouts[calloutIndex];
+        const callout = CALLOUTS[calloutIndex];
         const progressThreshold = (calloutIndex + 1) as ProgressLevel;
-        const labelBox = getTitleLabelBox(label, callout);
 
         return (
           <StageTitleLabel
-            key={`stage-title-${calloutIndex}`}
+            key={title}
             title={title}
-            left={labelBox.left}
-            top={labelBox.top}
-            width={labelBox.width}
+            left={callout.left}
+            top={markerTop + markerSize + TITLE_LABEL_GAP}
+            width={callout.width}
             isActive={openCallouts.has(calloutIndex)}
             isReached={activeProgress >= progressThreshold}
           />
         );
       })}
 
-      {/* Leader lines — drawn beneath the markers so the circles stay crisp */}
-      {leaderLines.length > 0 && (
-        <svg
-          className="pointer-events-none absolute left-0 top-0"
-          width={W}
-          height={H}
-          viewBox={`0 0 ${W} ${H}`}
-          aria-hidden
-        >
-          {leaderLines.map((line) => (
-            <g key={`leader-${line.index}`}>
-              <path
-                d={line.path}
-                fill="none"
-                stroke="rgba(255,230,0,0.55)"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeDasharray="4 4"
-              />
-              <circle cx={line.endX} cy={line.endY} r={2.5} fill="rgba(255,230,0,0.85)" />
-            </g>
-          ))}
-        </svg>
-      )}
-
-      <ModuleStartMarker
-        isActive={baseCampState.isActive}
-        isReached={baseCampState.isReached}
-        isNext={baseCampState.isNext}
-        isSubdued={baseCampState.isSubdued}
-        advancesJourney={Boolean(onBaseCampCta)}
-        onClick={() => {
-          toggleCallout(0);
-          onBaseCampCta?.();
-        }}
+      <BaseCampStartMarker
+        isActive={openCallouts.has(0)}
+        isReached={activeProgress >= 1}
+        isNext={nextCalloutIndex === 0}
+        onClick={() => toggleCallout(0)}
       />
 
       {/* Stage icon nodes */}
-      {stageNodes.map((node, index) => {
+      {STAGE_NODES.map((node, index) => {
         const calloutIndex = (index + 1) as CalloutIndex;
-        const markerState = getMarkerProgressState(
-          calloutIndex,
-          progressThrough,
-          activeProgress,
-          nextCalloutIndex,
-          openCallouts,
-        );
 
         return (
           <StageNode
-            key={`stage-node-${calloutIndex}`}
+            key={node.alt}
             {...node}
-            isActive={markerState.isActive}
-            isReached={markerState.isReached}
-            isNext={markerState.isNext}
-            isSubdued={markerState.isSubdued}
+            isActive={openCallouts.has(calloutIndex)}
+            isReached={activeProgress >= index + 2}
+            isNext={nextCalloutIndex === calloutIndex}
             onClick={() => toggleCallout(calloutIndex)}
           />
         );
       })}
 
-      {/* Continue CTA inline with the next trek marker */}
-      {(() => {
-        const ctaLabel = nextStepCtaLabel ?? lastNodeCtaLabel;
-        const ctaHandler = onNextStepCta ?? onLastNodeCta;
-        if (!ctaLabel || !ctaHandler) return null;
-
-        const targetIndex: CalloutIndex =
-          ctaTargetCalloutIndex !== null ? ctaTargetCalloutIndex : 6;
-        const markerBox = getMarkerBox(targetIndex, stageNodes);
-        if (!markerBox) return null;
-
-        const { width: ctaWidth, height: ctaHeight } = estimateCtaDimensions(ctaLabel);
-        const obstacles = buildOpenOverlayObstacles(
-          callouts,
-          stageTitleLabels,
-          openCallouts,
-          openCalloutLayout,
-        );
-        const ctaBox = resolveInlineCtaBox(markerBox, ctaWidth, ctaHeight, obstacles);
-
-        return (
-          <>
-            <style>{`
-              @keyframes ascent-cta-pulse {
-                0%, 100% { box-shadow: 0 0 18px 4px rgba(255,230,0,0.55), 0 2px 12px rgba(0,0,0,0.35); }
-                50%       { box-shadow: 0 0 36px 10px rgba(255,230,0,0.85), 0 2px 12px rgba(0,0,0,0.35); }
-              }
-            `}</style>
-            <button
-              type="button"
-              onClick={ctaHandler}
-              aria-label={ctaLabel}
-              style={{
-                position: "absolute",
-                left: ctaBox.left,
-                top: ctaBox.top,
-                width: ctaBox.width,
-                height: ctaBox.height,
-                zIndex: 20,
-                boxSizing: "border-box",
-                fontFamily: fonts.bold,
-                fontSize: CTA_FONT_SIZE,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                background: colors.yellow,
-                color: colors.confidentBlack,
-                border: `2px solid ${colors.yellow}`,
-                borderRadius: 32,
-                padding: `${CTA_V_PAD}px ${CTA_H_PAD}px`,
-                cursor: "pointer",
-                animation: "ascent-cta-pulse 2s ease-in-out infinite",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                lineHeight: `${CTA_LINE_HEIGHT}px`,
-                textAlign: "center",
-                whiteSpace: "normal",
-                wordBreak: "break-word",
-              }}
-            >
-              <span style={{ minWidth: 0, flex: "1 1 auto" }}>{ctaLabel}</span>
-              <span
-                style={{
-                  fontFamily: fonts.regular,
-                  fontSize: 16,
-                  lineHeight: 1,
-                  flexShrink: 0,
-                }}
-                aria-hidden
-              >
-                →
-              </span>
-            </button>
-          </>
-        );
-      })()}
-
-      <BottomBanner activeProgress={activeProgress} />
+      <BottomBanner />
     </div>
   );
 }
 
-export default function AscentJourneyInfographic(overrides: AscentOverrides = {}) {
+export default function AscentJourneyInfographic() {
   const shellRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -1663,7 +873,7 @@ export default function AscentJourneyInfographic(overrides: AscentOverrides = {}
           transformOrigin: "top center",
         }}
       >
-        <AscentCanvas {...overrides} />
+        <AscentCanvas />
       </div>
     </div>
   );

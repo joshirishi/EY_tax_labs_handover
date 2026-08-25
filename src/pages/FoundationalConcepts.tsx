@@ -8,13 +8,12 @@
  * high-specificity universal reset).
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import foundationalHtml from "../imports/Foundational_Concepts.html?raw";
-import { HitlUnderstandModal } from "../components/HitlUnderstandModal";
-import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, SUBNAV_SCROLL_OFFSET, useModuleSectionHashScroll } from "../design-kit/LearningNav";
 import { SiteHeader } from "../design-kit/SiteHeader";
-import { colors, contentRailStyle, fonts, layout, spacing, typeScale } from "../design-kit/tokens";
+import { EYWhatsNext } from "../design-kit/EYWhatsNext";
+import { colors, fonts, layout, spacing, typeScale } from "../design-kit/tokens";
 
 /**
  * Token bridge — maps the lesson HTML's CSS custom properties onto the
@@ -105,6 +104,9 @@ const TOKEN_BRIDGE = `
 #module-content .rise-card {
   border-color: var(--ey-card-deep);
   border-top-width: 4px;
+}
+#module-content .rise-card-top--img::after {
+  background: linear-gradient(0deg, var(--ey-card-deep) 0%, transparent 100%);
 }
 #module-content .rise-card-meta .source {
   color: ${colors.yellow};
@@ -517,14 +519,7 @@ export default function FoundationalConcepts({
     [foundationalHtml]
   );
   const contentRef = useRef<HTMLDivElement>(null);
-  const [hitlSlide, setHitlSlide] = useState<number | null>(null);
   useModuleSectionHashScroll();
-
-  useEffect(() => {
-    const onOpen = () => setHitlSlide(0);
-    window.addEventListener("ey-open-hitl-modal", onOpen);
-    return () => window.removeEventListener("ey-open-hitl-modal", onOpen);
-  }, []);
 
   // Inline onclick="" handlers work via innerHTML; <script> blocks do not —
   // re-run them after the markup is in the DOM. Wrapped in IIFEs so HMR /
@@ -549,7 +544,7 @@ export default function FoundationalConcepts({
   }, [scripts]);
 
   return (
-    <div style={{ width: "100%", background: colors.white }}>
+    <div style={{ position: "fixed", inset: 0, overflowY: "auto", background: colors.white }}>
       <SiteHeader variant="learning" onNavigate={onNavigate} skipLinkTarget="#module-content" />
       <ModuleHeader currentModuleId="foundational" onNavigate={onNavigate} onBack={onBack} />
 
@@ -558,18 +553,13 @@ export default function FoundationalConcepts({
         <div dangerouslySetInnerHTML={{ __html: body }} />
       </div>
 
-      {/* Journey progress — continue via next trek-step CTA */}
-      <AscentModuleProgressSection
-        moduleKey="m1_1"
-        onNextStepCta={() => onNavigate("/ai-tax-prompting")}
+      {/* Shared dark CTA — Figma 3455:18320 palette */}
+      <EYWhatsNext
+        title="Fundamentals are clear."
+        ctaLabel="Continue to Part 2: Basics of Prompting in Tax"
+        onContinue={() => onNavigate("/ai-tax-prompting")}
+        meta="Part 2 covers: prompt structure, role-setting, context framing, output formatting, and real tax prompt templates"
       />
-      {hitlSlide != null && (
-        <HitlUnderstandModal
-          slideIndex={hitlSlide}
-          onClose={() => setHitlSlide(null)}
-          onChangeSlide={setHitlSlide}
-        />
-      )}
     </div>
   );
 }

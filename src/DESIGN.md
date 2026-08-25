@@ -376,8 +376,8 @@ Not visual components, but drive all nav labels and section IDs:
 
 | Route | Component | Chrome |
 |-------|-----------|--------|
-| `/` | `Frame353/PhasedEngagementView` | Hub header — app landing |
-| `/phased` | Redirect → `/` | Kept for old bookmarks |
+| `/` | `imports/Home2` | `SiteHeader` hub |
+| `/phased` | `Frame353/PhasedEngagementView` | Hub header (Figma export) |
 | `/phase1` | `Frame353/Phase1View` | Learning header + `ModuleHeader` phase-overview |
 | `/foundational` | `pages/FoundationalConcepts` | Learning + module header |
 | `/ai-tax-prompting` | `pages/AiTaxPrompting` | Learning + module header |
@@ -393,17 +393,22 @@ Standard module page shell:
 <ModulePrevNext … />  {/* optional */}
 ```
 
-### 7.2 Hub landing (`PhasedEngagementView` on `/`)
+### 7.2 Hub home (`Home2`)
 
-Former marketing home (`Home2`) is unrouted. App entry is the phased journey overview.
+| Pattern | Description |
+|---------|-------------|
+| **Hero** | Full-bleed image, dark gradient scrim, yellow display title, white subcopy, yellow CTA pill |
+| **Pillar cards** | Three-column grid: yellow title bar, image + line icon overlay, gray body |
+| **Tax Labs entry** | Card linking to `/phased` |
+
+### 7.3 Phased engagement (`Frame353`)
 
 | Pattern | Description |
 |---------|-------------|
 | **Hub header** | Yellow strip + off-black brand + site section nav |
 | **Timeline cards** | `TimelineCard` — phase milestones |
 | **Core Processing Pipeline** | `CoreProcessingPipeline.tsx` — 1200×820 infographic, Copilot center ring, left processing cards, right M365 app orbit |
-| **Phase cards** | Entry into Phase 1–4 learning journeys |
-| **Phase 1 overview** | Course module cards with unlock states; navigates to module routes (`/phase1`) |
+| **Phase 1 overview** | Course module cards with unlock states; navigates to module routes |
 
 **Pipeline diagram:** Shared orbit geometry (`CX`, `CY`, `R`); yellow cards for Chat/RAG/Human/Model; MS app icons on right semicircle. Scales to container at `DISPLAY_SCALE`.
 
