@@ -57,7 +57,7 @@ function Frame6() {
 function Frame8() {
   return (
     <div className="[word-break:break-word] content-stretch flex flex-col gap-[12px] items-start not-italic relative shrink-0 w-full" data-name="Frame">
-      <p className="font-['EYInterstate:Bold',sans-serif] font-bold leading-[normal] relative shrink-0 text-[#2e2e38] text-[24px] whitespace-nowrap">Foundational Training Workshops</p>
+      <p className="font-['EYInterstate:Bold',sans-serif] font-bold leading-[normal] relative shrink-0 text-[#2e2e38] text-[24px] whitespace-nowrap">Foundational Workshop</p>
       <p className="font-['EYInterstate:Regular',sans-serif] font-normal leading-[22px] min-w-full relative shrink-0 text-[#747480] text-[14px] w-[min-content]">Covers AI concepts in Tax, Prompt engineering basics, and M365 Copilot across tax use cases.</p>
     </div>
   );

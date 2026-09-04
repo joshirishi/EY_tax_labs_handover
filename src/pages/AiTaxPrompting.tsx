@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle, ChevronRight, Copy, Cpu, EyeOff, FileText, ListChecks, ListTree, Palette, Play, RotateCcw, Scale, Shield, Table2, Target, User, X, XCircle, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle, ChevronRight, Copy, EyeOff, FileText, ListChecks, ListTree, Lock, Palette, Play, RotateCcw, Scale, Shield, Table2, Target, User, X, XCircle, Zap } from "lucide-react";
 import { colors as C, contentInlinePad, contentRailStyle, fonts as F, spacing, spectrumCss, typeScale } from "../design-kit/tokens";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
 import { SiteHeader } from "../design-kit/SiteHeader";
-import { EYWhatsNext } from "../design-kit/EYWhatsNext";
 import { SectionAnchorTitle } from "../design-kit/EYTypography";
+import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
 import heroImg from "../assets/images/AdobeStock-621943361.jpeg";
+import { PROMPTING_TECHNIQUES, TECHNIQUE_FACETS, type TechniqueFacetKey } from "../data/prompt-techniques";
+import { ELEMENTS } from "../data/prompt-elements";
+import { EightElementsPane } from "../components/EightElementsPane";
 
 /** Section surface rhythm: dark → neutral → light (repeats down the page). */
 type SurfaceTone = "dark" | "neutral" | "light";
@@ -35,51 +38,6 @@ const SURFACE: Record<SurfaceTone, { bg: string; heading: string; body: string; 
 };
 
 // ── Data ────────────────────────────────────────────────────────────────────
-
-const ELEMENTS = [
-  { id: 1, name: "Persona", color: C.frameMagenta, border: C.frameMagenta, q: "WHO should AI be?",
-    what: "Defines who the AI should act like — setting its expertise, seniority, and perspective. A tax partner writes differently from a junior analyst.",
-    why: "Aligns output to the expertise level you need. Without it, AI defaults to a generic voice that doesn't match your audience.",
-    without: '"Explain impact of New Tax Act on MNCs."',
-    with: '"You are a senior tax partner in India. Explain impact of withholding tax changes in the New Income Tax Act, 2025 on MNCs."',
-  },
-  { id: 2, name: "Context", color: C.frameTeal, border: C.frameTeal, q: "WHAT's the background?",
-    what: "Background information for the task — the who, what, where, and when surrounding your query.",
-    why: "Without context, AI gives generic answers that miss your specific situation entirely.",
-    without: '"Explain recent changes to transfer pricing regulations."',
-    with: '"Our client in India provides IT support to its parent in Singapore. Explain recent TP Regulation changes in 2025."',
-  },
-  { id: 3, name: "Instruction", color: C.yellow, border: C.yellow, q: "WHAT should AI do?",
-    what: "A clear task or command — the specific action you want AI to perform. No ambiguity.",
-    why: 'Define what "significant" or "recent" means — don\'t leave it to AI to guess.',
-    without: '"Summarise significant recent tax exposures of the Indian target company"',
-    with: '"Summarise tax exposures above INR 25 crore, under dispute in the last 3 assessment years."',
-  },
-  { id: 4, name: "Constraints & Boundaries", color: C.frameBlue, border: C.frameBlue, q: "WHAT are the limits?",
-    what: "Setting limits on scope, detail, or length — guardrails that keep AI focused.",
-    why: "Without limits, AI may produce 2000 words when you needed 200.",
-    without: '"Summarise GST refund changes."',
-    with: '"In under 200 words, summarise July 2025 GST refund changes for exporters."',
-  },
-  { id: 5, name: "Grounding / Source Anchoring", color: C.framePurple, border: C.framePurple, q: "WHERE should AI look?",
-    what: "Instructing AI to use specific statutes, circulars, or case law as its reference base.",
-    why: "Prevents hallucination and ensures legal accuracy. Ungrounded output is dangerous output.",
-    without: '"Explain safe harbour rules."',
-    with: '"According to the Income-tax Act, 1961 and latest CBDT circulars, explain safe harbour applicability to cross-border service fees."',
-  },
-  { id: 6, name: "Tone / Style", color: C.yellow, border: C.yellow, q: "HOW should it sound?",
-    what: "Directing AI to adopt a formal, client-ready, or simplified style matching your audience.",
-    why: "A CFO needs different language than an internal audit team or ITAT bench.",
-    without: '"Draft an email to the client regarding new GST slab rates"',
-    with: '"Explain new GST slab changes in formal and concise manner, suitable for Tax Head of a Logistics company"',
-  },
-  { id: 7, name: "Output Format", color: C.frameGreen, border: C.frameGreen, q: "WHAT shape should the answer take?",
-    what: "Specifies desired format — table, bullets, email, memo, comparison chart, etc.",
-    why: "Output is immediately usable without reformatting — saves editing time.",
-    without: '"Compare old vs new tax rates."',
-    with: '"Provide a table comparing old vs new tax rates, followed by 3 bullet-point risks and recommendations."',
-  },
-];
 
 /** Golden Rules — 7 Do's / 7 Don'ts, sourced from the prompting exercise brief. */
 const DOS = [
@@ -269,96 +227,6 @@ const FACETS: { key: FacetKey; label: string; color: string }[] = [
   { key: "with", label: "With", color: C.success },
 ];
 
-/** Prompting Techniques — 8-row catalog for the #advanced section (Block 1). */
-const TECHNIQUE_COLORS = [
-  C.frameMagenta, C.frameTeal, C.yellow, C.frameBlue,
-  C.framePurple, C.frameGreen, C.frameOrange, C.frameLime,
-];
-
-type PromptingTechnique = {
-  id: number;
-  color: string;
-  technique: string;
-  what: string;
-  does: string;
-  without: string;
-  with: string;
-};
-
-const PROMPTING_TECHNIQUES: PromptingTechnique[] = [
-  {
-    id: 1,
-    color: TECHNIQUE_COLORS[0],
-    technique: "Audience Prompting",
-    what: "Telling AI who the output is intended for.",
-    does: "Adjusts language, depth and terminology for the reader.",
-    without: '"Explain POEM provisions."',
-    with: '"Explain POEM provisions for a CEO with no tax background using simple business language and examples."',
-  },
-  {
-    id: 2,
-    color: TECHNIQUE_COLORS[1],
-    technique: "Zero-Shot / Few-Shot Prompting",
-    what: "Providing no examples (Zero-Shot) or sample examples (Few-Shot).",
-    does: "Guides the format and quality of the response.",
-    without: '"Summarize this tax judgment."',
-    with: '"Example Format: Issue → Taxpayer Argument → Revenue Argument → Decision → Key Takeaway. Now summarize this judgment using the same format."',
-  },
-  {
-    id: 3,
-    color: TECHNIQUE_COLORS[2],
-    technique: "Iterative Prompting",
-    what: "Improving the output through a series of follow-up prompts.",
-    does: "Refines the response step by step until it meets your needs.",
-    without: '"Draft a note on GST implications."',
-    with: '"Draft a note on GST implications." → "Make it user-friendly." → "Reduce it to one page." → "Add a summary table."',
-  },
-  {
-    id: 4,
-    color: TECHNIQUE_COLORS[3],
-    technique: "Flipped Prompting",
-    what: "Asking AI to ask questions before answering.",
-    does: "Helps gather missing context and improve accuracy.",
-    without: '"Prepare a tax advisory note on this transaction."',
-    with: '"Before preparing the advisory note, ask me all relevant questions regarding the transaction, jurisdictions, parties, objectives and timeline."',
-  },
-  {
-    id: 5,
-    color: TECHNIQUE_COLORS[4],
-    technique: "Chain-of-Thought Prompting",
-    what: "Asking AI to reason through a problem step by step.",
-    does: "Improves structured thinking and analysis.",
-    without: '"Does this arrangement create a Permanent Establishment risk?"',
-    with: '"Assess this arrangement step-by-step: identify key facts, evaluate PE indicators, analyze supporting and opposing arguments, then conclude."',
-  },
-  {
-    id: 6,
-    color: TECHNIQUE_COLORS[5],
-    technique: "Creative Expansion Prompting",
-    what: "Asking AI to challenge assumptions and identify gaps.",
-    does: "Generates additional perspectives and uncovers blind spots.",
-    without: '"Review this restructuring proposal."',
-    with: '"Review this restructuring proposal and identify 10 risks, unanswered questions or issues the team may have overlooked."',
-  },
-  {
-    id: 7,
-    color: TECHNIQUE_COLORS[6],
-    technique: "Refinement Prompting",
-    what: "Asking AI to improve your question before attempting the task.",
-    does: "Helps identify gaps and creates a stronger, more effective prompt.",
-    without: '"Summarize the GST implications of this transaction."',
-    with: '"Review my prompt and suggest a better version before answering. Highlight any missing context, assumptions or instructions that would improve the quality of the response."',
-  },
-  {
-    id: 8,
-    color: TECHNIQUE_COLORS[7],
-    technique: "Meta Prompting",
-    what: "Asking AI to create or improve the prompt itself.",
-    does: "Combines multiple prompting techniques and helps build stronger prompts.",
-    without: '"Summarize this judgment."',
-    with: '"Create the most effective prompt for summarizing a Supreme Court tax judgment for a Tax Partner. Incorporate persona, audience, format and key takeaway requirements."',
-  },
-];
 
 type AdvancedView = "wizard" | "table";
 
@@ -388,9 +256,12 @@ const ADVANCED_BUCKETS: AdvancedBucket[] = [
   },
 ];
 
+const ADVANCED_USE_CASE =
+  "Analyzing withholding tax on software royalty payments to a US parent company";
+
 /** Chain of Thought — 4 filter-chip groups shown inside the CoT detail pane. */
 type COTGroupId = "initiation" | "structuring" | "adaptation" | "uncertainty";
-type COTTechnique = { name: string; purpose: string; explain: string };
+type COTTechnique = { name: string; purpose: string; explain: string; samplePrompt?: string };
 type COTGroup = {
   id: COTGroupId;
   label: string;
@@ -405,8 +276,18 @@ const COT_GROUPS: COTGroup[] = [
     label: "Initiation of Thoughts",
     framing: "How should I begin thinking about this problem?",
     techniques: [
-      { name: "Step-Back Prompting", purpose: "Look at the bigger picture first", explain: "Before solving the problem, ask AI to step back and identify broader considerations." },
-      { name: "Analogical Prompting", purpose: "Learn from similar situations", explain: "Use past cases, familiar situations or known examples to guide reasoning." },
+      {
+        name: "Step-Back Prompting",
+        purpose: "Look at the bigger picture first",
+        explain: "Before solving the problem, ask AI to step back and identify broader considerations.",
+        samplePrompt: "Before analysing withholding tax on software royalty payments to a US parent, step back: which treaty articles, characterisation questions, and source rules should we settle first?",
+      },
+      {
+        name: "Analogical Prompting",
+        purpose: "Learn from similar situations",
+        explain: "Use past cases, familiar situations or known examples to guide reasoning.",
+        samplePrompt: "Think of a similar case where software payments to a related overseas company were treated as royalties versus business profits. Use that analogy to reason about withholding tax here.",
+      },
     ],
   },
   {
@@ -503,12 +384,12 @@ const RECAP_CARDS: { icon: LucideIcon; name: string; color: string; bg: string; 
 ];
 
 const STRONG_BRIEF_FIELDS = [
-  { label: "User", value: "ABC Corp" },
-  { label: "Issue", value: "Royalty payments" },
-  { label: "Jurisdiction", value: "India" },
-  { label: "Output", value: "1-page memo" },
+  { label: "Payee", value: "ABC Inc" },
+  { label: "Subject", value: "Royalty payments" },
+  { label: "Issue", value: "Withholding tax" },
+  { label: "Jurisdiction", value: "USA" },
+  { label: "PAN", value: "Not Available" },
   { label: "Deadline", value: "Thursday" },
-  { label: "Audience", value: "User-ready" },
 ];
 
 /** Exercise 1 — Choose the Best Answer: 5 MCQs, sourced from the prompting exercise brief. */
@@ -646,7 +527,7 @@ function getPromptStrengthState(layers: number, total = 7): PromptStrengthState 
   if (layers <= 6) {
     return { pct, label: "Strong prompt!", color: C.offBlack, Icon: Zap };
   }
-  return { pct, label: "Client-ready!", color: C.success, Icon: Target };
+  return { pct, label: "Expertly crafted!", color: C.success, Icon: Target };
 }
 
 function PromptStrengthIndicator({ layers, total = PROMPT_STACK.length }: { layers: number; total?: number }) {
@@ -994,91 +875,519 @@ function PromptStackBuilder() {
   );
 }
 
+/**
+ * Progressive disclosure — Figma 3978:2179 (side-by-side unlock).
+ * 0 See Outcome → 1 Generic outcome → 2 Missing chips stagger → 3 Strong fields after CTA
+ */
+type BriefBeat = 0 | 1 | 2 | 3;
+
+const BRIEF_CTA_STYLE: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 10,
+  height: 45,
+  padding: "12px 26px",
+  background: C.yellow,
+  color: C.confidentBlack,
+  border: "none",
+  borderRadius: 8,
+  fontSize: 14,
+  fontWeight: 700,
+  fontFamily: F.bold,
+  cursor: "pointer",
+};
+
+/** Outcome row: 14px pad + 28px header + 6px gap + ~20px body + 14px pad */
+const BRIEF_OUTCOME_MIN_HEIGHT = 83;
+
+function BriefRevealTile({
+  side,
+  disabled,
+  onClick,
+}: {
+  side: "weak" | "strong";
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  const isWeak = side === "weak";
+  const accent = isWeak ? C.destructive : C.success;
+  return (
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      aria-label={isWeak ? "Show weak brief" : "Show strong brief"}
+      style={{
+        minHeight: 403,
+        width: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+        padding: 32,
+        background: disabled ? C.offWhite : C.white,
+        border: `1px dashed ${disabled ? C.gray02 : `${accent}55`}`,
+        borderTop: `3px solid ${disabled ? C.gray02 : accent}`,
+        borderRadius: 12,
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.7 : 1,
+      }}
+    >
+      <span
+        style={{
+          color: disabled ? C.gray01 : accent,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "1px",
+          fontFamily: F.bold,
+        }}
+      >
+        {isWeak ? "WEAK BRIEF" : "STRONG BRIEF"}
+      </span>
+      <p
+        style={{
+          margin: 0,
+          maxWidth: 280,
+          textAlign: "center",
+          fontSize: 13,
+          lineHeight: 1.5,
+          color: C.gray01,
+          fontFamily: F.regular,
+        }}
+      >
+        {disabled
+          ? "Open the weak brief first, then click here."
+          : "Click to open this brief."}
+      </p>
+    </button>
+  );
+}
+
 function TeamBriefingSection() {
   const missingItems = ["What issue?", "Which jurisdiction?", "What output?", "By when?"];
+  const [beat, setBeat] = useState<BriefBeat>(0);
+  const [revealedStep, setRevealedStep] = useState(0);
+  const [strongStep, setStrongStep] = useState(0);
+  // 0 neither card · 1 weak · 2 weak + strong. Existing beat flow starts after both are open.
+  const [shownBriefs, setShownBriefs] = useState<0 | 1 | 2>(0);
+
+  // Beat 2: missing chips stagger in. Chips stay visible once beat advances to 3.
+  useEffect(() => {
+    if (beat < 2) {
+      setRevealedStep(0);
+      return;
+    }
+    if (beat > 2) {
+      setRevealedStep(missingItems.length);
+      return;
+    }
+    setRevealedStep(0);
+    const timers = missingItems.map((_, i) =>
+      window.setTimeout(() => setRevealedStep(i + 1), 280 * (i + 1)),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [beat]);
+
+  // Beat 3: strong fields appear one-by-one after "Reveal Strong Brief".
+  useEffect(() => {
+    if (beat !== 3) {
+      setStrongStep(0);
+      return;
+    }
+    setStrongStep(0);
+    const timers = STRONG_BRIEF_FIELDS.map((_, i) =>
+      window.setTimeout(() => setStrongStep(i + 1), 280 * (i + 1)),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [beat]);
+
+  const tagsReady = revealedStep >= missingItems.length;
+  const missingShown = Math.min(revealedStep, missingItems.length);
+
+  const showGeneric = beat >= 1;
+  const showMissing = beat >= 2;
+  const showStrong = beat >= 3;
+  const ctaOnLeft = beat === 0 || beat === 1;
+
+  const leftCtaLabel = beat === 0 ? "See the Outcome" : "Show what's missing";
+
   return (
-    <section id="team-briefing" style={{ background: SURFACE.light.bg, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
+    <section id="team-briefing" style={{ background: SURFACE.light.bg, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }} data-node-id="3978:2179">
       <div style={{ ...contentRailStyle }}>
         <SectionAnchorTitle align="center">Team Briefing</SectionAnchorTitle>
         <h2 style={{ fontSize: 36, fontWeight: 700, color: C.confidentBlack, textAlign: "center", marginBottom: 8, fontFamily: F.bold }}>
           Brief AI Like You Brief Your Team
         </h2>
-        <p style={{ fontSize: 16, color: C.gray01, textAlign: "center", lineHeight: 1.7, marginBottom: 52, fontFamily: F.light }}>
+        <p style={{ fontSize: 16, color: C.gray01, textAlign: "center", lineHeight: 1.7, marginBottom: 40, fontFamily: F.light }}>
           The more context you provide, the better the outcome.
         </p>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 60px 1fr", gap: 0, alignItems: "stretch" }}>
-          <div style={{ border: `1px solid ${C.destructive}33`, borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%", background: C.white }}>
-            <div style={{ background: C.destructive + "0d", padding: "14px 22px", borderBottom: `1px solid ${C.destructive}1f`, display: "flex", alignItems: "center", gap: 10, minHeight: 48 }}>
-              <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>WEAK BRIEF</span>
+        <div
+          data-brief-grid
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 50,
+            alignItems: "stretch",
+          }}
+        >
+          {/* Weak Brief — hidden until the first tile is clicked */}
+          {shownBriefs < 1 ? (
+            <BriefRevealTile side="weak" onClick={() => setShownBriefs(1)} />
+          ) : (
+          <div
+            style={{
+              border: `1px solid ${C.destructive}33`,
+              borderRadius: 12,
+              overflow: "hidden",
+              background: C.white,
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 403,
+            }}
+          >
+            <div
+              style={{
+                background: C.destructive + "0d",
+                borderBottom: `1px solid ${C.destructive}1f`,
+                padding: "14px 22px",
+                minHeight: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
+                WEAK BRIEF
+              </span>
+              {showMissing && (
+                <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: F.bold }}>
+                  Better brief
+                </span>
+              )}
             </div>
-            <div style={{ padding: 22, flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
-              <div style={{ background: C.offWhite, borderRadius: 8, padding: "16px 18px", borderLeft: `3px solid ${C.destructive}` }}>
+
+            <div
+              style={{
+                flex: 1,
+                padding: 22,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 18,
+                minHeight: 280,
+              }}
+            >
+              <div style={{ width: "100%", background: C.offWhite, borderRadius: 8, padding: "16px 18px", borderLeft: `3px solid ${C.destructive}` }}>
                 <p style={{ color: C.offBlack, fontSize: 15, fontStyle: "italic", lineHeight: 1.65, fontFamily: F.light, margin: 0 }}>
                   &ldquo;Research this matter and get back to me.&rdquo;
                 </p>
               </div>
-              <div>
-                <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 9, fontFamily: F.bold }}>Missing:</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {missingItems.map(item => (
-                    <div key={item} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px", background: C.destructive + "0d", borderRadius: 6 }}>
-                      <span style={{ color: C.destructive, fontSize: 11, fontWeight: 600, fontFamily: F.bold }}>{item}</span>
+
+              {showMissing && missingShown > 0 && (
+                <div style={{ width: "100%" }}>
+                  <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 9, fontFamily: F.bold }}>
+                    Missing:
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {missingItems.slice(0, missingShown).map((item) => (
+                      <div
+                        key={item}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 8,
+                          padding: "7px 12px",
+                          background: C.destructive + "0d",
+                          borderRadius: 6,
+                          animation: "briefFieldIn 0.32s ease both",
+                          border: "1px solid transparent",
+                          width: "100%",
+                          textAlign: "left",
+                        }}
+                      >
+                        <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, fontFamily: F.bold }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div
+                style={{
+                  width: "100%",
+                  marginTop: "auto",
+                  background: showGeneric ? C.destructive + "0a" : C.offWhite,
+                  border: `1px dashed ${showGeneric ? C.destructive + "33" : C.gray02}`,
+                  borderRadius: 8,
+                  padding: 14,
+                  ...(showStrong ? { minHeight: BRIEF_OUTCOME_MIN_HEIGHT } : {}),
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div
+                    style={{
+                      color: showGeneric ? C.destructive : C.gray01,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "1px",
+                      fontFamily: F.bold,
+                    }}
+                  >
+                    OUTCOME
+                  </div>
+                  {showStrong && <div style={{ width: 28, height: 28, flexShrink: 0 }} aria-hidden />}
+                </div>
+                <p
+                  style={{
+                    color: showGeneric ? C.destructive : C.gray01,
+                    fontSize: 12,
+                    lineHeight: 1.6,
+                    fontFamily: F.regular,
+                    margin: 0,
+                    fontWeight: showGeneric ? 700 : 400,
+                  }}
+                >
+                  {showGeneric ? "Generic response" : "..."}
+                </p>
+                {ctaOnLeft && (
+                  <div style={{ paddingTop: 12 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setBeat((b) => (b === 0 ? 1 : 2)); }}
+                      style={BRIEF_CTA_STYLE}
+                    >
+                      {leftCtaLabel}
+                      <ArrowRight size={16} strokeWidth={2} aria-hidden />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          )}
+
+          {/* Strong Brief — hidden until the second tile is clicked */}
+          {shownBriefs < 2 ? (
+            <BriefRevealTile
+              side="strong"
+              disabled={shownBriefs < 1}
+              onClick={() => setShownBriefs(2)}
+            />
+          ) : !showStrong ? (
+            <div
+              style={{
+                background: C.offWhite,
+                border: `1px dashed ${C.gray02}`,
+                borderTop: `3px solid ${C.gray02}`,
+                borderRadius: 10,
+                minHeight: 403,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 16,
+                padding: 32,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  background: C.white,
+                  border: `1px solid ${C.gray02}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Lock size={20} strokeWidth={1.75} color={C.gray01} aria-hidden />
+              </div>
+              <span
+                style={{
+                  background: C.gray02,
+                  color: C.gray01,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "1.1px",
+                  textTransform: "uppercase",
+                  fontFamily: F.bold,
+                  padding: "3px 10px",
+                  borderRadius: 4,
+                }}
+              >
+                Strong Brief
+              </span>
+              {tagsReady && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setBeat(3); }}
+                  style={{ ...BRIEF_CTA_STYLE, alignSelf: "center" }}
+                >
+                  Reveal Strong Brief
+                  <ArrowRight size={16} strokeWidth={2} aria-hidden />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div
+              style={{
+                border: `1px solid ${C.success}33`,
+                borderRadius: 12,
+                overflow: "hidden",
+                background: C.white,
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 403,
+              }}
+            >
+              <div
+                style={{
+                  background: C.success + "0d",
+                  borderBottom: `1px solid ${C.success}1f`,
+                  padding: "14px 22px",
+                  minHeight: 48,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                }}
+              >
+                <span style={{ color: C.success, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
+                  STRONG BRIEF
+                </span>
+                <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: F.bold }}>
+                  Better brief
+                </span>
+              </div>
+
+              <div
+                style={{
+                  flex: 1,
+                  padding: 22,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 18,
+                  minHeight: 280,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {STRONG_BRIEF_FIELDS.slice(0, strongStep).map((field) => (
+                    <div
+                      key={field.label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "7px 12px",
+                        background: C.success + "0d",
+                        borderRadius: 6,
+                        animation: "briefFieldIn 0.32s ease both",
+                      }}
+                    >
+                      <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, minWidth: 82, flexShrink: 0, fontFamily: F.bold }}>{field.label}</span>
+                      <span style={{ color: C.offBlack, fontSize: 12, fontWeight: 400, flex: 1, fontFamily: F.regular }}>{field.value}</span>
+                      <Check size={14} strokeWidth={2.5} color={C.success} aria-hidden />
                     </div>
                   ))}
                 </div>
-              </div>
-              <div style={{ background: C.destructive + "0a", border: `1px dashed ${C.destructive}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
-                <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ OUTCOME</div>
-                <p style={{ color: C.gray01, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>
-                  <strong style={{ color: C.destructive }}>Generic response</strong>
-                </p>
-              </div>
-            </div>
-          </div>
 
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 2, flex: 1, background: `linear-gradient(180deg, ${C.destructive}4d, ${C.yellow}99, ${C.success}4d)` }} />
-            <div style={{ background: C.white, border: `2px solid ${C.yellow}`, color: C.offBlack, fontSize: 10, fontWeight: 800, padding: "6px 8px", borderRadius: "50%", width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: F.bold }}>VS</div>
-            <div style={{ width: 2, flex: 1, background: `linear-gradient(180deg, ${C.success}4d, ${C.yellow}99, ${C.destructive}4d)` }} />
-          </div>
-
-          <div style={{ border: `1px solid ${C.success}33`, borderRadius: 12, overflow: "hidden", display: "flex", flexDirection: "column", height: "100%", background: C.white }}>
-            <div style={{ background: C.success + "0d", padding: "14px 22px", borderBottom: `1px solid ${C.success}1f`, display: "flex", alignItems: "center", gap: 10, minHeight: 48 }}>
-              <span style={{ color: C.success, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>STRONG BRIEF</span>
-            </div>
-            <div style={{ padding: 22, flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {STRONG_BRIEF_FIELDS.map(field => (
-                  <div key={field.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", background: C.success + "0d", borderRadius: 6 }}>
-                    <span style={{ color: C.gray01, fontSize: 11, fontWeight: 600, minWidth: 82, flexShrink: 0, fontFamily: F.bold }}>{field.label}</span>
-                    <span style={{ color: C.offBlack, fontSize: 12, fontWeight: 500, flex: 1, fontFamily: F.regular }}>{field.value}</span>
-                    <span style={{ color: C.success, fontSize: 12, fontWeight: 700 }}>✓</span>
+                <div
+                  style={{
+                    width: "100%",
+                    marginTop: "auto",
+                    background: C.success + "0a",
+                    border: `1px dashed ${C.success}33`,
+                    borderRadius: 8,
+                    padding: 14,
+                    minHeight: BRIEF_OUTCOME_MIN_HEIGHT,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                    <div style={{ color: C.success, fontSize: 10, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
+                      OUTCOME
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBeat(0)}
+                      aria-label="Start over"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: 28,
+                        height: 28,
+                        padding: 0,
+                        background: C.white,
+                        border: `1px solid ${C.success}33`,
+                        borderRadius: 6,
+                        color: C.success,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <RotateCcw size={14} strokeWidth={2} aria-hidden />
+                    </button>
                   </div>
-                ))}
-              </div>
-              <div style={{ background: C.success + "0a", border: `1px dashed ${C.success}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
-                <div style={{ color: C.success, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ OUTCOME</div>
-                <p style={{ color: C.gray01, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>
-                  <strong style={{ color: C.success }}>Focused response</strong>
-                </p>
+                  <p style={{ color: C.success, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0, fontWeight: 700 }}>
+                    Focused response
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div style={{ textAlign: "center", marginTop: 36 }}>
-          {/* "A Good Brief = A Good Prompt" pill temporarily hidden per request */}
-          {/*
-          <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 14, flexWrap: "wrap", padding: "16px 28px", background: C.white, border: "1px solid rgba(46,46,56,0.10)", borderRadius: 12 }}>
-            <div style={{ background: C.yellowAlpha10, border: `1px solid ${C.yellow}44`, padding: "10px 20px", borderRadius: 8, color: C.eyebrowGold, fontSize: 14, fontWeight: 600, fontFamily: F.bold }}>A Good Brief</div>
-            <span style={{ color: C.confidentBlack, fontSize: 24, fontWeight: 700, fontFamily: F.bold }}>=</span>
-            <div style={{ background: C.info + "14", border: `1px solid ${C.info}33`, padding: "10px 20px", borderRadius: 8, color: C.info, fontSize: 14, fontWeight: 600, fontFamily: F.bold }}>A Good Prompt</div>
-          </div>
-          */}
-        </div>
+        <style>{`
+          @keyframes briefFieldIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          @media (max-width: 900px) {
+            #team-briefing [data-brief-grid] {
+              grid-template-columns: 1fr !important;
+              gap: 24px !important;
+            }
+          }
+        `}</style>
       </div>
     </section>
+  );
+}
+
+/** Inline label tag for highlighted prompt phrases on dark quote blocks. */
+function PromptInlineTag({ children, accent }: { children: React.ReactNode; accent: string }) {
+  const isYellow = accent === C.yellow;
+  const borderColor = isYellow ? C.yellow : accent;
+  return (
+    <span
+      style={{
+        display: "inline",
+        fontStyle: "normal",
+        fontWeight: typeScale.caption.weight,
+        fontFamily: F.light,
+        fontSize: typeScale.caption.size,
+        letterSpacing: typeScale.label.tracking,
+        textTransform: "uppercase",
+        lineHeight: 1.35,
+        padding: "2px 6px",
+        borderRadius: 3,
+        margin: "0 2px",
+        verticalAlign: "baseline",
+        background: isYellow ? C.yellow : `${accent}33`,
+        border: `1.5px solid ${borderColor}`,
+        borderLeft: `3px solid ${borderColor}`,
+        color: isYellow ? C.offBlack : C.onDark,
+      }}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -1114,7 +1423,7 @@ function AiLazyProSection() {
               </div>
               <div style={{ background: C.destructive + "0a", border: `1px dashed ${C.destructive}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
                 <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ WHAT YOU GET BACK</div>
-                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A generic 300-word wall of text. Wrong tone. Wrong audience. Needs complete rewriting. <strong style={{ color: C.destructive }}>30 minutes wasted.</strong></p>
+                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A generic 300-word wall of text. Wrong tone. Wrong audience. Needs complete rewriting. <strong style={{ color: C.destructive }}>30 minutes lost.</strong></p>
               </div>
             </div>
           </div>
@@ -1133,16 +1442,38 @@ function AiLazyProSection() {
             <div style={{ padding: 22, flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
               <div style={{ background: C.surfaceOnDark, borderRadius: 8, padding: "12px 16px", borderLeft: `3px solid ${C.success}`, minHeight: 72, display: "flex", alignItems: "flex-start" }}>
                 <p style={{ color: s.heading, fontSize: 14, fontStyle: "italic", lineHeight: 1.65, fontFamily: F.light, margin: 0 }}>
-                  &ldquo;You are a <strong style={{ color: C.yellow, fontStyle: "normal" }}>tax advisor</strong>. Summarise the key <strong style={{ color: C.frameBlue, fontStyle: "normal" }}>transfer pricing changes</strong> in this circular for a <strong style={{ color: C.frameOrange, fontStyle: "normal" }}>client memo</strong>. Use <strong style={{ color: C.framePurple, fontStyle: "normal" }}>bullet points</strong>. Keep it under <strong style={{ color: C.success, fontStyle: "normal" }}>200 words</strong>.&rdquo;
+                  &ldquo;You are a <PromptInlineTag accent={C.yellow}>tax advisor</PromptInlineTag>. Summarise the key <PromptInlineTag accent={C.frameBlue}>transfer pricing changes</PromptInlineTag> in this circular for a <PromptInlineTag accent={C.frameOrange}>client memo</PromptInlineTag>. Use <PromptInlineTag accent={C.framePurple}>bullet points</PromptInlineTag>. Keep it under <PromptInlineTag accent={C.success}>200 words</PromptInlineTag>.&rdquo;
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, minHeight: 76 }}>
-                {["Role defined", "Task clear", "Format set", "Length capped"].map(t => (
-                  <div key={t} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px", background: C.success + "0d", borderRadius: 6 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    <span style={{ color: C.success, fontSize: 11, fontWeight: 600, fontFamily: F.bold }}>{t}</span>
-                  </div>
-                ))}
+                {[
+                  { label: "Role defined", accent: C.yellow },
+                  { label: "Task clear", accent: C.frameBlue },
+                  { label: "Format set", accent: C.framePurple },
+                  { label: "Length capped", accent: C.success },
+                ].map(({ label, accent }) => {
+                  const isYellow = accent === C.yellow;
+                  return (
+                    <div
+                      key={label}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "7px 12px",
+                        borderRadius: 6,
+                        background: isYellow ? C.yellow : `${accent}33`,
+                        border: `1.5px solid ${accent}`,
+                        borderLeft: `3px solid ${accent}`,
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={isYellow ? C.offBlack : accent} strokeWidth="2.5" aria-hidden>
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span style={{ color: isYellow ? C.offBlack : C.onDark, fontSize: 11, fontWeight: 700, fontFamily: F.bold }}>{label}</span>
+                    </div>
+                  );
+                })}
               </div>
               <div style={{ background: C.success + "0a", border: `1px dashed ${C.success}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
                 <div style={{ color: C.success, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ WHAT YOU GET BACK</div>
@@ -1246,13 +1577,14 @@ function RecapInNutshellSection() {
   );
 }
 
-function WhatsNextSection({ onContinue }: { onContinue: () => void }) {
+/**
+ * End-of-module ascent — continue via next trek-step CTA (no footer).
+ */
+function JourneyProgressSection({ onContinue }: { onContinue: () => void }) {
   return (
-    <EYWhatsNext
-      title="Prompting skills — unlocked."
-      ctaLabel="Continue to Part 3: M365 Copilot Deep Dive →"
-      onContinue={onContinue}
-      meta="Part 3 covers: Copilot in Word, Excel, Outlook, Teams, and real tax workflows"
+    <AscentModuleProgressSection
+      moduleKey="m1_2"
+      onNextStepCta={onContinue}
     />
   );
 }
@@ -1810,188 +2142,17 @@ function PromptingActivitySection() {
 
 // ── 7 Elements — left nav + detail pane (same pattern as AdvancedDecomposition) ─
 
-type ElemPanelKey = "what" | "why" | "without" | "with";
-
-const ELEM_FACETS: { key: ElemPanelKey; label: string; color: string }[] = [
-  { key: "what", label: "What it is", color: C.frameBlue },
-  { key: "why", label: "Why it matters", color: C.frameOrange },
-  { key: "without", label: "Without", color: C.destructive },
-  { key: "with", label: "With", color: C.success },
-];
-
 function EightElementsWizard() {
-  const s = SURFACE.neutral;
-  const [selectedId, setSelectedId] = useState(ELEMENTS[0].id);
-  const elem = ELEMENTS.find(e => e.id === selectedId) ?? ELEMENTS[0];
-  const focusRing = `2px solid ${C.yellow}`;
+  const s = SURFACE.light;
 
   return (
     <section id="elements" style={{ background: s.bg, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
       <div style={{ ...contentRailStyle, textAlign: "center" }}>
         <SectionAnchorTitle align="center">Elements</SectionAnchorTitle>
-        <h2 style={{ fontSize: 32, fontWeight: 700, color: s.heading, fontFamily: F.bold, letterSpacing: "-0.02em", margin: "0 0 12px", textAlign: "center" }}>
+        <h2 style={{ fontSize: 32, fontWeight: 700, color: s.heading, fontFamily: F.bold, letterSpacing: "-0.02em", margin: "0 0 40px", textAlign: "center" }}>
           Prompt like a Pro
         </h2>
-        <p style={{ fontSize: 16, color: s.body, fontFamily: F.light, lineHeight: "24px", margin: "0 auto 40px", maxWidth: 720, textAlign: "center" }}>
-          Each element is a lever — pick one from the list to explore what it is, why it matters, and how it changes a prompt.
-        </p>
-
-        <div className="pt-wizard" style={{
-          border: `1px solid rgba(46,46,56,0.10)`,
-          borderRadius: 12,
-          overflow: "hidden",
-          display: "grid",
-          gridTemplateColumns: "minmax(260px, 300px) 1fr",
-          height: 760,
-          textAlign: "left",
-          background: C.white,
-        }}>
-          <nav aria-label="Prompt elements" style={{
-            background: C.offWhite,
-            borderRight: `1px solid rgba(46,46,56,0.08)`,
-            padding: "20px 0",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-          }}>
-            <div style={{ padding: "0 20px 16px", borderBottom: `1px solid rgba(46,46,56,0.08)` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.gray01, fontFamily: F.bold, marginBottom: 4 }}>
-                Prompt like a Pro — Elements
-              </div>
-              <div style={{ fontSize: 13, color: C.offBlack, fontFamily: F.regular, lineHeight: 1.5 }}>
-                Pick an element to explore.
-              </div>
-            </div>
-
-            <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px" }}>
-              {ELEMENTS.map(item => {
-                const active = selectedId === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-current={active ? "true" : undefined}
-                    onClick={() => setSelectedId(item.id)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 12px",
-                      marginBottom: 2,
-                      background: active ? C.confidentBlack : "transparent",
-                      border: active ? "none" : "1px solid transparent",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                    onFocus={e => { e.currentTarget.style.outline = focusRing; }}
-                    onBlur={e => { e.currentTarget.style.outline = "none"; }}
-                  >
-                    <span style={{
-                      width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                      background: active ? C.yellow : item.color + "18",
-                      border: `1.5px solid ${active ? C.yellow : item.color}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 10, fontWeight: 800,
-                      color: C.confidentBlack,
-                      fontFamily: F.bold,
-                    }}>
-                      {item.id}
-                    </span>
-                    <span style={{
-                      flex: 1, minWidth: 0,
-                      fontSize: 13, fontWeight: 700,
-                      color: active ? C.white : C.confidentBlack,
-                      fontFamily: F.bold,
-                    }}>
-                      {item.name}
-                    </span>
-                    <ChevronRight size={14} color={active ? C.yellow : C.gray01} style={{ flexShrink: 0 }} />
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          <div style={{ display: "flex", flexDirection: "column", background: C.white, minHeight: 0 }}>
-            <div style={{
-              padding: "16px 24px",
-              background: C.confidentBlack,
-              borderBottom: `1px solid ${C.borderOnDark}`,
-              display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-              flexShrink: 0,
-            }}>
-              <span style={{
-                width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                background: C.yellow, color: C.confidentBlack,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 12, fontWeight: 800, fontFamily: F.bold,
-              }}>
-                {elem.id}
-              </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.onDark, fontFamily: F.bold }}>{elem.name}</span>
-              <span style={{ fontSize: 11, color: C.yellow, fontWeight: 700, fontFamily: F.bold }}>{elem.q}</span>
-            </div>
-
-            <div style={{
-              flex: 1,
-              overflowY: "auto",
-              padding: "24px 28px 32px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 20,
-            }}>
-              {ELEM_FACETS.map(f => {
-                const isExample = f.key === "without" || f.key === "with";
-                const text = elem[f.key];
-                return (
-                  <section key={f.key} aria-labelledby={`elem-facet-${elem.id}-${f.key}`}>
-                    <span
-                      id={`elem-facet-${elem.id}-${f.key}`}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 8,
-                        marginBottom: 10,
-                        padding: "4px 10px",
-                        borderRadius: 100,
-                        border: `1px solid ${f.color}55`,
-                        background: f.color + "14",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        color: f.color,
-                        fontFamily: F.bold,
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {f.key === "without" && <MatchResultBadge kind="bad" label="Without this element" />}
-                      {f.key === "with" && <MatchResultBadge kind="ok" label="With this element" />}
-                      {f.label}
-                    </span>
-                    <p style={{
-                      fontSize: isExample ? 14 : 16,
-                      lineHeight: 1.7,
-                      color: f.key === "without" ? C.destructive : f.key === "with" ? C.success : C.offBlack,
-                      fontFamily: isExample ? F.light : F.regular,
-                      fontStyle: isExample ? "italic" : "normal",
-                      margin: 0,
-                      maxWidth: 560,
-                      padding: isExample ? "14px 18px" : 0,
-                      background: isExample
-                        ? f.key === "without" ? C.destructive + "0a" : C.success + "0a"
-                        : "transparent",
-                      borderRadius: isExample ? 8 : 0,
-                      borderLeft: isExample ? `3px solid ${f.color}` : "none",
-                    }}>
-                      {text}
-                    </p>
-                  </section>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <EightElementsPane />
       </div>
     </section>
   );
@@ -2076,15 +2237,6 @@ function TechniqueExampleQuote({ text, variant }: { text: string; variant: "with
     </div>
   );
 }
-
-type TechniqueFacetKey = "what" | "does" | "without" | "with";
-
-const TECHNIQUE_FACETS: { key: TechniqueFacetKey; label: string; color: string }[] = [
-  { key: "what", label: "What it is", color: C.frameBlue },
-  { key: "does", label: "What it does", color: C.frameOrange },
-  { key: "without", label: "Without the Technique", color: C.destructive },
-  { key: "with", label: "With the Technique", color: C.success },
-];
 
 /** Block 1 — left nav + detail pane (mirrors EightElementsWizard / AdvancedFrameworkShell). */
 function PromptingTechniquesWizard() {
@@ -2212,8 +2364,19 @@ function PromptingTechniquesWizard() {
         }}>
           {TECHNIQUE_FACETS.map(f => {
             const text = technique[f.key];
+            const isWhen = f.key === "when";
             return (
-              <section key={f.key} aria-labelledby={`tech-facet-${technique.id}-${f.key}`}>
+              <section
+                key={f.key}
+                aria-labelledby={`tech-facet-${technique.id}-${f.key}`}
+                style={isWhen ? {
+                  padding: "14px 16px",
+                  background: C.offWhite,
+                  border: `1px solid rgba(46,46,56,0.10)`,
+                  borderLeft: `3px solid ${C.framePurple}`,
+                  borderRadius: 10,
+                } : undefined}
+              >
                 <span
                   id={`tech-facet-${technique.id}-${f.key}`}
                   style={{
@@ -2221,15 +2384,18 @@ function PromptingTechniquesWizard() {
                     alignItems: "center",
                     gap: 8,
                     marginBottom: 10,
-                    padding: "4px 10px",
-                    borderRadius: 100,
-                    border: `1px solid ${f.color}55`,
-                    background: f.color + "14",
+                    padding: isWhen ? 0 : "4px 10px",
+                    borderRadius: isWhen ? 0 : 100,
+                    border: isWhen ? "none" : `1px solid ${f.color}55`,
+                    background: isWhen ? "transparent" : f.color + "14",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: f.color,
+                    // Purple-on-pale-purple at 12px is easy to miss; dark label on the card reads clearly.
+                    color: isWhen ? C.confidentBlack : f.color,
                     fontFamily: F.bold,
                     lineHeight: 1.3,
+                    letterSpacing: isWhen ? "0.04em" : undefined,
+                    textTransform: isWhen ? "uppercase" as const : undefined,
                   }}
                 >
                   {f.key === "without" && <MatchResultBadge kind="bad" label="Without the technique" />}
@@ -2244,7 +2410,7 @@ function PromptingTechniquesWizard() {
                   <p style={{
                     fontSize: typeScale.body.size,
                     lineHeight: 1.6,
-                    color: C.gray01,
+                    color: isWhen ? C.offBlack : C.gray01,
                     fontFamily: F.regular,
                     margin: 0,
                     maxWidth: 560,
@@ -2257,6 +2423,50 @@ function PromptingTechniquesWizard() {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdvancedUseCaseBanner() {
+  return (
+    <div
+      aria-label="Advanced techniques use case"
+      style={{
+        marginBottom: 0,
+        padding: "14px 20px",
+        background: C.white,
+        borderRadius: 10,
+        border: `1px solid rgba(255,230,0,0.45)`,
+        boxShadow: `inset 4px 0 0 ${C.yellow}`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <span style={{
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase",
+        color: C.confidentBlack,
+        fontFamily: F.bold,
+        background: C.yellow,
+        padding: "4px 10px",
+        borderRadius: 4,
+        flexShrink: 0,
+      }}>
+        Use case
+      </span>
+      <span style={{
+        fontSize: 14,
+        fontWeight: 700,
+        color: C.confidentBlack,
+        fontFamily: F.bold,
+        lineHeight: 1.5,
+      }}>
+        {ADVANCED_USE_CASE}
+      </span>
     </div>
   );
 }
@@ -2343,7 +2553,7 @@ function SteppedFlow({ steps }: { steps: string[] }) {
 
 /** Technique card — name + purpose + one-line explanation, in the same visual language as
  *  AdvancedDecomposition's facet pills, condensed into a compact card for chip-filtered groups. */
-function AdvancedFrameworkCard({ name, purpose, explain }: COTTechnique) {
+function AdvancedFrameworkCard({ name, purpose, explain, samplePrompt }: COTTechnique) {
   return (
     <div style={{
       border: `1px solid rgba(46,46,56,0.10)`,
@@ -2360,6 +2570,40 @@ function AdvancedFrameworkCard({ name, purpose, explain }: COTTechnique) {
       <p style={{ fontSize: 13, color: C.gray01, fontFamily: F.regular, lineHeight: 1.6, margin: 0 }}>
         {explain}
       </p>
+      {samplePrompt && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: C.white,
+            border: `1px solid rgba(46,46,56,0.10)`,
+            borderLeft: `3px solid ${C.yellow}`,
+            borderRadius: 6,
+          }}
+        >
+          <p style={{
+            margin: "0 0 6px",
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: C.gray01,
+            fontFamily: F.bold,
+          }}>
+            Sample prompt
+          </p>
+          <p style={{
+            margin: 0,
+            fontSize: 12,
+            fontStyle: "italic",
+            lineHeight: 1.55,
+            color: C.offBlack,
+            fontFamily: F.light,
+          }}>
+            &ldquo;{samplePrompt}&rdquo;
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2849,7 +3093,8 @@ function AdvancedTechniquesSection({ onDark = false }: { onDark?: boolean }) {
 
       {activeTab === "advanced" && (
         <div role="tabpanel" aria-label="Advanced Prompting Techniques">
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+            <AdvancedUseCaseBanner />
             <AdvancedBucketToggle bucketId={bucketId} onChange={selectBucket} onDark={onDark} />
           </div>
           <AdvancedFrameworkShell bucket={bucket} stageId={stageId} onSelectStage={setStageId} />
@@ -3057,6 +3302,152 @@ function AdvancedDecomposition() {
   );
 }
 
+/** Three core rules — one briefing stagger on first scroll-in. Respects reduced motion. */
+const CORE_RULES = [
+  { Icon: Target, text: "Specific input = Specific output." },
+  { Icon: EyeOff, text: "AI doesn't read your mind." },
+  { Icon: Zap, text: "Prompting is a skill, not a gift." },
+] as const;
+
+const CORE_RULE_STYLES = `
+@keyframes prompt-core-rule-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes prompt-core-rule-rail {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.prompt-core-rules:not([data-in="true"]):not([data-reduce="true"]) .prompt-core-rule {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.prompt-core-rules:not([data-in="true"]):not([data-reduce="true"]) .prompt-core-rule-rail {
+  transform: scaleY(0);
+}
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule {
+  animation: prompt-core-rule-in 380ms ease-out both;
+}
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule-rail {
+  transform-origin: top;
+  animation: prompt-core-rule-rail 340ms ease-out both;
+}
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(1),
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(1) .prompt-core-rule-rail { animation-delay: 0ms; }
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(2),
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(2) .prompt-core-rule-rail { animation-delay: 220ms; }
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(3),
+.prompt-core-rules[data-in="true"]:not([data-reduce="true"]) .prompt-core-rule:nth-child(3) .prompt-core-rule-rail { animation-delay: 440ms; }
+.prompt-core-rules[data-reduce="true"] .prompt-core-rule-rail {
+  transform: scaleY(1);
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prompt-core-rule { animation: none !important; opacity: 1 !important; transform: none !important; }
+  .prompt-core-rule-rail { animation: none !important; transform: scaleY(1) !important; }
+}
+`;
+
+function CoreRuleCards() {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  const [reduceMotion] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const el = rowRef.current;
+    if (!el) return;
+
+    // Page scrolls inside an overflow:auto shell, not the window — observe that root.
+    let scrollRoot: HTMLElement | null = el.parentElement;
+    while (scrollRoot && !["auto", "scroll"].includes(getComputedStyle(scrollRoot).overflowY)) {
+      scrollRoot = scrollRoot.parentElement;
+    }
+
+    const show = () => setInView(true);
+    const isVisible = () => {
+      const row = el.getBoundingClientRect();
+      const box = scrollRoot?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+      return row.bottom > box.top + 8 && row.top < box.bottom - 8;
+    };
+    if (isVisible()) {
+      show();
+      return;
+    }
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        show();
+        obs.disconnect();
+      },
+      { root: scrollRoot, threshold: 0.15 },
+    );
+    obs.observe(el);
+    const onScroll = () => {
+      if (!isVisible()) return;
+      show();
+      obs.disconnect();
+      scrollRoot?.removeEventListener("scroll", onScroll);
+    };
+    scrollRoot?.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      obs.disconnect();
+      scrollRoot?.removeEventListener("scroll", onScroll);
+    };
+  }, [reduceMotion]);
+
+  return (
+    <>
+      <div
+        ref={rowRef}
+        className="prompt-core-rules"
+        data-in={inView ? "true" : undefined}
+        data-reduce={reduceMotion ? "true" : undefined}
+        style={{ display: "flex", gap: 24, width: "100%", flexWrap: "wrap" }}
+      >
+        {CORE_RULES.map(({ Icon, text }) => (
+          <div
+            key={text}
+            className="prompt-core-rule"
+            style={{
+              flex: "1 1 240px",
+              background: C.confidentBlack,
+              border: `1px solid ${C.gray02}`,
+              borderRadius: 12,
+              padding: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <span
+              className="prompt-core-rule-rail"
+              aria-hidden
+              style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                width: 3,
+                height: "100%",
+                background: C.yellow,
+                transformOrigin: "top",
+              }}
+            />
+            <Icon size={24} color={C.white} strokeWidth={1.75} style={{ flexShrink: 0 }} />
+            <p style={{ margin: 0, fontSize: 14, color: C.white, fontFamily: F.regular, lineHeight: "21px" }}>{text}</p>
+          </div>
+        ))}
+      </div>
+      <style>{CORE_RULE_STYLES}</style>
+    </>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AiTaxPrompting({
@@ -3069,7 +3460,7 @@ export default function AiTaxPrompting({
   useModuleSectionHashScroll();
 
   return (
-    <div style={{ position: "fixed", inset: 0, overflowY: "auto", background: C.white }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: C.white }}>
 
       <SiteHeader variant="learning" onNavigate={onNavigate} skipLinkTarget="#module-content" />
       <ModuleHeader currentModuleId="ai-tax-prompting" onNavigate={onNavigate} onBack={onBack} />
@@ -3145,87 +3536,9 @@ export default function AiTaxPrompting({
             </p>
           </div>
 
-          {/* Flow diagram + core rules */}
+          {/* Core rules — briefing stagger on first view */}
           <div style={{ display: "flex", flexDirection: "column", gap: 32, width: "100%", alignItems: "center" }}>
-            <div style={{
-              background: C.confidentBlack, border: `1px solid ${C.gray02}`, borderRadius: 16,
-              padding: 32, width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 24, flexWrap: "wrap",
-            }}>
-              {/* YOU */}
-              <div style={{
-                background: C.white, border: `1.5px solid ${C.gray02}`, borderRadius: 16,
-                width: 220, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              }}>
-                <div style={{ background: C.info + "33", borderRadius: 100, padding: 12, display: "flex" }}>
-                  <User size={24} color={C.info} strokeWidth={2} />
-                </div>
-                <span style={{ fontSize: 15, color: C.offBlack, fontFamily: F.bold, lineHeight: "25.5px" }}>YOU</span>
-                <span style={{
-                  border: `1px solid ${C.gray02}`, borderRadius: 16, padding: "2px 8px",
-                  fontSize: 14, color: C.offBlack, fontFamily: F.regular, lineHeight: "22.4px",
-                }}>Instruction</span>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <span style={{ fontSize: 10, color: C.gray01, fontFamily: F.regular }}>sends prompt</span>
-                <ArrowRight size={16} color={C.white} strokeWidth={2} />
-              </div>
-
-              {/* AI */}
-              <div style={{
-                background: C.yellow, border: `1.5px solid ${C.gray02}`, borderRadius: 16,
-                width: 220, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              }}>
-                <div style={{ background: C.yellow, borderRadius: 100, padding: 12, display: "flex" }}>
-                  <Cpu size={24} color={C.offBlack} strokeWidth={2} />
-                </div>
-                <span style={{ fontSize: 15, color: C.offBlack, fontFamily: F.bold, lineHeight: "25.5px" }}>AI</span>
-                <span style={{
-                  border: `1px solid ${C.gray02}`, borderRadius: 16, padding: "2px 8px",
-                  fontSize: 14, color: C.offBlack, fontFamily: F.regular, lineHeight: "22.4px",
-                  background: C.yellow,
-                }}>Processes</span>
-              </div>
-
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                <span style={{ fontSize: 10, color: C.gray01, fontFamily: F.regular }}>returns output</span>
-                <ArrowRight size={16} color={C.white} strokeWidth={2} />
-              </div>
-
-              {/* RESULT — light success surface so dark type stays WCAG-readable */}
-              <div style={{
-                background: C.white, border: `1.5px solid ${C.gray02}`, borderRadius: 16,
-                width: 220, padding: 20, display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
-              }}>
-                <div style={{ background: "rgba(0,200,100,0.12)", borderRadius: 100, padding: 12, display: "flex" }}>
-                  <CheckCircle size={24} color={C.success} strokeWidth={2} />
-                </div>
-                <span style={{ fontSize: 15, color: C.offBlack, fontFamily: F.bold, lineHeight: "25.5px" }}>RESULT</span>
-                <span style={{
-                  border: `1px solid rgba(0,200,100,0.35)`, borderRadius: 16, padding: "2px 8px",
-                  fontSize: 14, color: C.offBlack, fontFamily: F.regular, lineHeight: "22.4px",
-                  background: "rgba(0,200,100,0.10)",
-                }}>Output</span>
-              </div>
-            </div>
-
-            {/* Core rules row */}
-            <div style={{ display: "flex", gap: 24, width: "100%", flexWrap: "wrap" }}>
-              {[
-                { Icon: Target, text: "Specific input = Specific output." },
-                { Icon: EyeOff, text: "AI doesn't read your mind." },
-                { Icon: Zap, text: "Prompting is a skill, not a gift." },
-              ].map(({ Icon, text }) => (
-                <div key={text} style={{
-                  flex: "1 1 240px", background: C.confidentBlack, border: `1px solid ${C.gray02}`,
-                  borderRadius: 12, padding: 20, display: "flex", alignItems: "center", gap: 16,
-                }}>
-                  <Icon size={24} color={C.white} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  <p style={{ margin: 0, fontSize: 14, color: C.white, fontFamily: F.regular, lineHeight: "21px" }}>{text}</p>
-                </div>
-              ))}
-            </div>
+            <CoreRuleCards />
           </div>
         </div>
       </section>
@@ -3253,7 +3566,7 @@ export default function AiTaxPrompting({
               margin: "0 0 32px",
             }}
           >
-            See It in Action
+            Importance of Prompt
           </h2>
 
           {/* 16:9 video container — max 800px, centered */}
@@ -3323,9 +3636,6 @@ export default function AiTaxPrompting({
           <h2 style={{ fontSize: 36, fontWeight: 700, color: SURFACE.dark.heading, textAlign: "center", marginBottom: 8, fontFamily: F.bold }}>
             Prompt like a Pro — Techniques
           </h2>
-          <p style={{ fontSize: 16, color: SURFACE.dark.body, textAlign: "center", lineHeight: 1.7, marginBottom: 32, fontFamily: F.light, maxWidth: 920, marginLeft: "auto", marginRight: "auto" }}>
-            Eight core techniques for sharper everyday prompts, plus an advanced framework for complex tax problems.
-          </p>
           <AdvancedTechniquesSection onDark />
         </div>
       </section>
@@ -3336,12 +3646,12 @@ export default function AiTaxPrompting({
       {/* ── 9. PROMPTING ACTIVITY — MCQ + match exercises (Figma 3215:5657) ── */}
       <PromptingActivitySection />
 
-      {/* ── 10. GOLDEN RULES — Do's & Don'ts ── */}
+      {/* ── 10. GOLDEN RULES — Dos and Don'ts ── */}
       <section id="dos-donts" style={{ background: SURFACE.light.bg, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
         <div style={{ ...contentRailStyle }}>
-          <SectionAnchorTitle align="center">Do&apos;s &amp; Don&apos;ts</SectionAnchorTitle>
+          <SectionAnchorTitle align="center">Dos and Don&apos;ts</SectionAnchorTitle>
           <h2 style={{ fontSize: 36, fontWeight: 700, color: SURFACE.light.heading, marginBottom: 8, fontFamily: F.bold }}>
-            Prompt Engineering — Do&apos;s &amp; Don&apos;ts
+            Prompt Engineering — Dos and Don&apos;ts
           </h2>
           <p style={{ fontSize: 15, color: C.gray01, marginBottom: 40, fontFamily: F.light, lineHeight: 1.6 }}>
             A practical guide for tax professionals. Each card includes a real example.
@@ -3407,8 +3717,8 @@ export default function AiTaxPrompting({
       {/* ── 10. RECAP IN A NUTSHELL — temporarily hidden per request ── */}
       {/* <RecapInNutshellSection /> */}
 
-      {/* ── 11. WHAT'S NEXT — continue to M365 Copilot ── */}
-      <WhatsNextSection onContinue={() => onNavigate("/copilot-hub")} />
+      {/* ── Journey progress — continue via next trek-step CTA ── */}
+      <JourneyProgressSection onContinue={() => onNavigate("/copilot-hub")} />
 
     </div>
   );

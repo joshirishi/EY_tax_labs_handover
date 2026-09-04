@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
-import { createBrowserRouter, Outlet, useLocation, useNavigate } from "react-router";
-import Home from "../imports/Home2/index";
+import { createBrowserRouter, Navigate, Outlet, useLocation, useNavigate } from "react-router";
 import { PhasedEngagementView, Phase1View } from "../imports/Frame353/index";
 import FoundationalConcepts from "../pages/FoundationalConcepts";
 import AiTaxPrompting from "../pages/AiTaxPrompting";
@@ -8,17 +7,9 @@ import M365CopilotHub from "../pages/M365CopilotHub";
 import BrainstormingUseCases from "../pages/BrainstormingUseCases";
 import GuidanceImplementation from "../pages/GuidanceImplementation";
 import ClosureAiReinforcement from "../pages/ClosureAiReinforcement";
+import WorkshopLibraryStandalone from "../pages/WorkshopLibraryStandalone";
 
-// ── /  ──────────────────────────────────────────────────────────────────────
-function HomeRoute() {
-  return (
-    <div className="relative w-full max-w-full min-w-0 overflow-x-hidden">
-      <Home />
-    </div>
-  );
-}
-
-// ── /phased  ─────────────────────────────────────────────────────────────────
+// ── /  (phased engagement is the landing page) ───────────────────────────────
 function PhasedRoute() {
   const navigate = useNavigate();
   // The Phase 2 card routes through onNavigateToBrainstorming. An
@@ -41,7 +32,7 @@ function GuidanceImplementationRoute() {
   const navigate = useNavigate();
   return (
     <div className="size-full">
-      <GuidanceImplementation onBack={() => navigate("/phased")} onNavigate={navigate} />
+      <GuidanceImplementation onBack={() => navigate("/")} onNavigate={navigate} />
     </div>
   );
 }
@@ -67,7 +58,7 @@ function Phase2Route() {
   return (
     <div className="size-full">
       <BrainstormingUseCases
-        onBack={() => navigate("/phased")}
+        onBack={() => navigate("/")}
         onNavigate={navigate}
       />
     </div>
@@ -98,7 +89,7 @@ function AiTaxPromptingRoute() {
 function FoundationalRoute() {
   const navigate = useNavigate();
   return (
-    <div className="size-full">
+    <div className="w-full min-h-0">
       <FoundationalConcepts onBack={() => navigate("/phase1")} onNavigate={navigate} />
     </div>
   );
@@ -109,7 +100,7 @@ function ClosureAiReinforcementRoute() {
   const navigate = useNavigate();
   return (
     <div className="size-full">
-      <ClosureAiReinforcement onBack={() => navigate("/phased")} onNavigate={navigate} />
+      <ClosureAiReinforcement onBack={() => navigate("/")} onNavigate={navigate} />
     </div>
   );
 }
@@ -158,8 +149,9 @@ export const router = createBrowserRouter([
     path: "/",
     Component: Root,
     children: [
-      { index: true, Component: HomeRoute },
-      { path: "phased", Component: PhasedRoute },
+      { index: true, Component: PhasedRoute },
+      // Old landing URL — keep bookmarks working
+      { path: "phased", element: <Navigate to="/" replace /> },
       { path: "phase1", Component: Phase1Route },
       { path: "phase2", Component: Phase2Route },
       { path: "ai-tax-prompting", Component: AiTaxPromptingRoute },
@@ -167,6 +159,7 @@ export const router = createBrowserRouter([
       { path: "copilot-hub", Component: CopilotHubRoute },
       { path: "guidance-implementation", Component: GuidanceImplementationRoute },
       { path: "closure-ai-reinforcement", Component: ClosureAiReinforcementRoute },
+      { path: "workshop-library.html", Component: WorkshopLibraryStandalone },
     ],
   },
 ]);

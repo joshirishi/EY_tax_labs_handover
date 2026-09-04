@@ -18,6 +18,7 @@ function figmaAssetResolver() {
 
 export default defineConfig({
   server: {
+    // Avoid collision with other local Vite apps on 5173 (e.g. Echo/commentor_B).
     port: 5174,
     strictPort: true,
     host: true,

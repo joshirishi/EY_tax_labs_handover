@@ -33,6 +33,7 @@ export { SiteHeader } from './SiteHeader';
 export type { SiteSection } from './SiteHeader';
 export { ModuleHeader, ModulePrevNext, SUBNAV_SCROLL_MARGIN, SUBNAV_SCROLL_OFFSET, useModuleSectionHashScroll } from './LearningNav';
 export { EYWhatsNext, EYWhatsNextHighlight } from './EYWhatsNext';
+export { TabRail } from './TabRail';
 export {
   MODULES,
   PHASES,

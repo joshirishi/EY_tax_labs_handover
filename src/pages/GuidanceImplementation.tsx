@@ -1,11 +1,17 @@
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { motion } from "motion/react";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, Check, ChevronRight, Download, Eye, RotateCcw, X } from "lucide-react";
+import { HitlUnderstandModal } from "../components/HitlUnderstandModal";
 import { SiteHeader } from "../design-kit/SiteHeader";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
-import { EYWhatsNext, EYWhatsNextHighlight } from "../design-kit/EYWhatsNext";
-import { EYQuote, SectionAnchorTitle } from "../design-kit/EYTypography";
+import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
+import { TemplatePreviewModal } from "../components/TemplatePreviewModal";
+import { PromptBookshelfLibrary } from "../components/PromptBookshelfLibrary";
+import { EightElementsPane } from "../components/EightElementsPane";
+import { PROMPTING_TECHNIQUES, TECHNIQUE_FACETS } from "../data/prompt-techniques";
+import { AgentHubTabs } from "./M365CopilotHub";
+import { TabRail } from "../design-kit/TabRail";
 import {
   colors as C,
   contentInlinePad,
@@ -25,13 +31,14 @@ export const PHASE3_LABEL = "Phase 3: Guidance for Implementation";
 export const PHASE3_NUMBER = 3;
 
 const PHASE3_SECTIONS = [
-  { id: "p3-workshop", label: "Workshop", group: "learn" as const },
-  { id: "p3-prompts", label: "Tax Prompts", group: "learn" as const },
-  { id: "p3-agents", label: "M365 Agents", group: "learn" as const },
+  { id: "p3-bingo", label: "AI Bingo", group: "learn" as const },
+  { id: "p3-prompts", label: "Quick Recall", group: "learn" as const },
   { id: "p3-hitl", label: "Human-in-Loop", group: "learn" as const },
   { id: "p5-templates", label: "Reference Library", group: "apply" as const },
-  { id: "p3-closing", label: "Deployment", group: "apply" as const },
 ];
+
+/** Set true to restore Sample M365 Agent Templates (Panel6 / #p3-agent-templates) */
+const SHOW_P3_AGENT_TEMPLATES = false;
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -83,7 +90,7 @@ function NumberedRow({ n, label, question, color, light = false }: { n: string; 
 
 const BTR = [
   { n: "01", label: "Build", color: C.frameBlue },
-  { n: "02", label: "Test", color: C.frameOrange },
+  { n: "02", label: "Review", color: C.frameOrange },
   { n: "03", label: "Refine", color: C.frameGreen },
 ];
 
@@ -107,7 +114,7 @@ const WORKSHOP_COLS = [
 
 function Panel1() {
   return (
-    <section id="p3-workshop" style={{ position: "relative", scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
+    <section style={{ position: "relative", scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
       {/* Hero — matches Foundational Concepts #home.hero (420px, spectrum bg) */}
       <div
         style={{
@@ -163,7 +170,7 @@ function Panel1() {
         }}
       >
         <div style={{ ...contentRailStyle }}>
-        {/* Build / Test / Refine — yellow-tinted cards on light surface; top bars form a shared yellow line */}
+        {/* Build / Review / Refine — yellow-tinted cards on light surface; top bars form a shared yellow line */}
         <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
           {BTR.map((step, i) => (
             <motion.div
@@ -189,7 +196,6 @@ function Panel1() {
           ))}
         </div>
 
-        {/* Workshop objective / build zone / outcomes */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
           {WORKSHOP_COLS.map((col) => (
             <div
@@ -216,82 +222,84 @@ function Panel1() {
             </div>
           ))}
         </div>
-
-        {/* Thesis quote — light surface, yellow-accent footer band, the section's rank #1 */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          style={{
-            marginTop: 32,
-            background: C.white,
-            borderRadius: 4,
-            boxShadow: "0 2px 8px rgba(26,26,36,0.07)",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <motion.div
-            aria-hidden="true"
-            initial={{ width: 0 }}
-            whileInView={{ width: "100%" }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            style={{ height: 4, background: C.yellow, flexShrink: 0 }}
-          />
-          <div style={{ padding: "28px 36px" }}>
-            <p style={{ ...eyebrow(C.eyebrowGold), marginBottom: 14 }}>The Workshop Mandate</p>
-            <EYQuote theme="light" style={{ fontSize: 22, lineHeight: 1.45, maxWidth: "none" }}>
-              "The objective is no longer awareness. Participants should spend more time in Copilot than looking at slides."
-            </EYQuote>
-          </div>
-        </motion.div>
         </div>
       </div>
     </section>
   );
 }
 
-// ── Panel 2 — Building Better Tax Prompts (Slide 3) ───────────────────────────
+// ── Panel 1b — AI Fluency Bingo (before Prompt Engineering Refresher) ─────────
+// Echo: Priya (9079aa2f) + placement note (cd7c4b34) — after workshop, before p3-prompts
 
-const PROMPT_COMPONENTS = [
-  { n: "01", label: "Persona",           question: "Who should the AI act as?" },
-  { n: "02", label: "Context",           question: "Why is the task being performed?" },
-  { n: "03", label: "Instructions",      question: "What exactly must be done?" },
-  { n: "04", label: "Tone & style",      question: "How should it read?" },
-  { n: "05", label: "Examples",          question: "Use few-shot examples where possible." },
-  { n: "06", label: "Output indicator",  question: "Specify sections or table format." },
-  { n: "07", label: "Constraints",       question: "Define what should not be done." },
-  { n: "08", label: "Grounding",         question: "Anchor to approved source documents." },
+type BingoTile = {
+  id: string;
+  statement: string;
+  isTrue: boolean;
+};
+
+const BINGO_TILES: BingoTile[] = [
+  {
+    id: "b1",
+    statement: "A clear objective and rich context often matter more than making a prompt longer.",
+    isTrue: true,
+  },
+  {
+    id: "b2",
+    statement: "Copilot can access every file in your organization.",
+    isTrue: false,
+  },
+  {
+    id: "b3",
+    statement: "Chain-of-Thought prompting always improves accuracy and should be used in every scenario.",
+    isTrue: false,
+  },
+  {
+    id: "b4",
+    statement: "Few-Shot Prompting works by giving examples of the type of response you want.",
+    isTrue: true,
+  },
+  {
+    id: "b5",
+    statement: "An AI agent can use tools to act toward a goal.",
+    isTrue: true,
+  },
+  {
+    id: "b6",
+    statement: "An agent primarily responds to prompts and questions.",
+    isTrue: false,
+  },
+  {
+    id: "b7",
+    statement: "A Copilot Agent is primarily designed to automate or assist with a specific task or workflow.",
+    isTrue: true,
+  },
+  {
+    id: "b8",
+    statement: "Any confidential data is safe in any AI tool.",
+    isTrue: false,
+  },
+  {
+    id: "b9",
+    statement: "Giving AI an expert role can influence the style and perspective of its response.",
+    isTrue: true,
+  },
 ];
 
-// Each prompt segment maps to an element index (0-7). Unmapped segments are plain.
-const PROMPT_SEGMENTS: { text: string; el?: number }[] = [
-  { text: "You are a senior Indian tax professional specialising in transfer pricing and international taxation.", el: 0 },
-  { text: " " },
-  { text: "Prepare the analysis for a regional tax director.", el: 1 },
-  { text: " " },
-  { text: "Compare current-year and prior-year intercompany transactions and identify material changes.", el: 2 },
-  { text: " " },
-  { text: "Use a professional advisory style", el: 3 },
-  { text: " " },
-  { text: "and present the findings in a table with sections: Summary, Material Changes, and Recommendations.", el: 5 },
-  { text: " " },
-  { text: "Do not cite external sources or speculate beyond the provided documents.", el: 6 },
-  { text: " " },
-  { text: "Rely only on the specified source documents.", el: 7 },
-];
+function PanelBingo() {
+  // Track which tiles the learner has revealed (click once to show True/False)
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
 
-function Panel2() {
-  const [activeEl, setActiveEl] = useState<number | null>(null);
-  const elem = activeEl != null ? PROMPT_COMPONENTS[activeEl] : null;
-  const focusRing = `2px solid ${C.yellow}`;
+  const revealedCount = Object.keys(revealed).filter((k) => revealed[k]).length;
+
+  const revealTile = (id: string) => {
+    setRevealed((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+  };
+
+  const resetBingo = () => setRevealed({});
 
   return (
     <section
-      id="p3-prompts"
+      id="p3-bingo"
       style={{
         scrollMarginTop: SUBNAV_SCROLL_MARGIN,
         background: C.confidentBlack,
@@ -300,224 +308,448 @@ function Panel2() {
     >
       <div style={{ ...contentRailStyle }}>
         <div style={sectionHeader}>
-          <p style={eyebrow(C.yellow)}>Prompt Engineering Refresher</p>
-          <h2 style={{ ...h2Style, color: C.onDark }}>Building Better Tax Prompts</h2>
-          <p style={{ fontFamily: F.light, fontSize: typeScale.body.size, color: C.onDarkMuted, marginBottom: 0 }}>
-            A prompt is the control surface for quality, scope and reviewability. Click an element to see it at work.
+          <p style={eyebrow(C.yellow)}>AI Fluency Bingo</p>
+          <h2 style={{ ...h2Style, color: C.onDark, marginBottom: 8 }}>Fact or Fiction?</h2>
+          <p
+            style={{
+              fontFamily: F.light,
+              fontSize: typeScale.body.size,
+              color: C.onDarkMuted,
+              margin: "0 auto",
+              maxWidth: 880,
+              lineHeight: 1.5,
+            }}
+          >
+            A quick challenge to assess your understanding of prompts, Copilot, and AI agents.
           </p>
-        </div>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(260px, 300px) 1fr",
-          gap: 0,
-          borderRadius: 8,
-          overflow: "hidden",
-          border: `1px solid ${C.borderOnDark}`,
-          background: C.eyBgCard,
-          textAlign: "left",
-        }}>
-          {/* Left — element picker */}
-          <nav aria-label="Prompt elements" style={{
-            borderRight: `1px solid ${C.borderOnDark}`,
-            padding: "16px 0",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            background: C.confidentBlack,
-          }}>
-            <div style={{ padding: "0 20px 14px", borderBottom: `1px solid ${C.borderOnDark}` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.yellow, fontFamily: F.bold, marginBottom: 4 }}>
-                8 Elements
-              </div>
-              <div style={{ fontSize: 13, color: C.onDarkMuted, fontFamily: F.regular, lineHeight: 1.5 }}>
-                Pick one to highlight it in the prompt.
-              </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "10px 10px" }}>
-              {PROMPT_COMPONENTS.map((item, i) => {
-                const active = activeEl === i;
-                return (
-                  <button
-                    key={item.n}
-                    type="button"
-                    aria-current={active ? "true" : undefined}
-                    onClick={() => setActiveEl(active ? null : i)}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 12px",
-                      marginBottom: 2,
-                      background: active ? C.surfaceOnDark : "transparent",
-                      border: active ? "none" : "1px solid transparent",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                    onFocus={e => { e.currentTarget.style.outline = focusRing; }}
-                    onBlur={e => { e.currentTarget.style.outline = "none"; }}
-                  >
-                    <span style={{
-                      width: 22, height: 22, borderRadius: 4, flexShrink: 0,
-                      background: active ? C.yellow : "transparent",
-                      border: `1.5px solid ${C.yellow}`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 10, fontWeight: 700,
-                      color: active ? C.confidentBlack : C.yellow,
-                      fontFamily: F.bold,
-                    }}>
-                      {item.n}
-                    </span>
-                    <span style={{
-                      flex: 1, minWidth: 0,
-                      fontSize: 13, fontWeight: 700,
-                      color: active ? C.onDark : C.onDarkMuted,
-                      fontFamily: F.bold,
-                    }}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          {/* Right — example prompt with live highlighting */}
-          <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-            <div style={{
-              padding: "14px 24px",
-              background: C.surfaceOnDark,
-              borderBottom: `1px solid ${C.borderOnDark}`,
-              display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
-              flexShrink: 0,
-            }}>
-              {elem ? (
-                <>
-                  <span style={{
-                    width: 26, height: 26, borderRadius: 4, flexShrink: 0,
-                    background: C.yellow, color: C.confidentBlack,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, fontFamily: F.bold,
-                  }}>
-                    {elem.n}
-                  </span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: C.onDark, fontFamily: F.bold }}>{elem.label}</span>
-                  <span style={{ fontSize: 12, color: C.yellow, fontFamily: F.light }}>— {elem.question}</span>
-                </>
-              ) : (
-                <span style={{ fontSize: 13, color: C.onDarkMuted, fontFamily: F.light }}>
-                  Select an element to see where it lives in this prompt.
-                </span>
-              )}
-            </div>
-
-            <div style={{ padding: "24px 28px", flex: 1, overflowY: "auto" }}>
-              {/* Example Prompt Seed — artifact card */}
-              <div style={{
+          {/* Hint text on one end; refresh pill on the other */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              flexWrap: "wrap",
+              marginTop: 16,
+              textAlign: "left",
+            }}
+          >
+            <button
+              type="button"
+              onClick={resetBingo}
+              disabled={revealedCount === 0}
+              aria-label="Refresh bingo — hide all answers"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: `1px solid ${C.borderOnDark}`,
                 background: C.surfaceOnDark,
-                borderRadius: 4,
-                padding: "24px 28px",
-                borderLeft: `4px solid ${C.yellow}`,
-                marginBottom: 20,
-              }}>
-                <p style={eyebrow(C.yellow)}>Example Prompt Seed</p>
-                <p style={{ fontFamily: F.light, fontSize: 17, fontWeight: 300, color: C.onDarkMuted, lineHeight: 1.7, margin: 0 }}>
-                  {PROMPT_SEGMENTS.map((seg, i) => {
-                    const highlight = activeEl != null && seg.el === activeEl;
-                    return highlight ? (
-                      <motion.span
-                        key={i}
-                        initial={{ backgroundColor: "rgba(255,230,0,0.25)" }}
-                        animate={{ backgroundColor: "rgba(255,230,0,0.22)" }}
-                        style={{
-                          background: "rgba(255,230,0,0.22)",
-                          borderRadius: 3,
-                          padding: "1px 4px",
-                          margin: "0 -1px",
-                          color: C.yellow,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {seg.text}
-                      </motion.span>
-                    ) : (
-                      <span key={i} style={{ color: C.onDarkMuted, fontWeight: 400 }}>{seg.text}</span>
-                    );
-                  })}
-                </p>
-              </div>
-              <div style={{
-                padding: "18px 22px",
-                background: C.eyBgCard,
-                borderRadius: 4,
-                borderLeft: `4px solid ${C.yellow}`,
-              }}>
-                <p style={{ fontFamily: F.bold, fontSize: 20, fontWeight: 700, color: C.onDark, lineHeight: 1.3 }}>
-                  Good outputs start with good prompts.
-                </p>
-              </div>
-            </div>
+                color: C.onDark,
+                fontFamily: F.bold,
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                cursor: revealedCount === 0 ? "not-allowed" : "pointer",
+                opacity: revealedCount === 0 ? 0.45 : 1,
+              }}
+            >
+              <RotateCcw size={14} strokeWidth={2} aria-hidden />
+              Refresh
+            </button>
+            <p
+              style={{
+                fontFamily: F.regular,
+                fontSize: typeScale.caption.size,
+                color: C.onDarkSubtle,
+                margin: 0,
+                textAlign: "right",
+              }}
+            >
+              Tap a tile to reveal whether it is True or False.
+              {revealedCount > 0 ? ` · ${revealedCount} of ${BINGO_TILES.length} revealed` : ""}
+            </p>
           </div>
         </div>
+
+        <div
+          role="list"
+          aria-label="AI Fluency Bingo — nine True or False statements"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+            gap: 16,
+          }}
+        >
+          {BINGO_TILES.map((tile, index) => {
+            const isOpen = Boolean(revealed[tile.id]);
+            const tone = isOpen ? (tile.isTrue ? "true" : "false") : "idle";
+
+            const borderColor =
+              tone === "true" ? C.success : tone === "false" ? C.error : C.borderOnDark;
+            // Revealed tiles fill green/red per Priya's Echo note; idle stays on the dark surface
+            const bg =
+              tone === "true" ? C.success : tone === "false" ? C.error : C.surfaceOnDark;
+            const textColor = tone === "idle" ? C.onDark : C.white;
+            const labelColor = tone === "idle" ? C.yellow : C.white;
+
+            return (
+              <button
+                key={tile.id}
+                type="button"
+                role="listitem"
+                aria-pressed={isOpen}
+                aria-label={
+                  isOpen
+                    ? `${tile.statement} — ${tile.isTrue ? "True" : "False"}`
+                    : `Statement ${index + 1}: ${tile.statement}. Activate to reveal answer.`
+                }
+                onClick={() => revealTile(tile.id)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 12,
+                  minHeight: 168,
+                  padding: "20px 18px",
+                  textAlign: "left",
+                  cursor: isOpen ? "default" : "pointer",
+                  borderRadius: 4,
+                  border: `2px solid ${borderColor}`,
+                  background: bg,
+                  boxShadow: "none",
+                  transition: "background 160ms ease, border-color 160ms ease, box-shadow 160ms ease",
+                }}
+              >
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontFamily: F.bold,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: labelColor,
+                  }}
+                >
+                  {isOpen ? (
+                    tile.isTrue ? (
+                      <>
+                        <Check size={14} strokeWidth={2} aria-hidden />
+                        True
+                      </>
+                    ) : (
+                      <>
+                        <X size={14} strokeWidth={2} aria-hidden />
+                        False
+                      </>
+                    )
+                  ) : (
+                    <>{String(index + 1).padStart(2, "0")} · Fact or fiction?</>
+                  )}
+                </span>
+                <span
+                  style={{
+                    fontFamily: F.regular,
+                    fontSize: 14,
+                    fontWeight: 400,
+                    lineHeight: 1.45,
+                    color: textColor,
+                    flex: 1,
+                  }}
+                >
+                  {tile.statement}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <style>{`
+          @media (max-width: 900px) {
+            #p3-bingo [role="list"] {
+              grid-template-columns: 1fr !important;
+            }
+          }
+          @media (min-width: 901px) and (max-width: 1100px) {
+            #p3-bingo [role="list"] {
+              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            }
+          }
+        `}</style>
       </div>
     </section>
   );
 }
 
-// ── Panel 3 — Instruction Components / M365 Agent (Slide 4) ──────────────────
+// ── Panel 2 — Building Better Tax Prompts (Slide 3) ───────────────────────────
 
-const AGENT_COMPONENTS = [
-  { n: "01", label: "Purpose",               question: "Why does the agent exist?", step: -1 },
-  { n: "02", label: "Knowledge sources",     question: "Where should it search?", step: 1 },
-  { n: "03", label: "Core responsibilities", question: "Summaries, retrieve, organize, draft, report.", step: -1 },
-  { n: "04", label: "Workflow",              question: "What steps should it follow?", step: -2 },
-  { n: "05", label: "Output format",         question: "Define standard sections.", step: 4 },
-  { n: "06", label: "Escalation rules",      question: "When should it ask for help?", step: 3 },
-  { n: "07", label: "Guardrails",            question: "What must it never do?", step: -1 },
-];
+type TemplateAsset = { screenshot?: string; downloadUrl?: string };
 
-const AGENT_WORKFLOW = [
-  { n: "01", step: "Receive request" },
-  { n: "02", step: "Search repository" },
-  { n: "03", step: "Summaries findings" },
-  { n: "04", step: "Identify gaps" },
-  { n: "05", step: "Prepare output" },
-];
+function TechniqueExampleQuote({ text, variant }: { text: string; variant: "without" | "with" }) {
+  const isBad = variant === "without";
+  return (
+    <p
+      style={{
+        fontSize: 14,
+        lineHeight: 1.7,
+        color: isBad ? C.onDarkMuted : C.onDark,
+        fontFamily: F.light,
+        fontStyle: "italic",
+        margin: 0,
+        maxWidth: 560,
+        padding: "16px 20px",
+        background: C.confidentBlack,
+        borderRadius: 4,
+        borderLeft: `4px solid ${isBad ? C.destructive : C.yellow}`,
+      }}
+    >
+      {text}
+    </p>
+  );
+}
 
-function Panel3() {
-  const [activeStep, setActiveStep] = useState(0);
-  const [activeEl, setActiveEl] = useState<number | null>(null);
-  const [hoveredEl, setHoveredEl] = useState<number | null>(null);
-  const atEnd = activeStep === AGENT_WORKFLOW.length - 1;
+function PromptTechniquesPanel() {
+  const [selectedId, setSelectedId] = useState(PROMPTING_TECHNIQUES[0].id);
+  const technique = PROMPTING_TECHNIQUES.find((t) => t.id === selectedId) ?? PROMPTING_TECHNIQUES[0];
+  const focusRing = `2px solid ${C.yellow}`;
 
-  // Element → step mapping: -1 = all steps, -2 = workflow overview (whole flow), 0-4 = specific step
-  function handleElementClick(elIndex: number) {
-    const el = AGENT_COMPONENTS[elIndex];
-    setActiveEl(activeEl === elIndex ? null : elIndex);
-    if (el.step >= 0) {
-      setActiveStep(el.step);
-    } else if (el.step === -2) {
-      setActiveStep(-1); // overview — no single step highlighted
-    }
-    // step === -1 → all steps, leave activeStep as-is
-  }
+  return (
+    <div className="pt-wizard" style={{
+      display: "grid",
+      gridTemplateColumns: "minmax(260px, 300px) 1fr",
+      gap: 0,
+      borderRadius: 12,
+      overflow: "hidden",
+      border: "1px solid rgba(46,46,56,0.10)",
+      background: C.white,
+      textAlign: "left",
+      height: 760,
+    }}>
+      <nav aria-label="Prompting techniques" style={{
+        borderRight: "1px solid rgba(46,46,56,0.08)",
+        padding: "20px 0",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        background: C.offWhite,
+      }}>
+        <div style={{ padding: "0 20px 16px", borderBottom: "1px solid rgba(46,46,56,0.08)" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.gray01, fontFamily: F.bold, marginBottom: 4 }}>
+            Prompt like a Pro — Techniques
+          </div>
+          <div style={{ fontSize: 13, color: C.offBlack, fontFamily: F.regular, lineHeight: 1.5 }}>
+            Pick a technique to explore.
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "10px 10px" }}>
+          {PROMPTING_TECHNIQUES.map((item) => {
+            const active = selectedId === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                aria-current={active ? "true" : undefined}
+                onClick={() => setSelectedId(item.id)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "8px 12px",
+                  marginBottom: 2,
+                  background: active ? C.confidentBlack : "transparent",
+                  border: active ? "none" : "1px solid transparent",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+                onFocus={(e) => { e.currentTarget.style.outline = focusRing; }}
+                onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+              >
+                <span style={{
+                  width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+                  background: active ? C.yellow : item.color + "18",
+                  border: `1.5px solid ${active ? C.yellow : item.color}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 10, fontWeight: 700,
+                  color: C.confidentBlack,
+                  fontFamily: F.bold,
+                }}>
+                  {item.id}
+                </span>
+                <span style={{
+                  flex: 1, minWidth: 0,
+                  fontSize: 13, fontWeight: 700,
+                  color: active ? C.white : C.confidentBlack,
+                  fontFamily: F.bold,
+                  lineHeight: 1.3,
+                }}>
+                  {item.technique}
+                </span>
+                <ChevronRight size={14} color={active ? C.yellow : C.gray01} style={{ flexShrink: 0 }} />
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
-  function scrollToTemplates() {
-    const el = document.getElementById("p5-templates");
-    const container = document.querySelector(".overflow-auto");
-    if (el && container) {
-      const top = el.getBoundingClientRect().top + container.scrollTop - 80;
-      container.scrollTo({ top, behavior: "smooth" });
-    }
-  }
+      <div style={{ display: "flex", flexDirection: "column", minHeight: 0, background: C.offWhite }}>
+        <div style={{
+          padding: "14px 24px",
+          background: C.white,
+          borderBottom: "1px solid rgba(46,46,56,0.08)",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{
+              width: 26, height: 26, borderRadius: 4, flexShrink: 0,
+              background: C.yellow, color: C.confidentBlack,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, fontFamily: F.bold,
+            }}>
+              {technique.id}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.confidentBlack, fontFamily: F.bold }}>{technique.technique}</span>
+          </div>
+          <p style={{ fontSize: 12, color: C.gray01, fontFamily: F.light, margin: "4px 0 0", paddingLeft: 34 }}>
+            {technique.does}
+          </p>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+          {TECHNIQUE_FACETS.map((f) => {
+            const text = technique[f.key];
+            return (
+              <section key={f.key}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  marginBottom: 10,
+                  padding: "4px 10px",
+                  borderRadius: 100,
+                  border: `1px solid ${f.color}55`,
+                  background: f.color + "14",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: f.color,
+                  fontFamily: F.bold,
+                }}>
+                  {f.label}
+                </span>
+                {f.key === "without" || f.key === "with" ? (
+                  <TechniqueExampleQuote text={text} variant={f.key} />
+                ) : (
+                  <p style={{ fontSize: 14, lineHeight: 1.6, color: C.gray01, fontFamily: F.regular, margin: 0, maxWidth: 560 }}>
+                    {text}
+                  </p>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const isOverview = activeStep === -1;
+function TemplateAssetActions({
+  name,
+  asset,
+  onPreview,
+  onDark = false,
+}: {
+  name: string;
+  asset?: TemplateAsset;
+  onPreview: (src: string, title: string) => void;
+  onDark?: boolean;
+}) {
+  if (!asset?.screenshot && !asset?.downloadUrl) return null;
+
+  return (
+    <div style={{
+      marginTop: 8,
+      marginBottom: 24,
+      padding: "16px 18px",
+      background: onDark ? "rgba(255,255,255,0.04)" : C.offWhite,
+      borderRadius: 8,
+      border: onDark ? `1px solid ${C.borderOnDark}` : `1px solid rgba(46,46,56,0.08)`,
+      display: "flex",
+      alignItems: "center",
+      gap: 16,
+      flexWrap: "wrap",
+    }}>
+      {asset.screenshot && (
+        <button
+          type="button"
+          onClick={() => onPreview(asset.screenshot!, name)}
+          style={{
+            border: `1px solid ${onDark ? C.borderOnDark : C.gray02}`,
+            borderRadius: 6,
+            padding: 0,
+            background: C.white,
+            cursor: "pointer",
+            overflow: "hidden",
+            flexShrink: 0,
+          }}
+          aria-label={`Preview ${name} template`}
+        >
+          <img
+            src={asset.screenshot}
+            alt={`${name} template thumbnail`}
+            style={{ width: 120, height: 80, objectFit: "cover", display: "block" }}
+          />
+        </button>
+      )}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {asset.screenshot && (
+          <button
+            type="button"
+            onClick={() => onPreview(asset.screenshot!, name)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: F.bold, fontSize: 12, fontWeight: 700,
+              color: onDark ? C.onDark : C.confidentBlack,
+              background: onDark ? "rgba(255,255,255,0.08)" : C.white,
+              border: `1px solid ${onDark ? C.borderOnDark : C.gray02}`,
+              borderRadius: 6, padding: "8px 14px", cursor: "pointer",
+            }}
+          >
+            <Eye size={14} strokeWidth={1.75} aria-hidden /> Preview
+          </button>
+        )}
+        {asset.downloadUrl && (
+          <a
+            href={asset.downloadUrl}
+            download
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              fontFamily: F.bold, fontSize: 12, fontWeight: 700,
+              color: C.confidentBlack,
+              background: C.yellow,
+              border: "none",
+              borderRadius: 6, padding: "8px 14px",
+              textDecoration: "none",
+            }}
+          >
+            <Download size={14} strokeWidth={1.75} aria-hidden /> Download
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Panel2() {
+  const [panelTab, setPanelTab] = useState<"elements" | "techniques">("elements");
 
   return (
     <section
-      id="p3-agents"
+      id="p3-prompts"
       style={{
         scrollMarginTop: SUBNAV_SCROLL_MARGIN,
         background: C.white,
@@ -526,203 +758,53 @@ function Panel3() {
     >
       <div style={{ ...contentRailStyle }}>
         <div style={sectionHeader}>
-          <p style={eyebrow(C.eyebrowGold)}>Anatomy of a Good M365 Agent</p>
-          <h2 style={{ ...h2Style, color: C.confidentBlack }}>Instruction Components</h2>
+          <p style={eyebrow(C.eyebrowGold)}>Prompt Engineering Refresher</p>
+          <h2 style={{ ...h2Style, color: C.confidentBlack }}>Building Better Tax Prompts</h2>
           <p style={{ fontFamily: F.light, fontSize: typeScale.body.size, color: C.gray01, marginBottom: 0 }}>
-            Design the assistant like a repeatable tax process — not a generic chatbot. Click a component to see it in the workflow.
+            A prompt is the control surface for quality, scope and reviewability. Pick an element to see what it is, why it matters, and how it changes a prompt.
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 32, alignItems: "stretch" }}>
-          {/* 7-element table — clickable, linked to workflow */}
-          <div style={{ background: C.offWhite, borderRadius: 4, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-            <div style={{ height: 3, background: spectrumCss(2), flexShrink: 0 }} />
-            <div style={{ padding: "0 24px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-around" }}>
-              {AGENT_COMPONENTS.map((item, i) => {
-                const active = activeEl === i;
-                const showDetail = active || hoveredEl === i;
-                return (
-                  <button
-                    key={item.n}
-                    type="button"
-                    onClick={() => handleElementClick(i)}
-                    onMouseEnter={() => setHoveredEl(i)}
-                    onMouseLeave={() => setHoveredEl(null)}
-                    onFocus={e => { e.currentTarget.style.outline = `2px solid ${C.yellow}`; }}
-                    onBlur={e => { e.currentTarget.style.outline = "none"; }}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "36px 1fr",
-                      gap: 12,
-                      alignItems: "start",
-                      width: "100%",
-                      padding: "13px 8px",
-                      borderBottom: `1px solid rgba(26,26,36,0.07)`,
-                      background: active ? C.yellowAlpha10 : (hoveredEl === i ? C.white : "transparent"),
-                      border: "none",
-                      borderBottomWidth: 1,
-                      borderBottomStyle: "solid",
-                      borderBottomColor: "rgba(26,26,36,0.07)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      transition: "background 150ms ease",
-                    }}
-                  >
-                    <span style={{
-                      width: 26, height: 26, borderRadius: 4, flexShrink: 0,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      background: active ? C.yellow : "transparent",
-                      border: `1.5px solid ${active ? C.yellow : C.gray02}`,
-                      fontFamily: F.bold, fontSize: 11, fontWeight: 700,
-                      color: active ? C.confidentBlack : C.eyebrowGold,
-                      marginTop: 1,
-                    }}>
-                      {item.n}
-                    </span>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-                      <span style={{ fontFamily: F.bold, fontSize: 14, fontWeight: 700, color: C.confidentBlack }}>
-                        {item.label}
-                      </span>
-                      <div
-                        aria-hidden={!showDetail}
-                        style={{
-                          overflow: "hidden",
-                          maxHeight: showDetail ? 56 : 0,
-                          opacity: showDetail ? 1 : 0,
-                          transition: "max-height 200ms ease, opacity 200ms ease",
-                        }}
-                      >
-                        <span style={{ fontFamily: F.light, fontSize: 13, color: C.gray01, lineHeight: 1.45, display: "block" }}>
-                          {item.question}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Workflow — dark surface, circuit-fill, active chip pulse */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            <div style={{ background: C.eyBgCard, borderRadius: 4, padding: "24px 28px", flex: 1, display: "flex", flexDirection: "column" }}>
-              <p style={eyebrow(C.yellow)}>Agent Workflow</p>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {AGENT_WORKFLOW.map((step, i) => {
-                  const isActive = !isOverview && i === activeStep;
-                  const isPast = !isOverview && i < activeStep;
-                  const showCircuit = isPast || isActive;
-                  return (
-                    <div key={step.n} style={{ display: "flex", alignItems: "center", transition: "opacity 200ms ease-out", opacity: isOverview ? 0.6 : (isPast ? 0.45 : 1), cursor: "pointer" }} onClick={() => { setActiveStep(i); setActiveEl(null); }}>
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                        <motion.div
-                          key={`${step.n}-${isActive}`}
-                          animate={isActive ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-                          transition={{ duration: 0.3, ease: "easeOut" }}
-                          style={{
-                            width: 32, height: 32, borderRadius: 4, flexShrink: 0,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            background: isActive ? C.yellow : (showCircuit ? C.confidentBlack : "transparent"),
-                            border: `1.5px solid ${isActive ? C.yellow : (showCircuit ? C.yellow : "rgba(255,255,255,0.2)")}`,
-                            transition: "background 200ms ease-out, border-color 200ms ease-out",
-                          }}
-                        >
-                          <span style={{ fontFamily: F.bold, fontSize: 11, fontWeight: 700, color: isActive ? C.confidentBlack : (showCircuit ? C.yellow : C.onDarkMuted) }}>{step.n}</span>
-                        </motion.div>
-                        {i < AGENT_WORKFLOW.length - 1 && (
-                          <div style={{ width: 2, height: 16, background: "rgba(255,255,255,0.12)", position: "relative", overflow: "hidden" }}>
-                            {showCircuit && (
-                              <motion.div
-                                initial={{ height: 0 }}
-                                animate={{ height: "100%" }}
-                                transition={{ duration: 0.2, ease: "easeOut" }}
-                                style={{ width: "100%", background: C.yellow, position: "absolute", top: 0, left: 0 }}
-                              />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <span style={{
-                        fontFamily: F.regular, fontSize: 14, marginLeft: 14,
-                        color: isActive ? C.onDark : (showCircuit ? C.onDark : C.onDarkMuted),
-                        fontWeight: isActive ? 700 : 400,
-                        transition: "color 200ms ease-out",
-                      }}>{step.step}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Step controls */}
-              <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
-                {!atEnd && !isOverview ? (
-                  <button
-                    type="button"
-                    onClick={() => setActiveStep((s) => Math.min(s + 1, AGENT_WORKFLOW.length - 1))}
-                    style={{
-                      fontFamily: F.bold, fontSize: 12, fontWeight: 700,
-                      color: C.confidentBlack, background: C.yellow,
-                      border: "none", borderRadius: 3,
-                      padding: "8px 16px", cursor: "pointer",
-                      letterSpacing: "0.04em",
-                      transition: "background 150ms ease",
-                    }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#FFE933"; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = C.yellow; }}
-                  >
-                    Next step →
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={scrollToTemplates}
-                    style={{
-                      fontFamily: F.bold, fontSize: 12, fontWeight: 700,
-                      color: C.confidentBlack, background: C.yellow,
-                      border: "none", borderRadius: 3,
-                      padding: "8px 16px", cursor: "pointer",
-                      letterSpacing: "0.04em",
-                    }}
-                  >
-                    See example output →
-                  </button>
-                )}
-                {(activeStep > 0 || isOverview) && (
-                  <button
-                    type="button"
-                    onClick={() => { setActiveStep(0); setActiveEl(null); }}
-                    style={{
-                      fontFamily: F.regular, fontSize: 12,
-                      color: C.onDarkMuted, background: "none",
-                      border: "none", cursor: "pointer", padding: "8px 8px",
-                    }}
-                  >
-                    Reset
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <TabRail
+            tabs={[
+              { id: "elements" as const, label: "Elements" },
+              { id: "techniques" as const, label: "Techniques" },
+            ]}
+            active={panelTab}
+            onChange={setPanelTab}
+          />
         </div>
 
-        {/* Example Purpose — full-width footer band, spans both columns */}
-        <div style={{
-          marginTop: 24,
-          background: C.confidentBlack,
-          borderRadius: 4,
-          padding: "24px 32px",
-          borderLeft: `4px solid ${C.yellow}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 24,
-        }}>
-          <div style={{ flexShrink: 0 }}>
-            <p style={eyebrow(C.yellow)}>Example Purpose</p>
-          </div>
-          <p style={{ fontFamily: F.regular, fontSize: 18, color: C.onDark, lineHeight: 1.4, margin: 0 }}>
-            Assist tax teams in gathering and organising transfer pricing documentation.
+        {panelTab === "techniques" ? (
+          <PromptTechniquesPanel />
+        ) : (
+          <EightElementsPane />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PanelTaxAgents() {
+  return (
+    <section
+      id="p3-agents"
+      style={{
+        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
+        background: C.confidentBlack,
+        padding: `${spacing.sectionPaddingY} ${contentInlinePad}`,
+      }}
+    >
+      <div style={{ ...contentRailStyle }}>
+        <div style={sectionHeader}>
+          <p style={eyebrow(C.eyebrowGold)}>Agent Engineering Refresher</p>
+          <h2 style={{ ...h2Style, color: C.onDark }}>Building better Tax agents</h2>
+          <p style={{ fontFamily: F.light, fontSize: typeScale.body.size, color: C.onDarkMuted, marginBottom: 0 }}>
+            Use the same Elements, Techniques and Summary practices from Copilot Hub to write clearer agent instructions.
           </p>
         </div>
+        <AgentHubTabs variant="rail" />
       </div>
     </section>
   );
@@ -739,16 +821,29 @@ const HITL_FLOW = [
 ];
 
 const VALIDATE        = ["Facts", "Assumptions", "Calculations", "Legal references", "Recommendations", "Final conclusions"];
+const VALIDATE_DETAILS = [
+  "Verify source documents and cited figures match the underlying records.",
+  "Challenge implicit assumptions and confirm they are documented or removed.",
+  "Recalculate key figures independently before accepting AI output.",
+  "Check statutory citations, circular references and case law against approved sources.",
+  "Ensure recommendations align with client facts and professional judgment.",
+  "Confirm the final position is defensible and appropriately qualified.",
+];
 const NEVER_DELEGATE  = ["Technical tax positions", "Tax authority submissions", "Litigation strategy", "Return sign-offs", "Professional opinions"];
 
 function Panel4() {
   const [activeStep, setActiveStep] = useState<string | null>(null);
   const [replayKey, setReplayKey] = useState(0);
+  const [expandedValidate, setExpandedValidate] = useState<number | null>(null);
+  const [modalStep, setModalStep] = useState<number | null>(null);
   const hitlActive = activeStep === "04";
 
   const handleStepClick = (stepN: string) => {
     setActiveStep(stepN);
-    if (stepN === "04") setReplayKey((k) => k + 1);
+    if (stepN === "04") {
+      setReplayKey((k) => k + 1);
+      setModalStep(0);
+    }
   };
 
   return (
@@ -800,14 +895,34 @@ function Panel4() {
                 {step.yellow ? (
                   <motion.div
                     key={`pulse-${replayKey}`}
-                    initial={{ scale: 1 }}
                     animate={
                       hitlActive
-                        ? { scale: [1, 1.04, 1], boxShadow: "0 0 0 2px rgba(255,230,0,0.45)" }
-                        : { scale: 1, boxShadow: "0 0 0 0 rgba(255,230,0,0)" }
+                        ? {
+                            scale: [1, 1.06, 1],
+                            boxShadow: [
+                              `0 0 0 0 ${C.yellow}00`,
+                              `0 0 0 12px ${C.yellow}55`,
+                              `0 0 0 0 ${C.yellow}00`,
+                            ],
+                          }
+                        : {
+                            scale: [1, 1.04, 1],
+                            boxShadow: [
+                              `0 0 0 0 ${C.yellow}00`,
+                              `0 0 0 8px ${C.yellow}45`,
+                              `0 0 0 0 ${C.yellow}00`,
+                            ],
+                          }
                     }
-                    transition={{ duration: 0.4, ease: "easeInOut" }}
+                    transition={{
+                      duration: hitlActive ? 1.4 : 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleStepClick(step.n)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleStepClick(step.n); }}
                     style={{
                       background: C.yellow,
                       borderRadius: 4,
@@ -818,6 +933,9 @@ function Panel4() {
                   >
                     <p style={{ fontFamily: F.bold, fontSize: 11, fontWeight: 700, color: C.confidentBlack, letterSpacing: "0.06em", marginBottom: 4 }}>{step.n}</p>
                     <p style={{ fontFamily: F.bold, fontSize: 15, fontWeight: 700, color: C.confidentBlack }}>{step.label}</p>
+                    <p style={{ fontFamily: F.regular, fontSize: 11, color: C.confidentBlack, margin: "8px 0 0", letterSpacing: "0.02em" }}>
+                      Understand it better
+                    </p>
                   </motion.div>
                 ) : (
                   <div
@@ -866,28 +984,48 @@ function Panel4() {
           >
             <p style={{ fontFamily: F.bold, fontSize: 13, fontWeight: 700, color: C.confidentBlack, marginBottom: 16, letterSpacing: "0.04em", background: C.yellow, display: "inline-block", padding: "6px 12px", borderRadius: 3 }}>Human review should validate</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {VALIDATE.map((item, idx) => (
-                <motion.p
-                  key={`${item}-${replayKey}`}
-                  initial={{ backgroundColor: "rgba(255,255,255,0.03)" }}
-                  animate={
-                    hitlActive
-                      ? { backgroundColor: ["rgba(255,230,0,0.35)", "rgba(255,230,0,0.18)"] }
-                      : { backgroundColor: "rgba(255,255,255,0.03)" }
-                  }
-                  transition={{ delay: hitlActive ? idx * 0.08 : 0, duration: 0.6, ease: "easeOut" }}
-                  style={{
-                    fontFamily: F.light, fontSize: 13, color: hitlActive ? C.onDark : C.onDarkMuted, lineHeight: 1.4,
-                    padding: "6px 10px", borderRadius: 3, margin: 0,
-                    cursor: "default",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,200,100,0.12)"; e.currentTarget.style.color = C.onDark; }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = hitlActive ? "rgba(255,230,0,0.18)" : "rgba(255,255,255,0.03)";
-                    e.currentTarget.style.color = hitlActive ? C.onDark : C.onDarkMuted;
-                  }}
-                >{item}</motion.p>
-              ))}
+              {VALIDATE.map((item, idx) => {
+                const isExpanded = expandedValidate === idx;
+                return (
+                  <motion.button
+                    key={`${item}-${replayKey}`}
+                    type="button"
+                    initial={{ backgroundColor: "rgba(255,255,255,0.03)" }}
+                    animate={
+                      hitlActive
+                        ? { backgroundColor: ["rgba(255,230,0,0.35)", "rgba(255,230,0,0.18)"] }
+                        : { backgroundColor: isExpanded ? "rgba(255,230,0,0.12)" : "rgba(255,255,255,0.03)" }
+                    }
+                    transition={{ delay: hitlActive ? idx * 0.08 : 0, duration: 0.6, ease: "easeOut" }}
+                    onClick={() => setExpandedValidate(isExpanded ? null : idx)}
+                    style={{
+                      fontFamily: F.light, fontSize: 13, color: hitlActive || isExpanded ? C.onDark : C.onDarkMuted, lineHeight: 1.4,
+                      padding: "10px 12px", borderRadius: 3, margin: 0,
+                      cursor: "pointer",
+                      border: isExpanded ? `1px solid ${C.yellow}` : "1px solid transparent",
+                      textAlign: "left",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                    }}
+                  >
+                    <span style={{ fontFamily: F.bold, fontWeight: 700, fontSize: 13 }}>{item}</span>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.span
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          style={{ fontFamily: F.light, fontSize: 12, color: C.onDarkMuted, lineHeight: 1.45, overflow: "hidden" }}
+                        >
+                          {VALIDATE_DETAILS[idx]}
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
           <div style={{ background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "24px 28px", borderTop: `3px solid ${C.frameOrange}`, transition: "background 150ms ease" }}>
@@ -910,323 +1048,18 @@ function Panel4() {
           </div>
         </div>
       </div>
+      {modalStep != null && (
+        <HitlUnderstandModal
+          slideIndex={modalStep}
+          onClose={() => setModalStep(null)}
+          onChangeSlide={setModalStep}
+        />
+      )}
     </section>
   );
 }
 
 // ── Panel 5 — Workshop Reference Library (Slide 6) ───────────────────────────
-
-// 15 guided examples — same content as #guided-examples (BrainstormingUseCases)
-const GUIDED_EXAMPLES = [
-  {
-    name: "Concept Note",
-    purpose: "Reviewing research from multiple sources and helps draft requisite concept note for larger consumption.",
-    approach: "Analyses tax research data collated from various sources and drafts a concept note with the relevant legislative provisions, judicial precedents and positions adopted.",
-    outcome: "Creates a precise and informative summary of relevant tax concepts that serves as a foundational reference document.",
-  },
-  {
-    name: "Facts-to-Law Mapping",
-    purpose: "Mapping of relevant facts of the case to applicable tax provisions and judicial precedents to assess tax exposure.",
-    approach: "Extracts the relevant facts of a case, identifies the applicable tax provisions and maps these to applicable judicial precedents and positions adopted.",
-    outcome: "Develops a structured fact-to-law matrix that clearly shows the relationship between facts and applicable legal frameworks.",
-  },
-  {
-    name: "20-80 Concept Simplification",
-    purpose: "Simplifying tax concepts into digestible, actionable insights that cover 80% of use cases with 20% of the effort.",
-    approach: "Analyses complex tax concepts and extracts the key principles, rules and exceptions that apply to the most common scenarios encountered in practice.",
-    outcome: "Produces concise, practical summaries of tax concepts that enable quick understanding and application in common scenarios.",
-  },
-  {
-    name: "Stepwise Concept Plan",
-    purpose: "Breaking down complex tax concepts into step-by-step implementation guidance that can be followed sequentially.",
-    approach: "Structures tax concepts into logical, sequential steps with clear decision points, conditions and actions at each stage.",
-    outcome: "Creates a structured implementation guide that reduces errors and ensures consistent application of tax concepts.",
-  },
-  {
-    name: "Transaction Step Plan",
-    purpose: "Mapping the tax implications of each step in a transaction to identify risks and planning opportunities.",
-    approach: "Analyses each step of a proposed transaction, identifies applicable tax provisions and assesses the tax consequences and risks.",
-    outcome: "Produces a comprehensive transaction map showing the tax implications at each step and highlighting key risk areas.",
-  },
-  {
-    name: "GST Formula Validation",
-    purpose: "Validating GST calculations and formulas to ensure compliance with applicable provisions and circulars.",
-    approach: "Checks GST calculations against applicable tax rates, exemptions and provisions, identifies discrepancies and suggests corrections.",
-    outcome: "Provides a validated GST calculation with references to applicable provisions and explanation of any adjustments made.",
-  },
-  {
-    name: "Meeting Minutes",
-    purpose: "Generating structured meeting minutes from discussion notes or recordings for tax team meetings.",
-    approach: "Extracts key discussion points, decisions made, action items and owners from meeting notes and organises them into a structured format.",
-    outcome: "Produces clear, concise meeting minutes with action items, owners and timelines that can be shared with stakeholders.",
-  },
-  {
-    name: "PPT Mock Run",
-    purpose: "Preparing for client presentations by generating anticipated questions and suggested responses.",
-    approach: "Analyses the presentation content and generates likely client questions based on the subject matter, industry context and typical client concerns.",
-    outcome: "Produces a Q&A preparation guide that helps presenters anticipate and prepare for client questions.",
-  },
-  {
-    name: "Tax Strategic Upskilling",
-    purpose: "Creating personalised learning materials to build tax team capability in specific areas.",
-    approach: "Assesses the learning objectives and creates structured learning content including explanations, examples, scenarios and self-assessment questions.",
-    outcome: "Produces targeted learning materials that build capability in specific tax areas efficiently.",
-  },
-  {
-    name: "Document Extraction",
-    purpose: "Extracting specific data points or information from large volumes of tax documents.",
-    approach: "Identifies and extracts specified data fields from documents such as invoices, contracts, returns and correspondence.",
-    outcome: "Produces structured data extracts that can be used for analysis, reconciliation or reporting purposes.",
-  },
-  {
-    name: "Image Summarization",
-    purpose: "Summarising content from images, charts or scanned documents for use in tax analysis.",
-    approach: "Analyses image content including charts, tables, scanned documents and handwritten notes and converts them into structured text summaries.",
-    outcome: "Produces text summaries of image content that can be integrated into analysis and reporting workflows.",
-  },
-  {
-    name: "Vernacular Translation",
-    purpose: "Translating tax documents or communications from regional languages to English for analysis.",
-    approach: "Translates content from regional languages while preserving technical tax terminology and context.",
-    outcome: "Provides accurate translations that enable analysis of tax documents in regional languages.",
-  },
-  {
-    name: "VBA Automation",
-    purpose: "Creating VBA macros to automate repetitive Excel-based tax calculations and data processing tasks.",
-    approach: "Analyses the manual process steps and generates VBA code to automate data extraction, calculation and formatting tasks.",
-    outcome: "Produces VBA code that automates repetitive tasks, reducing manual effort and improving consistency.",
-  },
-  {
-    name: "Agreement Review",
-    purpose: "Reviewing agreements for tax-relevant clauses and assessing the tax implications of contractual arrangements.",
-    approach: "Extracts and analyses tax-relevant clauses from agreements, identifies potential tax risks and suggests areas for clarification or renegotiation.",
-    outcome: "Produces a structured review highlighting key tax clauses, risks and recommended actions.",
-  },
-  {
-    name: "SOP Review",
-    purpose: "Reviewing and updating standard operating procedures to reflect current tax provisions and best practices.",
-    approach: "Analyses existing SOPs against current tax provisions and identifies areas where updates or clarifications are required.",
-    outcome: "Produces updated SOPs or a gap analysis highlighting required changes to align with current requirements.",
-  },
-];
-
-const APPENDIX_REFS = [
-  "Master Prompt Template",
-  "Comparative Assessment Prompt",
-  "Risk Assessment Prompt",
-  "Data Analysis Prompt",
-];
-
-// ── Alternate UI for guided examples: split-panel (same as #guided-examples) ─
-function GuidedExamplesAlternateUI() {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [panelKey, setPanelKey] = useState(0);
-
-  const select = (idx: number) => {
-    if (idx === activeIdx) return;
-    setActiveIdx(idx);
-    setPanelKey((k) => k + 1);
-  };
-
-  const active = GUIDED_EXAMPLES[activeIdx];
-  const isLast = activeIdx === GUIDED_EXAMPLES.length - 1;
-  const next = () => select(Math.min(activeIdx + 1, GUIDED_EXAMPLES.length - 1));
-  const prev = () => select(Math.max(activeIdx - 1, 0));
-
-  return (
-    <div>
-      {/* Split panel */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "clamp(200px, 30%, 280px) 1fr",
-        gap: 0,
-        border: `1px solid ${C.gray02}`,
-        borderRadius: 10,
-        overflow: "hidden",
-        background: C.white,
-        minHeight: 480,
-      }}>
-
-        {/* LEFT — sidebar */}
-        <div style={{
-          background: C.confidentBlack,
-          borderRight: `1px solid rgba(255,255,255,0.08)`,
-          display: "flex",
-          flexDirection: "column",
-        }}>
-          <div style={{
-            padding: "16px 17px 12px",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}>
-            <span style={{
-              fontFamily: F.bold, fontSize: 11, letterSpacing: "0.06em",
-              textTransform: "uppercase", color: C.onDarkMuted,
-            }}>
-              Examples
-            </span>
-            <span style={{
-              fontFamily: F.bold, fontSize: 11,
-              color: C.yellow,
-              background: "rgba(255,230,0,0.12)",
-              borderRadius: 20, padding: "2px 10px",
-              letterSpacing: "0.02em",
-            }}>
-              {activeIdx + 1} / {GUIDED_EXAMPLES.length}
-            </span>
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-            {GUIDED_EXAMPLES.map((ex, idx) => {
-              const isActive = idx === activeIdx;
-              return (
-                <button
-                  key={ex.name}
-                  onClick={() => select(idx)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    width: "100%",
-                    border: "none",
-                    background: isActive ? "rgba(255,255,255,0.08)" : "transparent",
-                    borderLeft: isActive ? `3px solid ${C.yellow}` : "3px solid transparent",
-                    padding: "10px 16px 10px 14px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "background 150ms",
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; }}
-                  onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                >
-                  <span style={{
-                    fontFamily: isActive ? F.bold : F.regular,
-                    fontSize: isActive ? 13 : 12,
-                    color: isActive ? C.onDark : C.onDarkMuted,
-                    lineHeight: 1.35,
-                    letterSpacing: isActive ? "-0.01em" : "0.01em",
-                  }}>
-                    {ex.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* RIGHT — detail panel */}
-        <div
-          key={panelKey}
-          style={{
-            padding: "clamp(24px, 3vw, 40px)",
-            display: "flex",
-            flexDirection: "column",
-            animation: "ey-slide-right 200ms cubic-bezier(.22,.68,0,1.05) both",
-          }}
-        >
-          <h3 style={{
-            fontFamily: F.bold,
-            fontSize: "clamp(18px, 2.2vw, 26px)",
-            color: C.offBlack,
-            margin: "0 0 28px",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.15,
-          }}>
-            {active.name}
-          </h3>
-
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.eyebrowGold, margin: "0 0 8px" }}>Purpose</p>
-            <p style={{ fontFamily: F.regular, fontSize: 14, color: C.offBlack, margin: 0, lineHeight: 1.6 }}>{active.purpose}</p>
-          </div>
-
-          <div style={{ height: 1, background: C.gray02, marginBottom: 24 }} />
-
-          <div style={{ marginBottom: 24 }}>
-            <p style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.eyebrowGold, margin: "0 0 8px" }}>Approach</p>
-            <p style={{ fontFamily: F.regular, fontSize: 14, color: C.offBlack, margin: 0, lineHeight: 1.6 }}>{active.approach}</p>
-          </div>
-
-          <div style={{ height: 1, background: C.gray02, marginBottom: 24 }} />
-
-          <div style={{ marginBottom: 32 }}>
-            <p style={{ fontFamily: F.bold, fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: C.eyebrowGold, margin: "0 0 8px" }}>Outcome</p>
-            <p style={{ fontFamily: F.regular, fontSize: 14, color: C.offBlack, margin: 0, lineHeight: 1.6 }}>{active.outcome}</p>
-          </div>
-
-          <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <button
-              onClick={prev}
-              disabled={activeIdx === 0}
-              style={{
-                fontFamily: F.bold, fontSize: 13,
-                color: activeIdx === 0 ? C.gray02 : C.offBlack,
-                background: "transparent",
-                border: `1px solid ${activeIdx === 0 ? C.gray02 : C.offBlack}`,
-                borderRadius: 6, padding: "8px 20px",
-                cursor: activeIdx === 0 ? "not-allowed" : "pointer",
-                letterSpacing: "-0.01em",
-                display: "inline-flex", alignItems: "center", gap: 6,
-                transition: "border-color 150ms, color 150ms",
-              }}
-            >
-              <ChevronLeft size={14} /> Prev
-            </button>
-            <button
-              onClick={next}
-              disabled={isLast}
-              style={{
-                fontFamily: F.bold, fontSize: 13,
-                color: isLast ? C.gray02 : C.offBlack,
-                background: "transparent",
-                border: `1px solid ${isLast ? C.gray02 : C.offBlack}`,
-                borderRadius: 6, padding: "8px 20px",
-                cursor: isLast ? "not-allowed" : "pointer",
-                letterSpacing: "-0.01em",
-                display: "inline-flex", alignItems: "center", gap: 6,
-                transition: "border-color 150ms, color 150ms",
-              }}
-            >
-              {isLast ? <>See discussion prompt <ChevronDown size={14} /></> : <>Next <ChevronRight size={14} /></>}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Discussion prompt — always visible below */}
-      <div
-        id="discussion-prompt"
-        style={{
-          marginTop: 24,
-          background: C.yellow,
-          borderRadius: 10,
-          padding: "clamp(24px, 3vw, 36px)",
-          animation: isLast ? "ey-slide-up 300ms cubic-bezier(.22,.68,0,1.05) both" : undefined,
-        }}
-      >
-        <p style={{
-          fontFamily: F.bold, fontSize: 10,
-          letterSpacing: "0.1em", textTransform: "uppercase",
-          color: C.confidentBlack, margin: "0 0 12px", opacity: 0.6,
-        }}>
-          Discussion Prompt
-        </p>
-        <p style={{
-          fontFamily: F.bold,
-          fontSize: "clamp(16px, 2vw, 20px)",
-          color: C.confidentBlack,
-          margin: 0,
-          lineHeight: 1.45,
-          letterSpacing: "-0.01em",
-        }}>
-          Which recurring tax activity would benefit from stronger extraction, comparison, analysis,
-          explanation, validation or a first draft?
-        </p>
-      </div>
-    </div>
-  );
-}
 
 function Panel5() {
   return (
@@ -1240,15 +1073,14 @@ function Panel5() {
     >
       <div style={{ ...contentRailStyle }}>
         <div style={sectionHeader}>
-          <p style={eyebrow(C.confidentBlack)}>Sample Prompt Templates</p>
+          <p style={eyebrow(C.confidentBlack)}>Apply</p>
           <h2 style={{ ...h2Style, color: C.confidentBlack }}>Workshop Reference Library</h2>
           <p style={{ fontFamily: F.light, fontSize: typeScale.body.size, color: C.gray01, marginBottom: 0 }}>
-            Use the programme handouts for detailed templates; use this slide as the build menu.
+            Switch between the Prompt Template Library and the Agent Template Library, then open a book on the shelf.
           </p>
         </div>
 
-        {/* Alternate UI: search + expandable card grid (same content as #guided-examples) */}
-        <GuidedExamplesAlternateUI />
+        <PromptBookshelfLibrary />
       </div>
     </section>
   );
@@ -1256,12 +1088,21 @@ function Panel5() {
 
 // ── Panel 6 — Agent Library + Closing (Slides 7 + 8) ─────────────────────────
 
-const AGENT_LIBRARY = [
+type AgentEntry = {
+  name: string;
+  purpose: string;
+  actions: string;
+  outcome: string;
+  templateAsset?: TemplateAsset;
+};
+
+const AGENT_LIBRARY: AgentEntry[] = [
   {
     name: "Tax Knowledge Retrieval Agent",
     purpose: "Acts as a centralized knowledge assistant for locating historical tax positions, precedents and supporting materials.",
     actions: "Searches approved repositories containing tax opinions, notices, submissions, laws, policies and knowledge documents.",
     outcome: "Enables faster research, improves consistency in tax positions and reduces time spent searching for information.",
+    templateAsset: { screenshot: "/templates/tax-knowledge-agent.png", downloadUrl: "/templates/tax-knowledge-agent.docx" },
   },
   {
     name: "Transfer Pricing Documentation Agent",
@@ -1313,501 +1154,31 @@ const AGENT_LIBRARY = [
   },
 ];
 
-const YOU_NOW_HAVE = [
-  { color: C.frameBlue,   label: "Identified tax AI opportunities" },
-  { color: C.frameOrange, label: "Built prompt templates" },
-  { color: C.framePurple, label: "Designed AI-enabled processes" },
-  { color: C.frameGreen,  label: "Built Copilot Agent instructions" },
-];
-
-// ── Agent Instruction Tabs — Best Practices / Failures / Templates ──────────
-
-const AGENT_BEST_PRACTICES = [
-  {
-    n: "01",
-    heading: "Use Clear, Actionable Language",
-    sub: "Stop Telling Copilot Agent What NOT To Do. Just tell It What TO Do.",
-    content: "Use clear verbs like Ask, Search, Check, Use, Send. The more precise your instructions, the more reliable your agent's output. Avoid vague instructions.",
-    bad: "Review Section 194R applicability",
-    good: "Analyze whether Section 194R applies to the attached sales promotion scheme and identify compliance requirements",
-  },
-  {
-    n: "02",
-    heading: "Build Step-by-Step Workflows with transitions",
-    sub: "Confused Agents Follow Confused Instructions.",
-    content: "Every workflow should have: Goal, Action, Transition",
-    bad: "Review tax notices and prepare responses.",
-    good: "Step 1: Identify pending notices. Step 2: Extract due dates. Step 3: Draft response summary.",
-  },
-  {
-    n: "03",
-    heading: "Use strict structure",
-    sub: "Great Results Start with Great Structure",
-    content: "Use: Sections for categories, Bullets for parallel tasks, Steps for sequential workflows",
-    bad: "Mixed instructions in one paragraph",
-    good: "Separate sections: Research, Analysis, Output",
-  },
-  {
-    n: "04",
-    heading: "Make tasks atomic",
-    sub: "One Instruction. One Outcome.",
-    content: "Complex work isn't solved in a single leap. Guide your agent through the same logical path you would follow: Review the facts, Identify the issues, Analyze the impact, Recommend the next steps",
-    bad: "Extract case laws and draft litigation arguments",
-    good: "Extract relevant case laws. Summarize legal principles. Draft litigation arguments.",
-  },
-  {
-    n: "05",
-    heading: "Always specify tone, verbosity, and output format",
-    sub: "If You Don't Specify It, Copilot Will Guess.",
-    content: "Always define: Tone, Detail level, Output format",
-    bad: "Draft an email to the client summarising the provisions covered u/s 90",
-    good: "Draft an email to the client summarising the provisions covered u/s 90. Tone: Professional and reassuring. Length: Under 150 words. Output Format: Email ready to send with subject line",
-  },
-  {
-    n: "06",
-    heading: "Structure instructions in Markdown",
-    sub: "Help Your Agent See the Bigger Picture",
-    content: "Use #, ##, and ### for section headers. Use bullets or numbered lists. Highlight tool or system names. Make critical instructions bold by using **",
-    bad: "Prepare a transfer pricing risk assessment.",
-    good: "Scope: Review FY 2025-26 transactions. Analysis: Identify related party transactions, Evaluate transfer pricing exposure. Risk Assessment: High-risk areas, Supporting documentation gaps. Deliverable: Risk matrix and recommendations",
-  },
-  {
-    n: "07",
-    heading: "Provide domain vocabulary",
-    sub: "Teach Your Agent Your Language",
-    content: "Never Assume Copilot Knows Your Acronyms. Define: Acronyms, Tax terms, Internal terms, Specialized formulas",
-    bad: "TP = Transfer Pricing (undefined)",
-    good: "TP = Transfer Pricing, FAI = Foreign Asset Information, PE = Permanent Establishment, AO = Assessing Officer",
-  },
-  {
-    n: "08",
-    heading: "Explicitly reference capabilities, knowledge, and actions",
-    sub: "Tell Copilot Where To Look",
-    content: "Tell the agent: Search Teams, Check emails, Use SharePoint knowledge, Use OneDrive documents",
-    bad: "Summarize action items",
-    good: "Search Teams conversations and summarize action items",
-  },
-  {
-    n: "09",
-    heading: "Provide examples",
-    sub: "Examples Are Superpowers",
-    content: "Don't Just Describe It. Show It. Provide examples for more than one example for edge cases. Remove ambiguity and help your agent replicate the outcome you expect.",
-    bad: "Draft a client communication.",
-    good: "Use the tone and structure below: Dear Client, We would like to inform you about the recent amendment impacting withholding tax obligations. Recommended next step: Review current vendor arrangements. Now draft a communication regarding Section 194T using the same style.",
-  },
-  {
-    n: "10",
-    heading: "Control reasoning through phrasing",
-    sub: "Control How Much Reasoning You Need",
-    content: "Not Every Task Needs Deep Thinking. Choose the right instruction style: Deep reasoning to analyze, derive, evaluate, justify, think step by step, reflect, verify logic and structure tasks into multiple dependent steps. Moderate reasoning (balanced) for concise but structured explanation. Fast and minimal reasoning for short answers, no reasoning on explanation and final result only.",
-    bad: "Analyze litigation strategy considering recent High Court and Supreme Court rulings. (Deep, no signal)",
-    good: "Deep Task: Analyze litigation strategy considering recent High Court and Supreme Court rulings. Moderate Task: Summarize implications of Section 148A. Quick Task: Extract due dates from this notice.",
-  },
-];
-
-const COMMON_FAILURES = [
-  {
-    title: "Overeager tool use",
-    problem: "The model calls tools without needed inputs.",
-    solution: "Add instruction: Only call the tool if necessary inputs are available; otherwise, ask the user.",
-  },
-  {
-    title: "Repetitive phrasing",
-    problem: "The model reuses example phrasing verbatim.",
-    solution: "Encourage varied responses and natural language. Consider adding more than one example instead of just one (few-shot prompting). Experiment with removing the example to save on tokens.",
-  },
-  {
-    title: "Verbose explanations",
-    problem: "The model overexplains or provides excessive formatting.",
-    solution: "To limit verbosity or formatting, add constraints and concise examples.",
-  },
-  {
-    title: "Inference drift after model updates",
-    problem: "Agent reorders steps, adds context, or over-reasons following a GPT version change.",
-    solution: "Add a stabilizing header: Always interpret instructions literally. Never infer intent or fill in missing steps. Follow step order exactly with no optimization.",
-  },
-  {
-    title: "Missing self-evaluation",
-    problem: "Agent responds without verifying alignment with all instructions.",
-    solution: "Add a final self-evaluation step: Before finalizing, confirm that all items from Section A appear in the summary.",
-  },
-];
-
-const INSTRUCTION_PATTERNS = [
-  {
-    n: "01",
-    name: "Convert ambiguous multitask requests into deterministic workflows",
-    use: "Remove ambiguity by defining atomic steps, explicit formulas, and required validation. Ensures stable, repeatable behavior across model versions.",
-    template: "## Task: Metrics and ROI (Deterministic)\n\n### Definitions (Do not invent)\n- Metrics to compute: [Metric1], [Metric2], [Metric3]\n- ROI definition: ROI = (Benefit - Cost) / Cost\n- Source of truth: Use ONLY the provided document(s)\n\n### Steps (Sequential — do not reorder)\nStep 1: Locate inputs. Quote the section/table where each came from.\nStep 2: Compute metrics exactly as defined. If any input is missing, stop and ask ONE question.\nStep 3: Compute ROI using the definition above.\nStep 4: Output ONLY the table.\n\n### Final check\nBefore finalizing: confirm every metric has a value, a source, and no assumptions.",
-  },
-  {
-    n: "02",
-    name: "Correct parallel versus sequential structure",
-    use: "Separate parallel and sequential logic so the model runs workflows without adding or reordering steps.",
-    template: "Section A — Extract Data (parallel)\n- Extract pricing changes.\n- Extract margin changes.\n- Extract sentiment themes.\n\nSection B — Build the Summary (sequential)\nStep 1: Integrate all findings from Section A.\nStep 2: Produce the 2 page call prep summary.",
-  },
-  {
-    n: "03",
-    name: "Explicit decision rules",
-    use: "Add explicit if/then rules that prevent unintended model interpretation and enforce deterministic outcomes.",
-    template: "Read the product report.\nCheck category performance.\nIf performance is stable or improving, write the summary section.\nIf performance declines or anomalies are detected, write the risks/issues section.",
-  },
-  {
-    n: "04",
-    name: "Output contract",
-    use: "Provide shape, structure, tone, and allowed content ensuring consistency across versions.",
-    template: "## Output Contract (Mandatory)\nGoal: [one sentence]\nFormat: [bullet list | table | 2 pages | JSON]\nDetail level: [short | medium | detailed]\nTone: [Professional | Friendly | Efficient]\nInclude: [A, B, C]\nExclude: No extra recommendations, no extra context, no helpful tips",
-  },
-  {
-    n: "05",
-    name: "Self-evaluation gate",
-    use: "Add an explicit self-check step so the model validates completeness and corrects omissions before responding.",
-    template: "## Final Check: Self Evaluation\nBefore finalizing the output, review your response for completeness, ensure that all Section A elements are accurately represented, check for inconsistencies or uncertainty, and revise the answer if needed.",
-  },
-  {
-    n: "06",
-    name: "Steering automode reasoning",
-    use: "Explicit reasoning cues give you control over how much thinking the model applies.",
-    template: "Deep: Use deep reasoning. Break the problem into steps, analyze each step, evaluate alternatives, and justify the final decision. Reflect before answering.\n\nFast: Short answer only. No reasoning or explanation. Provide the final result only.",
-  },
-  {
-    n: "07",
-    name: "Literal-execution header for immediate stability",
-    use: "Temporarily stabilize an existing agent, especially after a model change. Interim fix while you update the full instruction set.",
-    template: "Always interpret instructions literally.\nNever infer intent or fill in missing steps.\nNever add context, recommendations, or assumptions.\nFollow step order exactly with no optimization.\nRespond concisely and only in the requested format.\nDo not call tools unless a step explicitly instructs to do so.",
-  },
-];
-
-function AgentInstructionTabs() {
-  const [activeKey, setActiveKey] = useState("bp-1");
-  const focusRing = `2px solid ${C.yellow}`;
-
-  // Flatten all items into a single list with group labels
-  const allItems = [
-    ...AGENT_BEST_PRACTICES.map((bp, i) => ({
-      key: `bp-${i + 1}`,
-      group: "Best Practices",
-      n: bp.n,
-      name: bp.heading,
-      type: "bp" as const,
-      data: bp,
-    })),
-    ...COMMON_FAILURES.map((f, i) => ({
-      key: `cf-${i + 1}`,
-      group: "Common Failures",
-      n: String(i + 1).padStart(2, "0"),
-      name: f.title,
-      type: "cf" as const,
-      data: f,
-    })),
-    ...INSTRUCTION_PATTERNS.map((p, i) => ({
-      key: `ip-${i + 1}`,
-      group: "Templates & Patterns",
-      n: p.n,
-      name: p.name,
-      type: "ip" as const,
-      data: p,
-    })),
-  ];
-
-  const active = allItems.find(it => it.key === activeKey) ?? allItems[0];
-  const groups = ["Best Practices", "Common Failures", "Templates & Patterns"];
-
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <SectionAnchorTitle align="center" style={{ marginBottom: 16 }}>
-        Reference Guidance
-      </SectionAnchorTitle>
-
-      {/* Wizard — split panel (same pattern as #elements / EightElementsWizard) */}
-      <div style={{
-        border: `1px solid ${C.borderOnDark}`,
-        borderRadius: 12,
-        overflow: "hidden",
-        display: "grid",
-        gridTemplateColumns: "minmax(260px, 300px) 1fr",
-        height: 620,
-        textAlign: "left",
-        background: C.eyBgCard,
-      }}>
-        {/* LEFT — sidebar with grouped items */}
-        <nav aria-label="Agent instruction guidance" style={{
-          background: C.confidentBlack,
-          borderRight: `1px solid ${C.borderOnDark}`,
-          padding: "20px 0",
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-        }}>
-          <div style={{ padding: "0 20px 16px", borderBottom: `1px solid ${C.borderOnDark}` }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: C.yellow, fontFamily: F.bold, marginBottom: 4 }}>
-              Agent Instruction Guidance
-            </div>
-            <div style={{ fontSize: 13, color: C.onDarkMuted, fontFamily: F.regular, lineHeight: 1.5 }}>
-              Pick a topic to explore.
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px" }}>
-            {groups.map(group => {
-              const groupItems = allItems.filter(it => it.group === group);
-              return (
-                <div key={group} style={{ marginBottom: 12 }}>
-                  <div style={{
-                    fontSize: 9, fontWeight: 700, letterSpacing: "0.1em",
-                    textTransform: "uppercase", color: C.onDarkSubtle,
-                    fontFamily: F.bold, padding: "4px 12px 8px",
-                  }}>
-                    {group}
-                  </div>
-                  {groupItems.map(item => {
-                    const isActive = activeKey === item.key;
-                    return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        aria-current={isActive ? "true" : undefined}
-                        onClick={() => setActiveKey(item.key)}
-                        style={{
-                          width: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "8px 12px",
-                          marginBottom: 2,
-                          background: isActive ? "rgba(255,255,255,0.08)" : "transparent",
-                          border: isActive ? "none" : "1px solid transparent",
-                          borderRadius: 8,
-                          cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                        onFocus={e => { e.currentTarget.style.outline = focusRing; }}
-                        onBlur={e => { e.currentTarget.style.outline = "none"; }}
-                      >
-                        <span style={{
-                          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                          background: isActive ? C.yellow : "transparent",
-                          border: `1.5px solid ${isActive ? C.yellow : C.gray02}`,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 10, fontWeight: 700,
-                          color: isActive ? C.confidentBlack : C.onDarkMuted,
-                          fontFamily: F.bold,
-                        }}>
-                          {item.n}
-                        </span>
-                        <span style={{
-                          flex: 1, minWidth: 0,
-                          fontSize: 12, fontWeight: 700,
-                          color: isActive ? C.onDark : C.onDarkMuted,
-                          fontFamily: F.bold,
-                          lineHeight: 1.3,
-                        }}>
-                          {item.name}
-                        </span>
-                        <ChevronRight size={14} color={isActive ? C.yellow : C.onDarkSubtle} strokeWidth={1.75} style={{ flexShrink: 0 }} />
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* RIGHT — detail panel */}
-        <div style={{ display: "flex", flexDirection: "column", background: C.eyBgCard, minHeight: 0 }}>
-          {/* Header strip */}
-          <div style={{
-            padding: "16px 24px",
-            background: C.confidentBlack,
-            borderBottom: `1px solid ${C.borderOnDark}`,
-            display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
-            flexShrink: 0,
-          }}>
-            <span style={{
-              width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-              background: C.yellow, color: C.confidentBlack,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 12, fontWeight: 700, fontFamily: F.bold,
-            }}>
-              {active.n}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.onDark, fontFamily: F.bold }}>{active.name}</span>
-            <span style={{ fontSize: 11, color: C.yellow, fontWeight: 700, fontFamily: F.bold, letterSpacing: "0.04em" }}>{active.group.toUpperCase()}</span>
-          </div>
-
-          {/* Body — content varies by type */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
-
-            {/* Best Practice item */}
-            {active.type === "bp" && (() => {
-              const bp = active.data as typeof AGENT_BEST_PRACTICES[0];
-              return (
-                <>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.yellow}55`, background: C.yellow + "14",
-                      fontSize: 12, fontWeight: 700, color: C.yellow, fontFamily: F.bold,
-                    }}>What it is</span>
-                    <p style={{ fontSize: 16, lineHeight: 1.7, color: C.onDark, fontFamily: F.regular, margin: 0, maxWidth: 560 }}>
-                      {bp.content}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.frameOrange}55`, background: C.frameOrange + "14",
-                      fontSize: 12, fontWeight: 700, color: C.frameOrange, fontFamily: F.bold,
-                    }}>Why it matters</span>
-                    <p style={{ fontSize: 16, lineHeight: 1.7, color: C.onDark, fontFamily: F.regular, margin: 0, maxWidth: 560, fontStyle: "italic" }}>
-                      {bp.sub}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.destructive}55`, background: C.destructive + "14",
-                      fontSize: 12, fontWeight: 700, color: C.destructive, fontFamily: F.bold,
-                    }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                      Avoid
-                    </span>
-                    <p style={{
-                      fontSize: 14, lineHeight: 1.7, color: C.destructive,
-                      fontFamily: F.light, fontStyle: "italic", margin: 0, maxWidth: 560,
-                      padding: "14px 18px", background: C.destructive + "0a",
-                      borderRadius: 8, borderLeft: `3px solid ${C.destructive}`,
-                    }}>
-                      {bp.bad}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.success}55`, background: C.success + "14",
-                      fontSize: 12, fontWeight: 700, color: C.success, fontFamily: F.bold,
-                    }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                      Use
-                    </span>
-                    <p style={{
-                      fontSize: 14, lineHeight: 1.7, color: C.success,
-                      fontFamily: F.light, fontStyle: "italic", margin: 0, maxWidth: 560,
-                      padding: "14px 18px", background: C.success + "0a",
-                      borderRadius: 8, borderLeft: `3px solid ${C.success}`,
-                    }}>
-                      {bp.good}
-                    </p>
-                  </div>
-                </>
-              );
-            })()}
-
-            {/* Common Failure item */}
-            {active.type === "cf" && (() => {
-              const f = active.data as typeof COMMON_FAILURES[0];
-              return (
-                <>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.frameOrange}55`, background: C.frameOrange + "14",
-                      fontSize: 12, fontWeight: 700, color: C.frameOrange, fontFamily: F.bold,
-                    }}>Problem</span>
-                    <p style={{ fontSize: 16, lineHeight: 1.7, color: C.onDark, fontFamily: F.regular, margin: 0, maxWidth: 560 }}>
-                      {f.problem}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.success}55`, background: C.success + "14",
-                      fontSize: 12, fontWeight: 700, color: C.success, fontFamily: F.bold,
-                    }}>Solution</span>
-                    <p style={{ fontSize: 16, lineHeight: 1.7, color: C.onDark, fontFamily: F.regular, margin: 0, maxWidth: 560 }}>
-                      {f.solution}
-                    </p>
-                  </div>
-                </>
-              );
-            })()}
-
-            {/* Instruction Pattern item */}
-            {active.type === "ip" && (() => {
-              const p = active.data as typeof INSTRUCTION_PATTERNS[0];
-              return (
-                <>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.yellow}55`, background: C.yellow + "14",
-                      fontSize: 12, fontWeight: 700, color: C.yellow, fontFamily: F.bold,
-                    }}>When to use</span>
-                    <p style={{ fontSize: 16, lineHeight: 1.7, color: C.onDark, fontFamily: F.regular, margin: 0, maxWidth: 560 }}>
-                      {p.use}
-                    </p>
-                  </div>
-                  <div>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 8,
-                      marginBottom: 10, padding: "4px 10px", borderRadius: 100,
-                      border: `1px solid ${C.frameBlue}55`, background: C.frameBlue + "14",
-                      fontSize: 12, fontWeight: 700, color: C.frameBlue, fontFamily: F.bold,
-                    }}>Template</span>
-                    <div style={{
-                      background: C.confidentBlack, borderRadius: 8,
-                      padding: "16px 18px", border: `1px solid ${C.borderOnDark}`,
-                      overflowX: "auto",
-                    }}>
-                      <p style={{ fontFamily: F.regular, fontSize: 13, color: C.onDark, lineHeight: 1.7, whiteSpace: "pre-wrap", margin: 0 }}>
-                        {p.template}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-
-      {/* Source attribution — light-surface variant */}
-      <div style={{ marginTop: 16, background: C.yellowAlpha10, borderRadius: 8, padding: "14px 18px", border: `1px solid ${C.yellowAlpha12}` }}>
-        <p style={{ fontFamily: F.bold, fontSize: 11, fontWeight: 700, color: C.eyebrowGold, marginBottom: 4 }}>Source</p>
-        <p style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01, lineHeight: 1.5 }}>
-          Write effective instructions for declarative agents | Microsoft Learn — https://learn.microsoft.com/hi-in/microsoft-365/copilot/extensibility/declarative-agent-instructions
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function Panel6() {
   const [activeIdx, setActiveIdx] = useState<number>(0);
+  const [preview, setPreview] = useState<{ src: string; title: string } | null>(null);
   const agent = AGENT_LIBRARY[activeIdx];
 
   return (
-    <>
-      <section
-        id="p3-agent-templates"
-        style={{
-          scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-          background: C.confidentBlack,
-          paddingTop: spacing.sectionPaddingY,
-          paddingBottom: spacing.sectionPaddingY,
-          paddingLeft: contentInlinePad,
-          paddingRight: contentInlinePad,
-        }}
-      >
-        <div style={{ ...contentRailStyle }}>
+    <section
+      id="p3-agent-templates"
+      style={{
+        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
+        background: C.confidentBlack,
+        paddingTop: spacing.sectionPaddingY,
+        paddingBottom: spacing.sectionPaddingY,
+        paddingLeft: contentInlinePad,
+        paddingRight: contentInlinePad,
+      }}
+    >
+      {preview && (
+        <TemplatePreviewModal
+          imageSrc={preview.src}
+          title={preview.title}
+          onClose={() => setPreview(null)}
+        />
+      )}
+      <div style={{ ...contentRailStyle }}>
           <div style={sectionHeader}>
             <p style={eyebrow(C.yellow)}>Sample M365 Agent Templates</p>
             <h2 style={{ ...h2Style, color: C.onDark }}>From Build Lab to Controlled Deployment</h2>
@@ -1919,6 +1290,12 @@ function Panel6() {
 
             {/* Body — Purpose / Actions / Outcome as labeled sections */}
             <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 32px", display: "flex", flexDirection: "column", gap: 20 }}>
+              <TemplateAssetActions
+                name={agent.name}
+                asset={agent.templateAsset}
+                onPreview={(src, title) => setPreview({ src, title })}
+                onDark
+              />
               {[
                 { label: "Purpose", body: agent.purpose },
                 { label: "Actions", body: agent.actions },
@@ -1945,59 +1322,6 @@ function Panel6() {
         </div>
       </div>
     </section>
-
-    <section
-      style={{
-        background: C.offWhite,
-        padding: `${spacing.sectionPaddingY} ${contentInlinePad}`,
-      }}
-    >
-      <div style={{ ...contentRailStyle }}>
-        {/* 3-tab reference section — Agent Best Practices / Common Failures / Templates & Patterns */}
-        <AgentInstructionTabs />
-
-        {/* You now have — deliverables grid */}
-        <p style={{ ...eyebrow(C.eyebrowGold), textAlign: "center", marginTop: 40 }}>You Now Have</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
-          {YOU_NOW_HAVE.map((item) => (
-            <div
-              key={item.label}
-              style={{
-                background: C.white,
-                borderRadius: 4,
-                padding: "24px 22px",
-                borderTop: `3px solid ${item.color}`,
-                boxShadow: "0 2px 8px rgba(26,26,36,0.07)",
-              }}
-            >
-              <p style={{ fontFamily: F.bold, fontSize: 15, fontWeight: 700, color: C.confidentBlack, lineHeight: 1.4 }}>{item.label}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-    </>
-  );
-}
-
-// ── Panel 7 — What's Next / Closing (Slide 8) ────────────────────────────────
-
-function Panel7({ onBack }: { onBack: () => void }) {
-  return (
-    <EYWhatsNext
-      id="p3-closing"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN }}
-      eyebrow="What's next?"
-      title={
-        <>
-          Hands-on Build{" "}
-          <EYWhatsNextHighlight>Workshop</EYWhatsNextHighlight>
-        </>
-      }
-      description="Controlled deployment, user adoption and continuous refinement of the Tax AI operating model."
-      ctaLabel="Looking ahead – Phase 3"
-      onContinue={onBack}
-    />
   );
 }
 
@@ -2032,12 +1356,16 @@ export default function GuidanceImplementation({ onBack, onNavigate }: Props) {
 
       <main id="phase3-content" style={{ position: "relative" }}>
         <Panel1 />
+        <PanelBingo />
         <Panel2 />
-        <Panel3 />
+        <PanelTaxAgents />
         <Panel4 />
         <Panel5 />
-        <Panel6 />
-        <Panel7 onBack={onBack} />
+        {SHOW_P3_AGENT_TEMPLATES && <Panel6 />}
+        <AscentModuleProgressSection
+          moduleKey="m3"
+          onNextStepCta={() => onNavigate("/closure-ai-reinforcement")}
+        />
       </main>
     </div>
   );

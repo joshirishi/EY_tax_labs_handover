@@ -1,16 +1,36 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
-  AlertTriangle, ArrowRight, BarChart3, Calculator, Check, CheckCircle, ChevronDown, ChevronRight,
-  ClipboardList, Compass, Copy, ExternalLink, FileText,
-  FolderOpen, Globe, LineChart, Link2, Mail, Megaphone, MessagesSquare,
-  ChevronLeft, PenLine, Pin, Rocket, Search, Sparkles, Target, Timer, X, XCircle,
+  AlertTriangle, AlignLeft, Archive, ArrowRight,
+  BarChart3, Bold, BookOpen, Bot, Brain, Briefcase, Calculator, Calendar, Check, CheckCircle, CircleCheckBig, CircleX, ChevronDown, ChevronLeft,
+  ChevronRight, CircleHelp, ClipboardList, Compass, Copy,
+  CornerUpLeft, DollarSign, ExternalLink, FileText, FolderOpen, Info,
+  Globe, Grid3x3, Hexagon, Image, Italic, LayoutTemplate, Lightbulb, LineChart, Link2,
+  List, ListOrdered, Mail, Megaphone, Menu, MessagesSquare, Mic, Monitor, MoreHorizontal, PenLine,
+  Pencil, Percent, Pin, Play, Plus, PlusSquare, Power, Rocket, Save, Search, Send, Settings, ShieldCheck, Sparkles,
+  Target, Timer, Trash2, Type, Underline, Users, Video, X, XCircle, ZoomIn, ZoomOut,
 } from "lucide-react";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
 import { SiteHeader } from "../design-kit/SiteHeader";
-import { EYWhatsNext } from "../design-kit/EYWhatsNext";
 import { SectionAnchorTitle } from "../design-kit/EYTypography";
-import { colors, contentInlinePad, contentRailStyle, fonts as F, spacing, typeScale } from "../design-kit/tokens";
+import { TabRail } from "../design-kit/TabRail";
+import { colors, contentInlinePad, contentRailStyle, fonts as F, spacing, spectrumCss, typeScale } from "../design-kit/tokens";
+import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
+import { M365ChatSlideTour, M365AgentHowExplorer } from "../components/M365ChatSlideTour";
+import { AgentInstructionComponents } from "../components/AgentInstructionComponents";
+import { AGENT_HEX_SRC } from "../components/AgentHexIcon";
+import {
+  AGENT_BEST_PRACTICES_SLIDES,
+  AGENT_COMMON_FAILURES,
+  AGENT_SUMMARY_PARTS,
+  AGENT_TECHNIQUE_PATTERNS,
+  formatTechniqueInstructionPreview,
+  parseSummaryParts,
+  parseTaxExample,
+  parseWhenToUse,
+  type AgentSummaryRow,
+  type AgentTechniqueItem,
+} from "../data/agent-best-practices";
 
 // Canonical token alias — keeps existing C.dark / C.dark2 references working
 const C = {
@@ -40,14 +60,19 @@ function CopilotIcon({ size = 20 }: { size?: number }) {
 // `logo` paths match the laptop-stage / CoreProcessingPipeline MS app SVGs in
 // public/pipeline/ — real product marks, not letter-on-square placeholders.
 const TABS = [
-  { id: "word",    label: "Word Prompts",     color: C.wordBlue,   appColor: C.wordBlue,   logo: "/pipeline/word.svg" },
-  { id: "excel",   label: "Excel Formulas",   color: C.excelGreen, appColor: C.excelGreen, logo: "/pipeline/excel.svg" },
-  { id: "ppt",     label: "PowerPoint Decks", color: C.pptOrange,  appColor: C.pptOrange,  logo: "/pipeline/powerpoint.svg" },
-  { id: "outlook", label: "Outlook Threads",  color: C.outlookBlue,appColor: C.outlookBlue,logo: "/pipeline/outlook.svg" },
-  { id: "m365",    label: "M365 Chat",        color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/copilot-icon.svg" },
-  { id: "agent",   label: "M365 Agent",       color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/m365-agent-icon.png" },
+  { id: "word",    label: "MS Word",          color: C.wordBlue,   appColor: C.wordBlue,   logo: "/pipeline/word.svg" },
+  { id: "excel",   label: "MS Excel",         color: C.excelGreen, appColor: C.excelGreen, logo: "/pipeline/excel.svg" },
+  { id: "ppt",     label: "MS PowerPoint",    color: C.pptOrange,  appColor: C.pptOrange,  logo: "/pipeline/powerpoint.svg" },
+  { id: "outlook", label: "MS Outlook",       color: C.outlookBlue,appColor: C.outlookBlue,logo: "/pipeline/outlook.svg" },
+  { id: "teams",   label: "MS Teams",         color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/teams.svg" },
+  { id: "m365",    label: "MS Chat",          color: C.teamsViolet,appColor: C.teamsViolet,logo: "/pipeline/copilot-icon.svg" },
+  { id: "agent",   label: "M365 Agent",       color: C.teamsViolet,appColor: C.teamsViolet,logo: AGENT_HEX_SRC },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
+// Prompt-repository pills are app categories only. Agent lives in the Learn header.
+const APP_TABS = TABS.filter((t) => t.id !== "agent");
+
+type UseCaseChip = { icon?: LucideIcon; agentIcon?: boolean; title: string; body: string; group?: string };
 
 // ── Real app display names — used in use-case tags, mock window titles, and
 // the "Ask Copilot in {App}" prompt-panel headers ────────────────────────────
@@ -56,54 +81,50 @@ const APP_NAME: Record<TabId, string> = {
   excel: "Excel",
   ppt: "PowerPoint",
   outlook: "Outlook",
+  teams: "Teams",
   m365: "M365 Chat",
   agent: "M365 Agent",
 };
 
 // ── Laptop stage — "What you can do" popping app widget (ported from Module1) ─
-// The 5 apps with live prompt content below "pop" with a floating animation and
-// jump straight to their tab section. M365 Agent sits on the stage itself;
-// remaining apps without prompt content show as a muted "coming soon" dock.
+// Live apps with prompt content below "pop" and jump to their tab.
+// M365 Agent sits on the stage itself; remaining apps stay in the muted dock.
+// 7 live apps sit on one ellipse around the laptop so none pile on a corner.
+const LAPTOP_TILE = 64;
+const LAPTOP_ORBIT = { cx: 280, cy: 200, rx: 232, ry: 156 };
+
+function laptopOrbitPos(angleDeg: number, delay: string): React.CSSProperties {
+  const r = (angleDeg * Math.PI) / 180;
+  return {
+    top: Math.round(LAPTOP_ORBIT.cy + LAPTOP_ORBIT.ry * Math.sin(r) - LAPTOP_TILE / 2),
+    left: Math.round(LAPTOP_ORBIT.cx + LAPTOP_ORBIT.rx * Math.cos(r) - LAPTOP_TILE / 2),
+    animationDelay: delay,
+  };
+}
+
+const LAPTOP_ORBIT_STEP = 360 / 7;
 const LAPTOP_CORE_APPS: { id: TabId; label: string; logo: string; pos: React.CSSProperties }[] = [
-  { id: "word",    label: "Word",        logo: "/pipeline/word.svg",         pos: { top: 47, left: 42 } },
-  { id: "excel",   label: "Excel",       logo: "/pipeline/excel.svg",        pos: { top: 34, right: 68, animationDelay: "0.4s" } },
-  { id: "ppt",     label: "PowerPoint",  logo: "/pipeline/powerpoint.svg",   pos: { bottom: 121, right: 25, animationDelay: "0.8s" } },
-  { id: "outlook", label: "Outlook",     logo: "/pipeline/outlook.svg",      pos: { bottom: 121, left: 35, animationDelay: "1.2s" } },
-  { id: "m365",    label: "M365 Chat",   logo: "/pipeline/copilot-icon.svg", pos: { top: 0, left: "44%", animationDelay: "1.6s" } },
-];
-
-// M365 Agent — stage tile opens the agent prompt tab (same white tile as other apps).
-const LAPTOP_STAGE_AGENT = {
-  id: "agent" as TabId,
-  label: "M365 Agent",
-  logo: "/pipeline/m365-agent-icon.png",
-  pos: { bottom: 34, left: 0, right: 0, marginLeft: "auto", marginRight: "auto", animationDelay: "2s" } as React.CSSProperties,
-};
-
-const LAPTOP_COMING_SOON_APPS: { label: string; logo: string }[] = [
-  { label: "MS Teams",   logo: "/pipeline/teams.svg" },
-  { label: "SharePoint", logo: "/pipeline/sharepoint.svg" },
-  { label: "OneDrive",   logo: "/pipeline/onedrive.svg" },
-  { label: "OneNote",    logo: "/pipeline/onenote.svg" },
-  { label: "MS Forms",   logo: "/pipeline/forms.svg" },
+  { id: "m365",    label: "M365 Chat",   logo: "/pipeline/copilot-icon.svg",    pos: laptopOrbitPos(-90, "0s") },
+  { id: "excel",   label: "Excel",       logo: "/pipeline/excel.svg",           pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP, "0.4s") },
+  { id: "ppt",     label: "PowerPoint",  logo: "/pipeline/powerpoint.svg",      pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 2, "0.8s") },
+  { id: "agent",   label: "M365 Agent",  logo: AGENT_HEX_SRC, pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 3, "1.2s") },
+  { id: "outlook", label: "Outlook",     logo: "/pipeline/outlook.svg",         pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 4, "1.6s") },
+  { id: "teams",   label: "Teams",       logo: "/pipeline/teams.svg",           pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 5, "2s") },
+  { id: "word",    label: "Word",        logo: "/pipeline/word.svg",            pos: laptopOrbitPos(-90 + LAPTOP_ORBIT_STEP * 6, "2.4s") },
 ];
 
 // ── Exact content from Figma (3317:15589), upgraded with the "use-grid" +
 // "copilot scene" tax use-case & prompt content ported from copilot_dashboard.html ──
 const SECTION_DATA: Record<TabId, {
-  eyebrow: string; eyebrowColor: string;
-  h2: string; subtitle: string;
-  useCases: { icon: LucideIcon; title: string; body: string }[];
+  h2: string;
+  useCases: UseCaseChip[];
   panelSubtitle: string;
   prompts: { label: string; text: string }[];
   screenshotSide: "left" | "right";
   altBg: boolean;
 }> = {
   word: {
-    eyebrow: "DOCUMENT INTELLIGENCE",
-    eyebrowColor: C.wordBlue,
-    h2: "Copilot in Word",
-    subtitle: "Draft documents, summarize content, and rewrite text with AI-powered assistance. Build professional issue memos and restructure client communication instantly.",
+    h2: "M365 Copilot in MS Word",
     useCases: [
       { icon: FileText, title: "Draft Position Notes",  body: "Create first-cut tax research memos, issue notes, legal summaries and client-ready position papers." },
       { icon: Search,   title: "Summarise Case Laws",   body: "Condense lengthy rulings, circulars, notifications or tribunal orders into crisp facts and implications." },
@@ -122,32 +143,26 @@ const SECTION_DATA: Record<TabId, {
     altBg: true,
   },
   excel: {
-    eyebrow: "ANALYTICAL ROUTINES",
-    eyebrowColor: C.excelGreen,
-    h2: "Copilot in Excel",
-    subtitle: "Analyze data, create formulas, generate charts, and uncover insights from your spreadsheets. Build clean logical checks and eliminate calculation bugs.",
+    h2: "M365 Copilot in MS Excel",
     useCases: [
       { icon: BarChart3,     title: "Analyse Tax Data",      body: "Summarise large datasets and identify key trends, gaps, mismatches and exceptions." },
       { icon: Calculator,    title: "Build Reconciliations", body: "Create formulas and logic checks to compare books, returns and working papers." },
       { icon: AlertTriangle, title: "Spot Exceptions",       body: "Detect anomalies such as missing details, rate mismatches or duplicates." },
-      { icon: LineChart,     title: "Visualise Compliance",  body: "Create dashboards to show status, exposures, ageing and risk movement." },
+      { icon: LineChart,     title: "Visualise Compliance",  body: "Create summary views to show status, exposures, ageing and risk movement." },
     ],
     panelSubtitle: "Analyse tax data, reconciliations and compliance trackers with precision.",
     prompts: [
       { label: "Reconcile Two Ledgers",           text: "Compare the GST returns and books data in these two sheets and flag every mismatch above ₹10,000." },
       { label: "Explain This Formula",            text: "Explain what this VLOOKUP + IFERROR formula in column F is actually doing, in plain language." },
       { label: "Spot Withholding Gaps",           text: "Scan this vendor payment sheet and flag any transaction where TDS appears under-deducted." },
-      { label: "Build a Compliance Dashboard",    text: "Turn this data into a one-page dashboard showing filing status, ageing, and open exposures by entity." },
+      { label: "Build a Compliance Summary",    text: "Turn this data into a one-page summary showing filing status, ageing, and open exposures by entity." },
       { label: "Forecast the Effective Tax Rate", text: "Using this P&L, calculate the projected effective tax rate for FY26 factoring in surcharge and cess." },
     ],
     screenshotSide: "right",
     altBg: false,
   },
   ppt: {
-    eyebrow: "COLLABORATIVE & CREATIVE DELIVERY",
-    eyebrowColor: C.pptOrange,
-    h2: "Copilot in PowerPoint & Chat",
-    subtitle: "Translate raw data matrices into compelling slides, executive summaries, and cross-application project definitions. Use Interactive Chat to coordinate answers.",
+    h2: "M365 Copilot in MS PowerPoint",
     useCases: [
       { icon: Target,     title: "Create Client Decks",        body: "Convert tax analysis into structured, visually clean, client-ready presentations." },
       { icon: Compass,    title: "Tell the Tax Story",         body: "Organise complex positions into context, issue, risk, recommendation and next steps." },
@@ -166,10 +181,7 @@ const SECTION_DATA: Record<TabId, {
     altBg: true,
   },
   outlook: {
-    eyebrow: "COMMUNICATIONS & AGENDAS",
-    eyebrowColor: C.outlookBlue,
-    h2: "Copilot in Outlook",
-    subtitle: "Summarize email threads, draft replies, and manage your inbox efficiently. Convert messy, sprawling client communications into actionable priorities in seconds.",
+    h2: "M365 Copilot in MS Outlook",
     useCases: [
       { icon: Mail,           title: "Draft Client Emails",   body: "Prepare clear professional emails for data requests, updates and follow-ups." },
       { icon: MessagesSquare, title: "Summarise Threads",     body: "Extract decisions, pending inputs, responsibilities and deadlines from long chains." },
@@ -187,16 +199,35 @@ const SECTION_DATA: Record<TabId, {
     screenshotSide: "left",
     altBg: false,
   },
-  m365: {
-    eyebrow: "COLATE INFORMATION ACROSS M365",
-    eyebrowColor: C.teamsViolet,
-    h2: "Copilot in M365 Chat",
-    subtitle: "Use Copilot in M365 Chat to ask questions, get summaries, and generate content across your Microsoft 365 data. Chat brings together information from documents, emails, meetings, and contacts to give you AI-powered answers grounded in your work data.",
+  teams: {
+    h2: "M365 Copilot in MS Teams",
     useCases: [
-      { icon: Globe,         title: "Search Across Work",      body: "Find tax-related discussions, documents, emails and files across Microsoft 365." },
-      { icon: ClipboardList, title: "Prepare Matter Briefs",   body: "Generate briefing notes before client calls or internal reviews." },
-      { icon: Link2,         title: "Connect Tax Context",     body: "Connect compliance data, research notes, email trails and presentation inputs." },
-      { icon: Rocket,        title: "Accelerate First Drafts", body: "Create starting drafts for emails, memos, decks, trackers and meeting prep." },
+      { icon: Calendar, title: "Meeting Options before the call", body: "Open the meeting in Calendar, then Meeting options, and choose whether Copilot can run during and after the call." },
+      { icon: Users, title: "Participants' acceptance of Copilot on the call", body: "When Copilot or transcription starts, each person on the call must accept before Copilot can use the conversation." },
+      { icon: Power, title: "Ability to turn Copilot on and off during the call", body: "Use the meeting toolbar to turn Copilot off if the discussion should not be captured, then turn it back on when needed." },
+      { icon: Sparkles, title: "Selecting Copilot while on the call", body: "Select Copilot on the meeting bar to open the pane and ask for a recap, open items, or decisions." },
+    ],
+    panelSubtitle: "Use Copilot in the meeting pane the same way the Teams recording shows in chat.",
+    prompts: [
+      { label: "Summarise this chat", text: "Summarise this chat" },
+      { label: "What are open items?", text: "What are open items?" },
+      { label: "What decisions were made?", text: "What decisions were made?" },
+      { label: "What decisions were made in this chat?", text: "What decisions were made in this chat?" },
+    ],
+    screenshotSide: "right",
+    altBg: true,
+  },
+  m365: {
+    h2: "M365 in Chat",
+    useCases: [
+      { icon: Sparkles,  title: "Enable Work IQ",         body: "Choose whether Copilot can use your work data and the web, or web content only." },
+      { icon: Brain,     title: "Select a Model",         body: "Auto, GPT Quick, GPT Advanced, or Claude Opus — pick speed or depth for the task." },
+      { icon: Settings,  title: "Personalize Responses",  body: "Custom instructions and saved memories so answers follow your tax style." },
+      { icon: Save,      title: "Saved Prompts",          body: "Reuse GST and other templates with one click for consistent results." },
+      { agentIcon: true, title: "Researcher Agent",       body: "Deep briefing for complex meetings — tax, customs, and transfer pricing.", group: "Agents" },
+      { agentIcon: true, title: "Analyst Agent",          body: "Turn GST filings into trends, late-filing flags, and charts in minutes.", group: "Agents" },
+      { agentIcon: true, title: "Custom Agent",           body: "Build a specialist for Indian tax with your instructions and knowledge sources.", group: "Agents" },
+      { icon: Rocket,    title: "Create Content",         body: "Generate professional images, videos, surveys, and pages from a short brief." },
     ],
     panelSubtitle: "Ask cross-app questions and retrieve tax context across Microsoft 365.",
     prompts: [
@@ -210,15 +241,16 @@ const SECTION_DATA: Record<TabId, {
     altBg: true,
   },
   agent: {
-    eyebrow: "AUTONOMOUS TAX WORKFLOWS",
-    eyebrowColor: C.teamsViolet,
-    h2: "M365 Agent in Tax",
-    subtitle: "Build reliable M365 agents with Microsoft's instruction principles, reusable templates, and tax-specific sample workflows.",
+    h2: "M365 Agent",
     useCases: [
+      { icon: Info,          title: "What are agents",         body: "An M365 agent is a focused Copilot assistant for a tax workflow — it follows your instructions and approved sources, rather than answering every question in general chat." },
       { icon: Search,        title: "Retrieve Tax Knowledge",    body: "Locate historical positions, precedents and supporting materials across approved repositories." },
       { icon: FolderOpen,    title: "Organise Evidence",         body: "Gather and package issue-wise evidence from SharePoint, Teams and Outlook for audits and disputes." },
       { icon: ClipboardList, title: "Track Compliance",          body: "Monitor filing deadlines, action items and overdue obligations across engagements." },
       { icon: Rocket,        title: "Automate Correspondence",   body: "Standardise recurring tax communications with approved templates and tone guidelines." },
+      { agentIcon: true, title: "Researcher Agent", body: "Deep briefing for complex meetings — tax, customs, and transfer pricing.", group: "Agents" },
+      { agentIcon: true, title: "Analyst Agent",    body: "Turn GST filings into trends, late-filing flags, and charts in minutes.", group: "Agents" },
+      { agentIcon: true, title: "Custom Agent",     body: "Build a specialist for Indian tax with your instructions and knowledge sources.", group: "Agents" },
     ],
     panelSubtitle: "Sample agent instructions for common tax workflow scenarios.",
     prompts: [
@@ -744,206 +776,6 @@ OUTPUT (concise)
   },
 ] as const;
 
-const AGENT_HUB_TABS = [
-  { id: "guide", label: "Write Effective Instructions" },
-  { id: "templates", label: "Instruction Templates and Design Patterns" },
-  { id: "best-practices", label: "Agent Best Practices" },
-] as const;
-type AgentHubTabId = (typeof AGENT_HUB_TABS)[number]["id"];
-
-/**
- * One Avoid/Use (or plain reference) block inside the agent Instructions field.
- * The mailer's Examples column is not uniformly a bad/good pair — some rows are
- * an unlabelled reference list (domain vocabulary) or a set of neutral, labelled
- * task tiers (reasoning depth), so `tone` carries that distinction.
- */
-type ExampleBlock = {
-  tone: "bad" | "good" | "neutral";
-  label?: string;
-  lines: readonly string[];
-};
-
-/**
- * Verbatim from reference/assets/"Agent Best Practices mailer content.xlsx".
- * `content` keeps the sheet's own line breaks: a line prefixed "- " renders as
- * a bullet, anything else as a lead-in paragraph.
- */
-type AgentBestPracticeSlide = {
-  n: string;
-  heading: string;
-  sub: string;
-  content: readonly string[];
-  examples: readonly ExampleBlock[];
-};
-
-const AGENT_BEST_PRACTICES_SLIDES: readonly AgentBestPracticeSlide[] = [
-  {
-    n: "01",
-    heading: "Use Clear, Actionable Language",
-    sub: "Stop Telling Copilot Agent What NOT To Do. Just tell It What TO Do.",
-    content: [
-      "Use clear verbs like Ask, Search, Check, Use, Send",
-      "The more precise your instructions, the more reliable your agent's output",
-      "Avoid vague instructions.",
-    ],
-    examples: [
-      { tone: "bad", lines: ["Review Section 194R applicability"] },
-      { tone: "good", lines: ["Analyze whether Section 194R applies to the attached sales promotion scheme and identify compliance requirements"] },
-    ],
-  },
-  {
-    n: "02",
-    heading: "Build Step-by-Step Workflows with transitions",
-    sub: "Confused Agents Follow Confused Instructions.",
-    content: ["Every workflow should have:", "- Goal", "- Action", "- Transition"],
-    examples: [
-      { tone: "bad", label: "Instead of", lines: ["Review tax notices and prepare responses."] },
-      { tone: "good", label: "Use", lines: ["Step 1: Identify pending notices.", "Step 2: Extract due dates.", "Step 3: Draft response summary."] },
-    ],
-  },
-  {
-    n: "03",
-    heading: "Use strict structure",
-    sub: "Great Results Start with Great Structure",
-    content: ["Use:", "- Sections for categories", "- Bullets for parallel tasks", "- Steps for sequential workflows"],
-    examples: [
-      { tone: "bad", lines: ["Mixed instructions in one paragraph"] },
-      { tone: "good", label: "Separate sections", lines: ["Research", "Analysis", "Output"] },
-    ],
-  },
-  {
-    n: "04",
-    heading: "Make tasks atomic",
-    sub: "One Instruction. One Outcome.",
-    content: [
-      "Complex work isn't solved in a single leap.",
-      "Guide your agent through the same logical path you would follow:",
-      "- Review the facts",
-      "- Identify the issues",
-      "- Analyze the impact",
-      "- Recommend the next steps",
-    ],
-    examples: [
-      { tone: "bad", lines: ["Extract case laws and draft litigation arguments"] },
-      { tone: "good", lines: ["Extract relevant case laws", "Summarize legal principles", "Draft litigation arguments"] },
-    ],
-  },
-  {
-    n: "05",
-    heading: "Always specify tone, verbosity, and output format",
-    sub: "If You Don't Specify It, Copilot Will Guess.",
-    content: ["Always define:", "- Tone", "- Detail level", "- Output format"],
-    examples: [
-      { tone: "bad", label: "Poor Instruction", lines: ["Draft an email to the client summarising the provisions covered u/s 90"] },
-      { tone: "good", label: "Better Instruction", lines: [
-        "Draft an email to the client summarising the provisions covered u/s 90",
-        "Tone: Professional and reassuring",
-        "Length: Under 150 words",
-        "Output Format: Email ready to send with subject line",
-      ] },
-    ],
-  },
-  {
-    n: "06",
-    heading: "Structure instructions in Markdown",
-    sub: "Help Your Agent See the Bigger Picture",
-    content: [
-      "Use #, ##, and ### for section headers",
-      "Use bullets or numbered lists",
-      "Highlight tool or system names",
-      "Make critical instructions bold by using **",
-    ],
-    examples: [
-      { tone: "bad", lines: ["Prepare a transfer pricing risk assessment."] },
-      { tone: "good", lines: [
-        "Scope",
-        "Review FY 2025-26 transactions",
-        "Analysis",
-        "Identify related party transactions",
-        "Evaluate transfer pricing exposure",
-        "Risk Assessment",
-        "High-risk areas",
-        "Supporting documentation gaps",
-        "Deliverable",
-        "Risk matrix and recommendations",
-      ] },
-    ],
-  },
-  {
-    n: "07",
-    heading: "Provide domain vocabulary",
-    sub: "Teach Your Agent Your Language",
-    content: [
-      "Never Assume Copilot Knows Your Acronyms.",
-      "Define:",
-      "- Acronyms",
-      "- Tax terms",
-      "- Internal terms",
-      "- Specialized formulas",
-    ],
-    examples: [
-      { tone: "neutral", lines: [
-        "TP = Transfer Pricing",
-        "FAI = Foreign Asset Information",
-        "PE = Permanent Establishment",
-        "AO = Assessing Officer",
-      ] },
-    ],
-  },
-  {
-    n: "08",
-    heading: "Explicitly reference capabilities, knowledge, and actions",
-    sub: "Tell Copilot Where To Look",
-    content: [
-      "Tell the agent:",
-      "- Search Teams",
-      "- Check emails",
-      "- Use SharePoint knowledge",
-      "- Use OneDrive documents",
-    ],
-    examples: [
-      { tone: "bad", label: "Instead", lines: ["Summarize action items"] },
-      { tone: "good", label: "Use", lines: ["Search Teams conversations and summarize action items"] },
-    ],
-  },
-  {
-    n: "09",
-    heading: "Provide examples",
-    sub: "Examples Are Superpowers",
-    content: [
-      "Don't Just Describe It. Show It.",
-      "Provide examples for more than one example for edge cases.",
-      "Remove ambiguity and help your agent replicate the outcome you expect",
-    ],
-    examples: [
-      { tone: "bad", label: "Instruction Only", lines: ["Draft a client communication."] },
-      { tone: "good", label: "Instruction + Example", lines: [
-        "Use the tone and structure below:",
-        "Dear Client, We would like to inform you about the recent amendment impacting withholding tax obligations.",
-        "Recommended next step: Review current vendor arrangements.",
-        "Now draft a communication regarding Section 194T using the same style.",
-      ] },
-    ],
-  },
-  {
-    n: "10",
-    heading: "Control reasoning through phrasing",
-    sub: "Control How Much Reasoning You Need",
-    content: [
-      "Not Every Task Needs Deep Thinking.",
-      "Choose the right instruction style:",
-      "- Deep reasoning to analyze, derive, evaluate, justify, think step by step, reflect, verify logic and structure tasks into multiple dependent steps",
-      "- Moderate reasoning (balanced) for concise but structured explanation",
-      "- Fast and minimal reasoning for short answers, no reasoning on explanation and final result only.",
-    ],
-    examples: [
-      { tone: "neutral", label: "Deep Task", lines: ["Analyze litigation strategy considering recent High Court and Supreme Court rulings."] },
-      { tone: "neutral", label: "Moderate Task", lines: ["Summarize implications of Section 148A."] },
-      { tone: "neutral", label: "Quick Task", lines: ["Extract due dates from this notice."] },
-    ],
-  },
-] as const;
-
 type AgentInstructionNavItem = {
   id: string;
   group: string;
@@ -952,30 +784,6 @@ type AgentInstructionNavItem = {
   title: string;
   subtitle?: string;
 };
-
-// ── Pattern 2c: Use-case cards — left column (Figma 3640:4312). Bare stacked
-// cards on the section background; no titled panel wrapper.
-function CopilotUseCasePanel({ useCases }: {
-  useCases: { icon: LucideIcon; title: string; body: string }[];
-}) {
-  return (
-    <div style={{ flex: "0 0 292px", minWidth: 0, maxHeight: 800, minHeight: 0, padding: 22, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto" }}>
-      {useCases.map(uc => {
-        const Icon = uc.icon;
-        return (
-          <div key={uc.title} style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "12.75px", borderRadius: 14, background: C.white, border: `0.75px solid ${C.gray02}` }}>
-            <div style={{ width: 36, height: 36, minWidth: 36, borderRadius: 10, background: C.yellow, display: "flex", alignItems: "center", justifyContent: "center", color: C.dark2, flexShrink: 0 }}>
-              <Icon size={18} strokeWidth={1.75} aria-hidden />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: F.regular, fontWeight: 700, fontSize: 13, color: C.dark2, margin: 0, lineHeight: 1.3 }}>{uc.title}</p>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ── Typing-reveal hook — ports the reference file's injectPrompt/typePrompt
 // character-by-character animation into a lightweight React hook ─────────────
@@ -1004,31 +812,365 @@ function useTypingPrompt() {
   return { activeIndex, typedText, select };
 }
 
-// ── Pattern 2a: App window mock — dark chrome, gradient canvas, tall white
-// document with Copilot panel anchored at top (Figma 3640:4190) ─────────────
-function CopilotAppMock({ appLabel, accent, typedText }: { appLabel: string; accent: string; typedText: string }) {
+// ── Pattern 2a: In-app Copilot pane (matches MS Word / Excel / PPT / Outlook)
+// Title bar + ribbon + workspace, with Copilot as a right-hand side pane.
+// Clicking a suggestion card types the prompt into the composer.
+const MOCK_SKEL = "rgba(46, 46, 56, 0.10)";
+const MOCK_TOOL_ON = "rgba(26, 26, 36, 0.08)";
+
+function MockTool({ icon: Icon, active }: { icon: LucideIcon; active?: boolean }) {
   return (
-    <div style={{ flex: "1 1 392px", minWidth: 0, maxHeight: 800, minHeight: 598, background: `linear-gradient(180deg, ${C.dark2}, ${C.dark})`, borderRadius: 22, overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.28)", border: "0.75px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column" }}>
-      <div style={{ height: 42, background: C.dark, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: "0.75px solid rgba(255,255,255,0.08)", gap: 12, flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
-          {[1, 0.6, 0.32].map((o, i) => <div key={i} style={{ width: 10, height: 10, borderRadius: 5, background: accent, opacity: o }} />)}
-        </div>
-        <span style={{ fontFamily: F.regular, fontSize: 12, fontWeight: 700, color: C.white, flex: 1, textAlign: "center" }}>{appLabel} — blank workspace</span>
-        <span style={{ fontFamily: F.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.4px", textTransform: "uppercase", color: C.gray02, border: "0.75px solid rgba(255,255,255,0.16)", borderRadius: 999, padding: "4.75px 10.75px", flexShrink: 0, whiteSpace: "nowrap" }}>Copilot-enabled</span>
+    <span
+      aria-hidden
+      style={{
+        width: 32, height: 32, borderRadius: 6, flexShrink: 0,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        background: active ? MOCK_TOOL_ON : "transparent", color: C.offBlack,
+      }}
+    >
+      <Icon size={16} strokeWidth={1.75} />
+    </span>
+  );
+}
+
+function MockZoom() {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <ZoomOut size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      <span aria-hidden style={{ position: "relative", width: 100, height: 4, borderRadius: 2, background: C.gray02 }}>
+        <span style={{ position: "absolute", left: 0, top: 0, width: 65, height: 4, borderRadius: 2, background: C.offBlack }} />
+        <span style={{ position: "absolute", left: 60, top: -3, width: 10, height: 10, borderRadius: 5, background: C.offBlack }} />
+      </span>
+      <ZoomIn size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      <span style={{ fontFamily: F.bold, fontSize: 12, color: C.offBlack, width: 32, textAlign: "right" }}>100%</span>
+    </div>
+  );
+}
+
+const APP_ACCENT: Record<TabId, string> = {
+  word: C.wordBlue,
+  excel: C.excelGreen,
+  ppt: C.pptOrange,
+  outlook: C.outlookBlue,
+  teams: C.teamsViolet,
+  m365: C.teamsViolet,
+  agent: C.wordBlue,
+};
+
+const RIBBON_TABS: Record<TabId, string[]> = {
+  word: ["File", "Home", "Insert", "Draw", "Layout", "References", "Review", "View"],
+  excel: ["File", "Home", "Insert", "Formulas", "Data", "Review", "View"],
+  ppt: ["File", "Home", "Insert", "Design", "Transitions", "Slide Show", "Review", "View"],
+  outlook: ["File", "Home", "View", "Help"],
+  teams: ["Chat", "Calendar", "Teams", "Calls"],
+  m365: ["Chat"],
+  agent: ["File", "Home", "Insert", "Review", "View"],
+};
+
+const COPILOT_HEADING: Record<TabId, string> = {
+  word: "Let's edit your document",
+  excel: "Let's edit your workbook",
+  ppt: "Let's edit your presentation",
+  outlook: "What can I help with?",
+  teams: "What can I help with?",
+  m365: "What can I help with?",
+  agent: "Let's edit your document",
+};
+
+const COPILOT_PLACEHOLDER: Record<TabId, string> = {
+  word: "Describe what you'd like to edit",
+  excel: "Describe what you'd like to edit",
+  ppt: "Create a presentation about…",
+  outlook: "Message Copilot",
+  teams: "Message Copilot",
+  m365: "Message Copilot",
+  agent: "Describe what you'd like to edit",
+};
+
+const DOC_TITLES: Partial<Record<TabId, string>> = {
+  word: "EY_AI_Governance_Framework_2026.docx",
+  excel: "EY_AI_Ops_Budget_FY26.xlsx",
+  ppt: "EY_AI_Strategy_Deck_2026.pptx",
+  agent: "EY_AI_Governance_Framework_2026.docx",
+};
+
+function MsTitleBar({ tabId }: { tabId: TabId }) {
+  const accent = APP_ACCENT[tabId];
+  const isMail = tabId === "outlook";
+  const isTeams = tabId === "teams";
+  const title = isMail ? "Mail — Outlook" : isTeams ? "Meeting — Teams" : (DOC_TITLES[tabId] ?? `${APP_NAME[tabId]}`);
+  return (
+    <div style={{
+      background: C.white, borderBottom: `1px solid ${C.gray02}`,
+      display: "flex", alignItems: "center", gap: 12, padding: "6px 12px", flexShrink: 0, minHeight: 40,
+    }}>
+      {!isMail && !isTeams && (
+        <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01, flexShrink: 0 }}>AutoSave Off</span>
+      )}
+      <span aria-hidden style={{ width: 8, height: 8, borderRadius: 2, background: accent, flexShrink: 0 }} />
+      <span style={{
+        fontFamily: F.bold, fontSize: 13, color: C.offBlack, whiteSpace: "nowrap",
+        overflow: "hidden", textOverflow: "ellipsis", minWidth: 0,
+      }}>{title}</span>
+      <div style={{
+        flex: 1, maxWidth: 280, height: 26, margin: "0 auto", borderRadius: 6, background: C.offWhite,
+        display: "flex", alignItems: "center", gap: 6, padding: "0 10px",
+      }}>
+        <Search size={12} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01 }}>
+          {isMail ? "Search emails" : isTeams ? "Search meetings" : "Search"}
+        </span>
       </div>
-      <div style={{ flex: 1, padding: 24, display: "flex", alignItems: "stretch", justifyContent: "center", background: `linear-gradient(125deg, ${accent}, ${C.dark})`, minHeight: 0, overflow: "auto" }}>
-        <div style={{ width: "100%", maxWidth: 342, minHeight: 506, background: C.white, borderRadius: 16, padding: 24, boxShadow: "0 18px 22px rgba(0,0,0,0.24)", display: "flex", flexDirection: "column" }}>
-          <div style={{ marginTop: 12, background: C.offWhite, border: `0.75px solid ${C.yellow}`, borderRadius: 12, padding: "14.75px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <CopilotIcon size={16} />
-              <span style={{ fontFamily: F.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.6px", textTransform: "uppercase", color: C.dark2 }}>Copilot</span>
+      <span style={{
+        fontFamily: F.bold, fontSize: 11, color: C.white, background: accent,
+        padding: "5px 12px", borderRadius: 4, flexShrink: 0,
+      }}>Share</span>
+      <span style={{
+        width: 26, height: 26, borderRadius: 13, background: C.confidentBlack,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        fontFamily: F.bold, fontSize: 10, color: C.white, flexShrink: 0,
+      }}>EY</span>
+    </div>
+  );
+}
+
+function MsRibbon({ tabId }: { tabId: TabId }) {
+  const accent = APP_ACCENT[tabId];
+  const tools: LucideIcon[] =
+    tabId === "ppt" ? [PlusSquare, LayoutTemplate, Type, Image, Play]
+    : tabId === "excel" ? [Bold, Italic, Grid3x3, DollarSign, Percent]
+    : tabId === "outlook" ? [Plus, CornerUpLeft, Archive, Trash2]
+    : tabId === "teams" ? [Video, Mic, Users, Monitor]
+    : [Bold, Italic, Underline, AlignLeft, List, ListOrdered];
+  return (
+    <div style={{ background: C.white, borderBottom: `1px solid ${C.gray02}`, flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 2, padding: "0 10px", minHeight: 28 }}>
+        {RIBBON_TABS[tabId].map((tab, i) => (
+          <span key={tab} style={{
+            fontFamily: i === 1 || tab === "Home" ? F.bold : F.regular,
+            fontSize: 11, color: C.offBlack, padding: "6px 10px",
+            borderBottom: tab === "Home" || (tabId === "outlook" && tab === "Home") || (tabId === "teams" && tab === "Chat") ? `2px solid ${accent}` : "2px solid transparent",
+          }}>{tab}</span>
+        ))}
+        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px" }}>
+          <img src="/pipeline/copilot-icon.svg" alt="" width={13} height={13} style={{ objectFit: "contain", display: "block" }} />
+          <span style={{ fontFamily: F.bold, fontSize: 11, color: accent }}>Copilot</span>
+        </span>
+      </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 2, padding: "4px 10px 6px",
+        background: C.offWhite,
+      }}>
+        {tools.map((icon, i) => (
+          <MockTool key={i} icon={icon} active={i === 0} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CopilotComposer({
+  tabId, typedText, accent,
+}: {
+  tabId: TabId;
+  typedText: string;
+  accent: string;
+}) {
+  return (
+    <div style={{
+      padding: "10px 12px 8px", background: C.white,
+      border: `1px solid ${C.gray02}`, borderRadius: 12,
+      height: 108, display: "flex", flexDirection: "column",
+    }}>
+      <p style={{
+        margin: 0, flex: 1, minHeight: 0, fontFamily: F.regular, fontSize: 12, lineHeight: 1.5,
+        color: typedText ? C.offBlack : C.gray01, overflow: "auto",
+      }}>
+        {typedText || COPILOT_PLACEHOLDER[tabId]}
+        {typedText ? (
+          <span aria-hidden style={{
+            display: "inline-block", width: 1, height: 12, marginLeft: 1,
+            background: C.offBlack, verticalAlign: "text-bottom",
+          }} />
+        ) : null}
+      </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+        <span style={{ display: "inline-flex", gap: 8 }}>
+          <Plus size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+          <Mic size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        </span>
+        <span style={{
+          width: 26, height: 26, borderRadius: 13, background: accent,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Send size={12} strokeWidth={2} color={C.white} aria-hidden />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function CopilotSuggestionCards({
+  prompts, activeIndex, onSelect, accent,
+}: {
+  prompts: { label: string; text: string }[];
+  activeIndex: number | null;
+  onSelect: (idx: number) => void;
+  accent: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {prompts.map((p, i) => {
+        const active = i === activeIndex;
+        return (
+          <button
+            key={p.label}
+            type="button"
+            onClick={() => onSelect(i)}
+            style={{
+              display: "block", width: "100%", textAlign: "left", cursor: "pointer",
+              padding: "10px 12px", borderRadius: 10, fontFamily: F.regular,
+              background: C.white,
+              border: active ? `1px solid ${accent}` : `1px solid ${C.gray02}`,
+              boxShadow: active ? `inset 3px 0 0 ${C.yellow}` : "none",
+            }}
+          >
+            <span style={{ fontFamily: F.regular, fontSize: 12, color: C.offBlack, lineHeight: 1.4 }}>{p.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CopilotSidePane({
+  tabId, prompts, activeIndex, typedText, onSelect,
+}: {
+  tabId: TabId;
+  prompts: { label: string; text: string }[];
+  activeIndex: number | null;
+  typedText: string;
+  onSelect: (idx: number) => void;
+}) {
+  const accent = APP_ACCENT[tabId];
+  const isMail = tabId === "outlook";
+  return (
+    <aside
+      aria-label={`Copilot in ${APP_NAME[tabId]}`}
+      style={{
+        width: 292, flexShrink: 0, background: C.white,
+        borderLeft: `1px solid ${C.gray02}`,
+        display: "flex", flexDirection: "column", minHeight: 0,
+      }}
+    >
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8, padding: "10px 12px",
+        borderBottom: `1px solid ${C.gray02}`, flexShrink: 0,
+      }}>
+        <Menu size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        <ShieldCheck size={14} strokeWidth={1.75} color={C.success} aria-hidden />
+        {isMail ? (
+          <>
+            <span style={{
+              marginLeft: 4, display: "inline-flex", alignItems: "center", gap: 2,
+              background: C.offWhite, borderRadius: 8, padding: 2,
+            }}>
+              <span style={{
+                width: 22, height: 22, borderRadius: 6, background: C.white,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Briefcase size={11} strokeWidth={1.75} color={C.offBlack} aria-hidden />
+              </span>
+              <span style={{
+                width: 22, height: 22, borderRadius: 6,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Globe size={11} strokeWidth={1.75} color={C.gray01} aria-hidden />
+              </span>
+            </span>
+            <span style={{ flex: 1 }} />
+          </>
+        ) : (
+          <>
+            <img src="/pipeline/copilot-icon.svg" alt="" width={16} height={16} style={{ objectFit: "contain" }} />
+            <span style={{ fontFamily: F.bold, fontSize: 13, color: C.offBlack, flex: 1 }}>Copilot</span>
+          </>
+        )}
+        <span style={{
+          width: 22, height: 22, borderRadius: 5, background: accent,
+          display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <Pencil size={11} strokeWidth={1.75} color={C.white} aria-hidden />
+        </span>
+        <MoreHorizontal size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        <X size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      </div>
+
+      <div style={{ padding: "18px 14px 8px", flexShrink: 0 }}>
+        <p style={{ margin: 0, fontFamily: F.bold, fontSize: 18, color: C.offBlack, lineHeight: 1.25 }}>
+          {COPILOT_HEADING[tabId]}
+        </p>
+        {!isMail && tabId !== "teams" && (
+          <span style={{
+            marginTop: 8, fontFamily: F.regular, fontSize: 11, color: C.gray01,
+            display: "inline-flex", alignItems: "center", gap: 4,
+          }}>
+            Allow editing <ChevronDown size={12} strokeWidth={1.75} aria-hidden />
+          </span>
+        )}
+      </div>
+
+      <div style={{ padding: "0 12px 10px", flexShrink: 0 }}>
+        <CopilotComposer tabId={tabId} typedText={typedText} accent={accent} />
+      </div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "8px 12px 12px" }}>
+        <CopilotSuggestionCards prompts={prompts} activeIndex={activeIndex} onSelect={onSelect} accent={accent} />
+      </div>
+
+      <div style={{
+        padding: "8px 12px 12px", flexShrink: 0, display: "flex",
+        alignItems: "center", justifyContent: "space-between",
+      }}>
+        <span style={{ fontFamily: F.regular, fontSize: 10, color: C.gray01 }}>M365 Copilot</span>
+        <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01, display: "inline-flex", alignItems: "center", gap: 2 }}>
+          See more <ChevronDown size={12} strokeWidth={1.75} aria-hidden />
+        </span>
+      </div>
+    </aside>
+  );
+}
+
+function WordWorkspace() {
+  const bar = (w: string, h: number) => (
+    <span aria-hidden style={{ display: "block", width: w, height: h, borderRadius: 4, background: MOCK_SKEL }} />
+  );
+  return (
+    <div style={{ flex: 1, background: C.offWhite, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+      <div aria-hidden style={{
+        height: 18, flexShrink: 0, backgroundColor: C.white, borderBottom: `1px solid ${C.gray02}`,
+        backgroundImage: `repeating-linear-gradient(90deg, ${C.gray02} 0 1px, transparent 1px 24px)`,
+      }} />
+      <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+        <div aria-hidden style={{
+          width: 18, flexShrink: 0, backgroundColor: C.white, borderRight: `1px solid ${C.gray02}`,
+          backgroundImage: `repeating-linear-gradient(180deg, ${C.gray02} 0 1px, transparent 1px 24px)`,
+        }} />
+        <div style={{ flex: 1, display: "flex", justifyContent: "center", padding: "20px 28px", overflow: "hidden" }}>
+          <div style={{
+            width: "100%", maxWidth: 520, background: C.white,
+            padding: "36px 40px", display: "flex", flexDirection: "column", gap: 16,
+            boxShadow: "0 1px 8px rgba(26, 26, 36, 0.06)",
+          }}>
+            {bar("72%", 16)}
+            {bar("100%", 10)}
+            {bar("100%", 10)}
+            {bar("88%", 10)}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span aria-hidden style={{ width: 6, height: 6, borderRadius: 3, background: C.yellow, flexShrink: 0 }} />
+              {bar("100%", 10)}
             </div>
-            <textarea
-              readOnly
-              value={typedText}
-              placeholder="Choose a prompt on the right to see Copilot respond →"
-              style={{ width: "100%", minHeight: 100, border: "none", outline: "none", resize: "none", background: "transparent", fontFamily: F.regular, fontSize: 13, color: typedText ? C.dark2 : "rgba(46,46,56,0.5)", lineHeight: 1.55 }}
-            />
+            {bar("64%", 10)}
+            {bar("100%", 10)}
           </div>
         </div>
       </div>
@@ -1036,70 +1178,409 @@ function CopilotAppMock({ appLabel, accent, typedText }: { appLabel: string; acc
   );
 }
 
-// ── Pattern 2b: "Ask Copilot in {App}" prompt panel — 5 clickable prompts ──
-function CopilotPromptPanel({ appLabel, prompts, activeIndex, onSelect }: {
-  appLabel: string; prompts: { label: string; text: string }[];
-  activeIndex: number | null; onSelect: (idx: number) => void;
-}) {
+function PptWorkspace() {
   return (
-    <div style={{ flex: "1 1 392px", minWidth: 0, maxHeight: 800, minHeight: 598, background: `linear-gradient(151deg, ${C.dark2} 8.5%, ${C.dark} 91.5%)`, border: "0.75px solid rgba(255,255,255,0.08)", borderRadius: 22, padding: "22.75px", boxShadow: "0 20px 25px rgba(0,0,0,0.24)", display: "flex", flexDirection: "column" }}>
-      <p style={{ fontFamily: F.regular, fontWeight: 700, fontSize: 16, color: C.white, marginBottom: 16, display: "flex", alignItems: "center", gap: 8, lineHeight: 1.5 }}>
-        <Sparkles size={16} strokeWidth={1.75} color={C.yellow} aria-hidden /> Ask Copilot in {appLabel}
-      </p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", minHeight: 0, flex: 1, paddingRight: 4 }}>
-        {prompts.map((p, i) => {
-          const active = i === activeIndex;
-          return (
-            <button
-              key={p.label}
-              onClick={() => onSelect(i)}
-              style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "11.75px 12.75px", borderRadius: 14,
-                background: active ? "rgba(255,230,0,0.14)" : "rgba(255,255,255,0.04)",
-                border: active ? `0.75px solid ${C.yellow}` : "0.75px solid rgba(255,255,255,0.08)",
-                cursor: "pointer", textAlign: "left", width: "100%", fontFamily: F.regular,
-                transition: "background 0.2s, border-color 0.2s, transform 0.2s",
-              }}
-              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.transform = "translateX(3px)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "none"; }}
-            >
-              <span style={{ width: 24, height: 24, minWidth: 24, borderRadius: 12, background: active ? C.yellow : "rgba(255,255,255,0.12)", color: active ? C.dark : C.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700 }}>{i + 1}</span>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: C.white, lineHeight: 1.5 }}>{p.label}</span>
-              <ArrowRight size={14} strokeWidth={1.75} color={active ? C.yellow : "rgba(255,255,255,0.35)"} aria-hidden style={{ flexShrink: 0 }} />
-            </button>
-          );
-        })}
+    <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden", background: C.offWhite }}>
+      <div style={{ width: 148, flexShrink: 0, padding: 12, display: "flex", flexDirection: "column", gap: 12, borderRight: `1px solid ${C.gray02}`, background: C.white }}>
+        {[1, 2, 3, 4].map(n => (
+          <div key={n} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01, width: 12 }}>{n}</span>
+            <div style={{
+              flex: 1, height: 64, borderRadius: 4, background: C.offWhite,
+              border: n === 1 ? `1.5px solid ${C.yellow}` : `1px solid ${C.gray02}`,
+              padding: 8, display: "flex", flexDirection: "column", gap: 4,
+            }}>
+              <span aria-hidden style={{ height: 5, width: "100%", borderRadius: 2, background: MOCK_SKEL }} />
+              <span aria-hidden style={{ height: 4, width: "36%", borderRadius: 2, background: MOCK_SKEL }} />
+              <span aria-hidden style={{ flex: 1, borderRadius: 2, background: MOCK_SKEL }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{
+          width: "100%", maxWidth: 480, aspectRatio: "16 / 9", background: C.white,
+          padding: 36, boxShadow: "0 8px 24px -8px rgba(26, 26, 36, 0.12)",
+          display: "flex", flexDirection: "column", justifyContent: "center", gap: 16,
+        }}>
+          <div style={{
+            border: `1px dashed ${C.gray02}`, padding: "10px 12px",
+            fontFamily: F.regular, fontSize: 22, color: C.gray01,
+          }}>Click to add title</div>
+          <div style={{
+            border: `1px dashed ${C.gray02}`, padding: "8px 12px", maxWidth: 280,
+            fontFamily: F.regular, fontSize: 13, color: C.gray01,
+          }}>Click to add subtitle</div>
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Pattern 2: Use cases | app mock | prompt panel — Word/Excel/PPT/Outlook tabs
+const EXCEL_ROWS: { metric: string; value: string; total?: boolean }[] = [
+  { metric: "Financial Metric", value: "Value (USD)" },
+  { metric: "Enterprise AI Licenses", value: "45,000" },
+  { metric: "Cloud Compute Allocation", value: "128,500" },
+  { metric: "Advisory Governance Fee", value: "32,000" },
+  { metric: "Model Auditing & Compliance", value: "15,000" },
+  { metric: "", value: "" },
+  { metric: "Total Operations Cost", value: "220,500", total: true },
+];
+
+function ExcelWorkspace() {
+  const cols = ["A", "B", "C", "D", "E", "F"];
+  const cell: React.CSSProperties = {
+    borderRight: `1px solid ${C.gray02}`, borderBottom: `1px solid ${C.gray02}`,
+    fontFamily: F.regular, fontSize: 12, color: C.offBlack, padding: "0 8px",
+    display: "flex", alignItems: "center", height: 24, overflow: "hidden",
+  };
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden", background: C.white }}>
+      <div style={{
+        height: 35, borderBottom: `1px solid ${C.gray02}`, display: "flex", alignItems: "center",
+        gap: 10, padding: "0 16px", flexShrink: 0,
+      }}>
+        <span style={{
+          fontFamily: F.bold, fontSize: 12, color: C.offBlack, background: C.offWhite,
+          border: `1px solid ${C.gray02}`, borderRadius: 4, padding: "2px 10px",
+        }}>C7</span>
+        <span aria-hidden style={{ width: 1, height: 16, background: C.gray02 }} />
+        <span style={{ fontFamily: F.bold, fontSize: 13, color: C.gray01, fontStyle: "italic" }}>fx</span>
+        <span style={{ fontFamily: F.regular, fontSize: 13, color: C.offBlack }}>=SUM(C2:C6)</span>
+      </div>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "40px 1fr 2.2fr 1fr 1fr 1fr 1fr", background: C.offWhite }}>
+          <span style={{ ...cell, justifyContent: "center" }} />
+          {cols.map(c => (
+            <span key={c} style={{ ...cell, justifyContent: "center", fontFamily: F.bold, fontSize: 11, color: C.gray01 }}>{c}</span>
+          ))}
+        </div>
+        {EXCEL_ROWS.map((row, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2.2fr 1fr 1fr 1fr 1fr" }}>
+            <span style={{ ...cell, justifyContent: "center", background: C.offWhite, fontSize: 11, color: C.gray01 }}>{i + 1}</span>
+            <span style={cell} />
+            <span style={{ ...cell, fontFamily: i === 0 || row.total ? F.bold : F.regular }}>{row.metric}</span>
+            <span style={{
+              ...cell,
+              justifyContent: "flex-end",
+              fontFamily: i === 0 || row.total ? F.bold : F.regular,
+              outline: row.total ? `2px solid ${C.excelGreen}` : undefined,
+              outlineOffset: -2,
+              background: row.total ? C.offWhite : undefined,
+            }}>{row.value}</span>
+            <span style={cell} /><span style={cell} /><span style={cell} />
+          </div>
+        ))}
+        {Array.from({ length: 6 }, (_, i) => (
+          <div key={`e${i}`} style={{ display: "grid", gridTemplateColumns: "40px 1fr 2.2fr 1fr 1fr 1fr 1fr" }}>
+            <span style={{ ...cell, justifyContent: "center", background: C.offWhite, fontSize: 11, color: C.gray01 }}>{i + 8}</span>
+            {cols.map(c => <span key={c} style={cell} />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const OUTLOOK_MAILS = [
+  { from: "EY Compliance Desk", time: "10:24 AM", subject: "AI Audit Status: Action Required", preview: "The regulatory dashboard has detected a slight drift..." },
+  { from: "Sarah Jenkins", time: "9:15 AM", subject: "Re: Governance Framework Update", preview: "Hi Team, please find my comments on Section 3 attached..." },
+  { from: "Microsoft Azure Team", time: "Yesterday", subject: "Azure Compute Quota Increase Approved", preview: "Your subscription request for the governance cluster..." },
+  { from: "Internal Advisory", time: "Yesterday", subject: "Global AI Practice Newsletter - Q1", preview: "Welcome to the quarterly update. Check out the ascent journey..." },
+];
+
+function OutlookWorkspace() {
+  const rail: { icon: LucideIcon; on?: boolean }[] = [
+    { icon: Mail, on: true },
+    { icon: Calendar },
+    { icon: Users },
+    { icon: ClipboardList },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+      <div style={{
+        width: 44, flexShrink: 0, background: C.offWhite, borderRight: `1px solid ${C.gray02}`,
+        display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, gap: 4,
+      }}>
+        {rail.map(({ icon: Icon, on }) => (
+          <span key={Icon.displayName ?? Icon.name} style={{
+            width: 32, height: 32, borderRadius: 8,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            background: on ? C.white : "transparent",
+            boxShadow: on ? `inset 0 0 0 1.5px ${C.outlookBlue}` : "none",
+            color: on ? C.outlookBlue : C.gray01,
+          }}>
+            <Icon size={16} strokeWidth={1.75} aria-hidden />
+          </span>
+        ))}
+      </div>
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ width: 118, flexShrink: 0, background: C.white, borderRight: `1px solid ${C.gray02}`, padding: 10 }}>
+          <span style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            height: 30, marginBottom: 10, borderRadius: 6, background: C.outlookBlue,
+            color: C.white, fontFamily: F.bold, fontSize: 11,
+          }}>
+            <Plus size={12} strokeWidth={1.75} aria-hidden /> New email
+          </span>
+          {[
+            { name: "Inbox", badge: "3", on: true },
+            { name: "Sent Items" },
+            { name: "Drafts", badge: "1" },
+            { name: "Archive" },
+            { name: "Deleted Items" },
+          ].map(f => (
+            <div key={f.name} style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              height: 28, padding: "0 8px", borderRadius: 4,
+              background: f.on ? C.offWhite : "transparent",
+            }}>
+              <span style={{ fontFamily: f.on ? F.bold : F.regular, fontSize: 13, color: C.offBlack }}>{f.name}</span>
+              {f.badge && (
+                <span style={{
+                  fontFamily: F.bold, fontSize: 10, color: C.offBlack, background: C.yellow,
+                  borderRadius: 8, padding: "1px 6px",
+                }}>{f.badge}</span>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ width: 188, flexShrink: 0, background: C.white, borderRight: `1px solid ${C.gray02}`, overflow: "hidden" }}>
+          {OUTLOOK_MAILS.map((m, i) => (
+            <div key={m.subject} style={{
+              padding: "12px 14px", borderBottom: `1px solid ${C.gray02}`,
+              background: i === 0 ? C.offWhite : C.white,
+              borderLeft: i === 0 ? `3px solid ${C.yellow}` : "3px solid transparent",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontFamily: F.bold, fontSize: 12, color: C.offBlack }}>{m.from}</span>
+                <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01, flexShrink: 0 }}>{m.time}</span>
+              </div>
+              <p style={{ margin: "0 0 2px", fontFamily: F.regular, fontSize: 12, color: C.offBlack }}>{m.subject}</p>
+              <p style={{ margin: 0, fontFamily: F.light, fontSize: 11, color: C.gray01, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.preview}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ flex: 1, minWidth: 0, background: C.white, padding: "16px 16px 20px", overflow: "hidden" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                width: 40, height: 40, borderRadius: 20, background: C.confidentBlack,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontFamily: F.bold, fontSize: 13, color: C.white,
+              }}>CD</span>
+              <div>
+                <p style={{ margin: 0, fontFamily: F.bold, fontSize: 14, color: C.offBlack }}>EY Compliance Desk</p>
+                <p style={{ margin: 0, fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>To: AI Team Advisory Group</p>
+              </div>
+            </div>
+            <span style={{ fontFamily: F.regular, fontSize: 11, color: C.gray01 }}>Today, 10:24 AM</span>
+          </div>
+          <p style={{ margin: "0 0 12px", fontFamily: F.bold, fontSize: 16, color: C.offBlack }}>AI Audit Status: Action Required</p>
+          <p style={{ margin: "0 0 10px", fontFamily: F.regular, fontSize: 13, color: C.offBlack, lineHeight: 1.5 }}>Dear Team,</p>
+          <p style={{ margin: "0 0 12px", fontFamily: F.regular, fontSize: 13, color: C.offBlack, lineHeight: 1.5 }}>
+            The responsible AI metrics engine has signaled a drift warning within the core underwriting pipeline. All variables must undergo demographic parity testing immediately to maintain alignment with global standards.
+          </p>
+          <div style={{ background: C.offWhite, borderRadius: 8, padding: 12, marginBottom: 12 }}>
+            <p style={{ margin: "0 0 8px", fontFamily: F.bold, fontSize: 12, color: C.offBlack }}>Next Steps for Team Members:</p>
+            <p style={{ margin: "0 0 4px", fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>• Review model logs and trace data lineage metadata</p>
+            <p style={{ margin: 0, fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>• Re-run demographic bias mitigation protocols</p>
+          </div>
+          <p style={{ margin: 0, fontFamily: F.regular, fontSize: 13, color: C.offBlack, lineHeight: 1.5 }}>Best regards, EY AI Governance Desk</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MockStatusBar({ tabId }: { tabId: TabId }) {
+  if (tabId === "excel") {
+    return (
+      <div style={{
+        height: 40, background: C.white, borderTop: `1px solid ${C.gray02}`,
+        display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {["Sheet1", "Sheet2", "Summary"].map((s, i) => (
+            <span key={s} style={{
+              fontFamily: i === 0 ? F.bold : F.regular, fontSize: 12,
+              color: i === 0 ? C.offBlack : C.gray01,
+              padding: "4px 12px",
+              borderBottom: i === 0 ? `2px solid ${C.yellow}` : "2px solid transparent",
+            }}>{s}</span>
+          ))}
+          <Plus size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        </div>
+        <MockZoom />
+      </div>
+    );
+  }
+  const left =
+    tabId === "ppt" ? ["Slide 3 of 12", "Notes", "Accessibility: Good to go"]
+    : tabId === "outlook" ? ["Items: 142", "All folders up to date"]
+    : tabId === "teams" ? ["In a meeting", "Transcription on"]
+    : ["184 words", "1,124 characters", "English (US)"];
+  return (
+    <div style={{
+      height: 30, background: C.white, borderTop: `1px solid ${C.gray02}`,
+      display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", flexShrink: 0,
+    }}>
+      <div style={{ display: "flex", gap: 16, fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>
+        {left.map(t => <span key={t}>{t}</span>)}
+      </div>
+      {tabId === "outlook"
+        ? <span style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>Connected to Microsoft Exchange</span>
+        : tabId === "teams"
+        ? <span style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01 }}>Copilot available</span>
+        : <MockZoom />}
+    </div>
+  );
+}
+
+function TeamsWorkspace() {
+  const rail: { icon: LucideIcon; on?: boolean }[] = [
+    { icon: MessagesSquare },
+    { icon: Calendar, on: true },
+    { icon: Users },
+    { icon: Video },
+  ];
+  const people = [
+    { initials: "PR", name: "Presenter" },
+    { initials: "RK", name: "Reviewer" },
+    { initials: "AM", name: "Organiser" },
+    { initials: "EY", name: "You" },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+      <div style={{
+        width: 44, flexShrink: 0, background: C.offWhite, borderRight: `1px solid ${C.gray02}`,
+        display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 10, gap: 4,
+      }}>
+        {rail.map(({ icon: Icon, on }) => (
+          <span key={Icon.displayName ?? Icon.name} style={{
+            width: 32, height: 32, borderRadius: 8,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            background: on ? C.white : "transparent",
+            boxShadow: on ? `inset 0 0 0 1.5px ${C.teamsViolet}` : "none",
+            color: on ? C.teamsViolet : C.gray01,
+          }}>
+            <Icon size={16} strokeWidth={1.75} aria-hidden />
+          </span>
+        ))}
+      </div>
+      <div style={{
+        flex: 1, minWidth: 0, background: C.dark, padding: 16,
+        display: "flex", flexDirection: "column", gap: 12,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <p style={{ margin: 0, fontFamily: F.bold, fontSize: 14, color: C.white }}>Weekly huddle</p>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8, color: C.onDarkMuted }}>
+            <Mic size={14} strokeWidth={1.75} aria-hidden />
+            <Video size={14} strokeWidth={1.75} aria-hidden />
+            <Monitor size={14} strokeWidth={1.75} aria-hidden />
+            <Sparkles size={14} strokeWidth={1.75} color={C.yellow} aria-hidden />
+          </span>
+        </div>
+        <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, minHeight: 0 }}>
+          {people.map(p => (
+            <div key={p.initials} style={{
+              background: C.offBlack, borderRadius: 12, border: `1px solid ${C.borderOnDark}`,
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8,
+              minHeight: 0,
+            }}>
+              <span style={{
+                width: 44, height: 44, borderRadius: 22, background: C.white,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                fontFamily: F.bold, fontSize: 13, color: C.offBlack,
+              }}>{p.initials}</span>
+              <span style={{ fontFamily: F.regular, fontSize: 12, color: C.onDarkMuted }}>{p.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CopilotAppMock({
+  tabId, prompts, activeIndex, typedText, onSelect,
+}: {
+  tabId: TabId;
+  prompts: { label: string; text: string }[];
+  activeIndex: number | null;
+  typedText: string;
+  onSelect: (idx: number) => void;
+}) {
+  const workspace =
+    tabId === "excel" ? <ExcelWorkspace />
+    : tabId === "ppt" ? <PptWorkspace />
+    : tabId === "outlook" ? <OutlookWorkspace />
+    : tabId === "teams" ? <TeamsWorkspace />
+    : <WordWorkspace />;
+
+  return (
+    <div style={{
+      width: "100%", minHeight: 640, background: C.offWhite, borderRadius: 12, overflow: "hidden",
+      border: `1px solid ${C.gray02}`, boxShadow: "0 16px 40px rgba(26, 26, 36, 0.10)",
+      display: "flex", flexDirection: "column",
+    }}>
+      <MsTitleBar tabId={tabId} />
+      <MsRibbon tabId={tabId} />
+      <div style={{ flex: 1, display: "flex", minHeight: 0, overflow: "hidden" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          {workspace}
+        </div>
+        <CopilotSidePane
+          tabId={tabId}
+          prompts={prompts}
+          activeIndex={activeIndex}
+          typedText={typedText}
+          onSelect={onSelect}
+        />
+      </div>
+      <MockStatusBar tabId={tabId} />
+    </div>
+  );
+}
+
+// ── Pattern 2: Use cases (top) → prompts + app mock side-by-side — all app tabs
 function CopilotScene({ tabId }: { tabId: TabId }) {
   const d = SECTION_DATA[tabId];
-  const tabMeta = TABS.find(t => t.id === tabId)!;
-  const appLabel = APP_NAME[tabId];
   const { activeIndex, typedText, select } = useTypingPrompt();
 
   return (
     <>
-      <div
-        className="copilot-scene"
-        style={{ display: "flex", alignItems: "stretch", gap: 20, maxHeight: 800 }}
-      >
-        <CopilotUseCasePanel useCases={d.useCases} />
-        <CopilotAppMock appLabel={appLabel} accent={tabMeta.appColor} typedText={typedText} />
-        <CopilotPromptPanel
-          appLabel={appLabel}
-          prompts={d.prompts}
-          activeIndex={activeIndex}
-          onSelect={idx => select(idx, d.prompts[idx].text)}
-        />
+      <div className="copilot-scene">
+        {tabId === "m365" ? (
+          <div className="copilot-scene-main copilot-scene-main--chat-tour">
+            <M365ChatSlideTour />
+          </div>
+        ) : (
+          <div className="copilot-scene-main">
+            <CopilotAppMock
+              tabId={tabId}
+              prompts={d.prompts}
+              activeIndex={activeIndex}
+              typedText={typedText}
+              onSelect={idx => select(idx, d.prompts[idx].text)}
+            />
+          </div>
+        )}
       </div>
       <style>{`
-        @media (max-width: 900px) {
-          .copilot-scene { flex-direction: column !important; max-height: none !important; }
-          .copilot-scene > * { flex: 1 1 auto !important; max-height: none !important; min-height: 0 !important; }
+        .copilot-scene {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          width: 100%;
+        }
+        .copilot-scene-main {
+          width: 100%;
+        }
+        .copilot-scene-main--chat-tour {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
         }
       `}</style>
     </>
@@ -1148,18 +1629,33 @@ function AgentBuilderShell({
     return order.map(label => ({ label, items: map.get(label)! }));
   }, [sidebarItems]);
 
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(
-    () => sidebarItems?.[0]?.group ?? null,
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
+    () => new Set(sidebarItems?.map(item => item.group ?? "Other") ?? []),
   );
+
+  useEffect(() => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      for (const item of sidebarItems ?? []) next.add(item.group ?? "Other");
+      return next;
+    });
+  }, [sidebarItems]);
 
   useEffect(() => {
     if (!activeSidebarId || !sidebarItems) return;
     const activeItem = sidebarItems.find(item => item.id === activeSidebarId);
-    if (activeItem?.group) setExpandedGroup(activeItem.group);
+    if (activeItem?.group) {
+      setExpandedGroups(prev => new Set(prev).add(activeItem.group!));
+    }
   }, [activeSidebarId, sidebarItems]);
 
   const toggleGroup = (groupLabel: string) => {
-    setExpandedGroup(prev => (prev === groupLabel ? null : groupLabel));
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupLabel)) next.delete(groupLabel);
+      else next.add(groupLabel);
+      return next;
+    });
   };
 
   const renderSidebar = () => (
@@ -1183,7 +1679,7 @@ function AgentBuilderShell({
       <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2, paddingRight: 2, minHeight: 0 }}>
         {sidebarItems ? (
           sidebarGroups.map(({ label, items }, groupIndex) => {
-            const isExpanded = expandedGroup === label;
+            const isExpanded = expandedGroups.has(label);
             const groupHasActive = items.some(item => item.id === activeSidebarId);
             return (
               <div key={label} style={{ marginTop: groupIndex === 0 ? 0 : 4 }}>
@@ -1255,7 +1751,7 @@ function AgentBuilderShell({
                             cursor: "pointer",
                             textAlign: "left",
                             fontFamily: F.regular,
-                            background: active ? C.yellow + "33" : "transparent",
+                            background: active ? "rgba(255,230,0,0.2)" : "transparent",
                           }}
                           onFocus={e => { e.currentTarget.style.outline = focusRing; }}
                           onBlur={e => { e.currentTarget.style.outline = "none"; }}
@@ -1286,7 +1782,7 @@ function AgentBuilderShell({
                               flex: 1,
                               minWidth: 0,
                               fontSize: 12,
-                              fontWeight: active ? 700 : 400,
+                              fontWeight: 400,
                               color: active ? C.dark2 : C.gray01,
                               lineHeight: 1.35,
                             }}
@@ -1630,12 +2126,46 @@ function AgentProse({ children, style }: { children: ReactNode; style?: React.CS
   );
 }
 
-function AgentBulletList({ items }: { items: readonly string[] }) {
+function AgentBulletList({ items, style }: { items: readonly string[]; style?: React.CSSProperties }) {
   return (
-    <ul style={{ margin: "0 0 12px", paddingLeft: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+    <ul
+      style={{
+        margin: "0 0 16px",
+        padding: 0,
+        listStyle: "none",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        ...style,
+      }}
+    >
       {items.map(item => (
-        <li key={item} style={{ fontFamily: F.regular, fontSize: 14, color: C.dark2, lineHeight: 1.6 }}>
-          <VerbatimInline text={item} />
+        <li
+          key={item}
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 10,
+            fontFamily: F.regular,
+            fontSize: 14,
+            color: C.dark2,
+            lineHeight: 1.6,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 6,
+              height: 6,
+              marginTop: 8,
+              flexShrink: 0,
+              borderRadius: "50%",
+              background: C.offBlack,
+            }}
+          />
+          <span>
+            <VerbatimInline text={item} />
+          </span>
         </li>
       ))}
     </ul>
@@ -2007,9 +2537,1076 @@ function FullWorkedExampleCard() {
   );
 }
 
-function AgentTemplatesTab() {
-  const templateNavItems: AgentBuilderSidebarItem[] = [
-    ...AGENT_INSTRUCTION_PATTERNS.map(p => ({
+function AgentPager({
+  items,
+  activeIndex,
+  onSelect,
+}: {
+  items: readonly { id: string; label: string }[];
+  activeIndex: number;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div
+      style={{
+        padding: "14px 24px",
+        borderTop: `1px solid ${C.gray02}`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexShrink: 0,
+        background: C.offWhite,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => onSelect(items[Math.max(0, activeIndex - 1)].id)}
+        disabled={activeIndex === 0}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "10px 16px",
+          minHeight: 44,
+          borderRadius: 8,
+          border: `1px solid ${C.gray02}`,
+          background: C.white,
+          cursor: activeIndex === 0 ? "not-allowed" : "pointer",
+          opacity: activeIndex === 0 ? 0.45 : 1,
+          fontFamily: F.regular,
+          fontSize: 13,
+          fontWeight: 700,
+          color: C.dark2,
+        }}
+      >
+        <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
+        Previous
+      </button>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+        {items.map((item, i) => (
+          <button
+            key={item.id}
+            type="button"
+            aria-label={`Go to ${item.label}`}
+            onClick={() => onSelect(item.id)}
+            style={{
+              width: i === activeIndex ? 22 : 8,
+              height: 8,
+              borderRadius: 999,
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              background: i === activeIndex ? C.yellow : C.gray02,
+              transition: "width 0.2s, background 0.2s",
+            }}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onSelect(items[Math.min(items.length - 1, activeIndex + 1)].id)}
+        disabled={activeIndex === items.length - 1}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "10px 16px",
+          minHeight: 44,
+          borderRadius: 8,
+          border: "none",
+          background: activeIndex === items.length - 1 ? C.gray02 : C.yellow,
+          cursor: activeIndex === items.length - 1 ? "not-allowed" : "pointer",
+          opacity: activeIndex === items.length - 1 ? 0.45 : 1,
+          fontFamily: F.regular,
+          fontSize: 13,
+          fontWeight: 700,
+          color: C.dark2,
+        }}
+      >
+        Next
+        <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function AgentPanelHeader({
+  badge,
+  title,
+  subtitle,
+  counter,
+}: {
+  badge?: string;
+  title: string;
+  subtitle?: string;
+  counter: string;
+}) {
+  return (
+    <div
+      style={{
+        padding: "16px 24px",
+        background: C.confidentBlack,
+        borderBottom: `1px solid ${C.borderOnDark}`,
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        flexWrap: "wrap",
+        flexShrink: 0,
+      }}
+    >
+      {badge && (
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            flexShrink: 0,
+            background: C.yellow,
+            color: C.dark2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            fontWeight: 700,
+            fontFamily: F.bold,
+          }}
+        >
+          {badge}
+        </span>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontFamily: F.bold, fontSize: 15, fontWeight: 700, color: C.onDark, margin: 0, lineHeight: 1.3 }}>
+          {title}
+        </p>
+        {subtitle && (
+          <p style={{ fontFamily: F.regular, fontSize: 12, color: C.onDarkSubtle, margin: "4px 0 0", lineHeight: 1.45 }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <span style={{ fontFamily: F.bold, fontSize: 12, fontWeight: 700, color: C.yellow, letterSpacing: "0.04em" }}>
+        {counter}
+      </span>
+    </div>
+  );
+}
+
+function AgentLabeledBlock({
+  label,
+  text,
+  tone,
+}: {
+  label: string;
+  text: string;
+  tone: "weak" | "strong" | "neutral";
+}) {
+  const accent = tone === "weak" ? colors.error : tone === "strong" ? colors.success : C.gray01;
+  const Icon = tone === "weak" ? XCircle : tone === "strong" ? CheckCircle : Info;
+  return (
+    <div
+      style={{
+        background: C.offWhite,
+        borderRadius: 10,
+        padding: "14px 16px",
+        borderLeft: `3px solid ${accent}`,
+      }}
+    >
+      <p
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontFamily: F.bold,
+          fontSize: 10,
+          fontWeight: 700,
+          color: accent,
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          margin: "0 0 8px",
+        }}
+      >
+        <Icon size={14} strokeWidth={1.75} aria-hidden />
+        {label}
+      </p>
+      <p style={{ fontFamily: F.regular, fontSize: 13, color: C.dark2, lineHeight: 1.55, margin: 0, whiteSpace: "pre-wrap" }}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/** Black + yellow stack — same pattern as the terminology “What is a prompt?” card. */
+function AgentSplitToneCard({
+  top,
+  bottom,
+}: {
+  top: { label: string; text: string; icon: LucideIcon };
+  bottom: { label: string; text: string; icon: LucideIcon };
+}) {
+  const labelStyle = (onYellow: boolean): React.CSSProperties => ({
+    margin: 0,
+    fontFamily: F.bold,
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    color: onYellow ? C.offBlack : C.onDarkMuted,
+  });
+  const iconBox: React.CSSProperties = {
+    width: 24,
+    height: 24,
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  const headingRow: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    minWidth: 0,
+  };
+  const bodyStyle = (onYellow: boolean): React.CSSProperties => ({
+    margin: 0,
+    fontFamily: F.regular,
+    fontSize: 13,
+    lineHeight: 1.55,
+    whiteSpace: "pre-wrap",
+    color: onYellow ? C.offBlack : C.white,
+  });
+  const panelPad: React.CSSProperties = {
+    padding: "16px 18px 18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    textAlign: "left",
+    minWidth: 0,
+  };
+
+  const TopIcon = top.icon;
+  const BottomIcon = bottom.icon;
+
+  return (
+    <div
+      role="group"
+      aria-label={`${top.label} and ${bottom.label}`}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr",
+        borderRadius: 12,
+        overflow: "hidden",
+        marginTop: 8,
+      }}
+    >
+      <div style={{ ...panelPad, background: C.dark }}>
+        <div style={headingRow}>
+          <span style={iconBox} aria-hidden>
+            <TopIcon size={24} strokeWidth={1.75} />
+          </span>
+          <p style={labelStyle(false)}>{top.label}</p>
+        </div>
+        <p style={bodyStyle(false)}>{top.text}</p>
+      </div>
+      <div style={{ ...panelPad, background: C.yellow }}>
+        <div style={headingRow}>
+          <span style={iconBox} aria-hidden>
+            <BottomIcon size={24} strokeWidth={1.75} />
+          </span>
+          <p style={labelStyle(true)}>{bottom.label}</p>
+        </div>
+        <p style={bodyStyle(true)}>{bottom.text}</p>
+      </div>
+    </div>
+  );
+}
+
+function AgentWeakStrongCard({ weak, strong }: { weak: string; strong: string }) {
+  return (
+    <AgentSplitToneCard
+      top={{ label: "Weak instruction", text: weak, icon: CircleX }}
+      bottom={{ label: "Strong instruction", text: strong, icon: CircleCheckBig }}
+    />
+  );
+}
+
+/** Figma 4412:7179 — dark left rail bullets for Elements best-practice beats. */
+const AGENT_DARK_RAIL_TITLE: React.CSSProperties = {
+  margin: 0,
+  fontFamily: F.regular,
+  fontSize: 16,
+  lineHeight: 1.25,
+  letterSpacing: "-0.01em",
+  color: C.offWhite,
+};
+
+const AGENT_DARK_RAIL_BODY: React.CSSProperties = {
+  margin: 0,
+  fontFamily: F.light,
+  fontSize: 12,
+  fontWeight: 300,
+  lineHeight: 1.4,
+  letterSpacing: "-0.01em",
+  color: C.offWhite,
+};
+
+const AGENT_DARK_RAIL_PANEL: React.CSSProperties = {
+  flex: "0 0 47%",
+  maxWidth: "47%",
+  background: C.dark2,
+  padding: "20px 24px 28px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+  minHeight: 0,
+  overflowY: "auto",
+};
+
+function AgentElementsDarkBullets({ title, items }: { title?: string; items: readonly string[] }) {
+  return (
+    <div
+      style={{
+        ...AGENT_DARK_RAIL_PANEL,
+        justifyContent: "flex-start",
+      }}
+    >
+      {title && <p style={AGENT_DARK_RAIL_TITLE}>{title}</p>}
+      {items.map(item => (
+        <div key={item} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <span
+            aria-hidden
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 8,
+              background: C.offWhite,
+              marginTop: 5,
+              flexShrink: 0,
+            }}
+          />
+          <p style={AGENT_DARK_RAIL_BODY}>{item}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AgentInstructionPreviewCard({
+  label,
+  text,
+  tone,
+  highlightPulse,
+}: {
+  label: string;
+  text: string;
+  tone: "weak" | "strong";
+  highlightPulse?: boolean;
+}) {
+  const accent = tone === "weak" ? colors.error : colors.success;
+  const Icon = tone === "weak" ? CircleX : CircleCheckBig;
+  return (
+    <div
+      className={highlightPulse ? "agent-tech-strong-pulse" : undefined}
+      style={{
+        border: `1px solid ${C.gray02}`,
+        borderRadius: 12,
+        padding: 14,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        background: C.white,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Icon size={24} strokeWidth={1.75} color={accent} aria-hidden />
+        <p
+          style={{
+            margin: 0,
+            fontFamily: F.bold,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: accent,
+          }}
+        >
+          {label}
+        </p>
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontFamily: F.regular,
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: C.offBlack,
+          whiteSpace: "pre-line",
+        }}
+      >
+        {text}
+      </p>
+    </div>
+  );
+}
+
+/** Figma 4412:7179 — Agent Builder configure mock with Instructions weak/strong cards. */
+function AgentBuilderConfigurePreview({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        background: C.white,
+        borderLeft: `1px solid ${C.gray02}`,
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          padding: "10px 14px",
+          borderBottom: `1px solid ${C.gray02}`,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "3px 10px",
+            borderRadius: 999,
+            border: `1px solid ${C.gray02}`,
+            fontFamily: F.regular,
+            fontSize: 11,
+            color: C.offBlack,
+          }}
+        >
+          <img src={AGENT_HEX_SRC} alt="" width={14} height={14} style={{ display: "block" }} />
+          Agent Builder
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "3px 10px",
+            borderRadius: 6,
+            border: `1px solid ${C.gray02}`,
+            fontFamily: F.regular,
+            fontSize: 11,
+            color: C.offBlack,
+          }}
+        >
+          Configure <ChevronDown size={12} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        </span>
+        <span style={{ flex: 1 }} />
+        <Plus size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        <MoreHorizontal size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+        <X size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px", minHeight: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <img src={AGENT_HEX_SRC} alt="" width={44} height={44} style={{ display: "block", flexShrink: 0 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: F.bold,
+                fontSize: 20,
+                fontWeight: 700,
+                color: C.offBlack,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              Agent <PenLine size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+            </p>
+          </div>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: F.regular, fontSize: 12, color: C.gray01, flexShrink: 0 }}>
+            Auto <ChevronDown size={12} strokeWidth={1.75} aria-hidden />
+          </span>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AgentElementsSplitBody({
+  title,
+  leftItems,
+  right,
+}: {
+  title?: string;
+  leftItems: readonly string[];
+  right: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        minHeight: 0,
+        overflow: "hidden",
+        borderTop: `1px solid ${C.gray02}`,
+        background: C.white,
+      }}
+    >
+      <AgentElementsDarkBullets title={title} items={leftItems} />
+      <AgentBuilderConfigurePreview>{right}</AgentBuilderConfigurePreview>
+    </div>
+  );
+}
+
+function AgentElementsInstructionsPanel({
+  weak,
+  strong,
+  reasoningLevels,
+  strongLabel,
+  pulseStrong,
+}: {
+  weak?: string;
+  strong?: string;
+  reasoningLevels?: readonly { label: string; text: string }[];
+  strongLabel?: string;
+  pulseStrong?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${C.gray02}`,
+        borderRadius: 18,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontFamily: F.bold, fontSize: 14, fontWeight: 700, color: C.offBlack }}>Instructions</span>
+        <Info size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {reasoningLevels?.map(level => (
+          <AgentInstructionPreviewCard key={level.label} label={level.label} text={level.text} tone="strong" />
+        ))}
+        {weak && (
+          <AgentInstructionPreviewCard label="Weak instruction" text={weak} tone="weak" />
+        )}
+        {strong && (
+          <AgentInstructionPreviewCard
+            label={strongLabel ?? (weak ? "Strong instruction" : "Example")}
+            text={strong}
+            tone="strong"
+            highlightPulse={pulseStrong}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+const splitLabelStyle = (onYellow: boolean): React.CSSProperties => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  margin: 0,
+  fontFamily: F.bold,
+  fontSize: 9,
+  fontWeight: 700,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: onYellow ? C.offBlack : C.onDarkMuted,
+});
+
+const TECHNIQUE_ICON = 18;
+const STATUS_ICON = 24;
+
+/** Techniques: When to use as scan bullets, Don’t vs Do, copy, raw workbook one click away. */
+function AgentTechniquePatternCard({ pattern }: { pattern: AgentTechniqueItem }) {
+  const [showRaw, setShowRaw] = useState(false);
+  const whenItems = parseWhenToUse(pattern.whenToUse);
+  const { dont, doLines } = parseTaxExample(pattern.taxExample);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {whenItems.length > 0 && (
+        <div
+          style={{
+            background: C.offWhite,
+            border: `1px solid ${C.gray02}`,
+            borderRadius: 12,
+            padding: "16px 18px",
+          }}
+        >
+          <p style={{ ...splitLabelStyle(false), color: C.gray01, marginBottom: 10 }}>
+            <CircleHelp size={TECHNIQUE_ICON} strokeWidth={1.75} aria-hidden />
+            When to use
+          </p>
+          <AgentBulletList items={whenItems} style={{ margin: 0 }} />
+        </div>
+      )}
+
+      <div
+        role="group"
+        aria-label="Don’t write this, then the instruction to copy"
+        style={{ borderRadius: 12, overflow: "hidden" }}
+      >
+        {dont && (
+          <div style={{ background: C.dark, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <p style={splitLabelStyle(false)}>
+              <CircleX size={STATUS_ICON} strokeWidth={1.75} aria-hidden />
+              Don’t write this
+            </p>
+            <p style={{ margin: 0, fontFamily: F.regular, fontSize: 13, lineHeight: 1.55, color: C.white }}>
+              {dont}
+            </p>
+          </div>
+        )}
+        <div style={{ background: C.yellow, padding: "16px 18px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <p style={splitLabelStyle(true)}>
+            <CircleCheckBig size={STATUS_ICON} strokeWidth={1.75} aria-hidden />
+            Write this Instead
+          </p>
+          <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+            {doLines.map((line, i) => (
+              <li
+                key={`${i}-${line}`}
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 10,
+                  fontFamily: F.regular,
+                  fontSize: 13,
+                  lineHeight: 1.55,
+                  color: C.offBlack,
+                }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    flexShrink: 0,
+                    minWidth: 18,
+                    fontFamily: F.bold,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: C.offBlack,
+                  }}
+                >
+                  {i + 1}.
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div>
+        <button
+          type="button"
+          aria-expanded={showRaw}
+          onClick={() => setShowRaw(open => !open)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            minHeight: 44,
+            padding: 0,
+            border: "none",
+            background: "transparent",
+            cursor: "pointer",
+            fontFamily: F.regular,
+            fontSize: 13,
+            fontWeight: 700,
+            color: C.gray01,
+          }}
+        >
+          <ChevronDown
+            size={16}
+            strokeWidth={1.75}
+            aria-hidden
+            style={{ transform: showRaw ? "rotate(180deg)" : "none", transition: "transform 150ms ease" }}
+          />
+          Show workbook wording
+        </button>
+        {showRaw && (
+          <pre
+            style={{
+              margin: "8px 0 0",
+              padding: "14px 16px",
+              borderRadius: 10,
+              background: C.offWhite,
+              border: `1px solid ${C.gray02}`,
+              fontFamily: F.regular,
+              fontSize: 12,
+              lineHeight: 1.55,
+              color: C.dark2,
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {`When to use\n${pattern.whenToUse.trim()}\n\nTax example\n${pattern.taxExample.trim()}`}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AgentElementsTab({ openId }: { openId?: string } = {}) {
+  const navItems: AgentBuilderSidebarItem[] = [
+    ...AGENT_BEST_PRACTICES_SLIDES.map(s => ({
+      id: `bp-${s.n}`,
+      label: s.heading,
+      badge: s.n,
+      group: "Agent Best Practices",
+    })),
+    ...AGENT_COMMON_FAILURES.map(f => ({
+      id: `fail-${f.n}`,
+      label: f.title,
+      badge: f.n,
+      group: "Common Failures",
+    })),
+  ];
+
+  const [activeId, setActiveId] = useState(
+    openId && navItems.some(item => item.id === openId) ? openId : (navItems[0]?.id ?? "bp-01"),
+  );
+  const activeIndex = navItems.findIndex(item => item.id === activeId);
+  const active = navItems[activeIndex] ?? navItems[0];
+  const practice = AGENT_BEST_PRACTICES_SLIDES.find(s => active.id === `bp-${s.n}`);
+  const failure = AGENT_COMMON_FAILURES.find(f => active.id === `fail-${f.n}`);
+
+  return (
+    <AgentBuilderShell
+      fullPanel
+      sidebarTitle="Elements"
+      sidebarItems={navItems}
+      activeSidebarId={activeId}
+      onSidebarSelect={setActiveId}
+    >
+      <AgentPanelHeader
+        badge={active.badge}
+        title={practice?.heading ?? failure?.title ?? active.label}
+        counter={`${activeIndex + 1}/${navItems.length}`}
+      />
+      {practice && (
+        <AgentElementsSplitBody
+          title={practice.sub}
+          leftItems={practice.content}
+          right={
+            <AgentElementsInstructionsPanel
+              weak={practice.reasoningLevels ? undefined : practice.weak}
+              strong={practice.reasoningLevels ? undefined : practice.strong}
+              reasoningLevels={practice.reasoningLevels}
+            />
+          }
+        />
+      )}
+      {failure && (
+        <AgentElementsSplitBody
+          title="What happens and how to fix it"
+          leftItems={[failure.whatHappens, failure.fix]}
+          right={<AgentElementsInstructionsPanel strong={failure.example} />}
+        />
+      )}
+      <AgentPager items={navItems} activeIndex={Math.max(0, activeIndex)} onSelect={setActiveId} />
+    </AgentBuilderShell>
+  );
+}
+
+const TECHNIQUE_STEP_STYLES = `
+@keyframes agent-tech-strong-ring {
+  0% {
+    border-color: ${C.yellow};
+    box-shadow: 0 0 0 0 rgba(255, 230, 0, 0.45);
+    background: rgba(255, 230, 0, 0.32);
+  }
+  100% {
+    border-color: ${C.yellow};
+    box-shadow: 0 0 0 8px rgba(255, 230, 0, 0);
+    background: rgba(255, 230, 0, 0.2);
+  }
+}
+.agent-tech-strong-pulse {
+  animation: agent-tech-strong-ring 300ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-tech-strong-pulse {
+    animation: none;
+  }
+}
+`;
+
+/** Matches AgentBuilderShell active sidebar item (aria-current). */
+const TECHNIQUE_INSTRUCTIONS_HIGHLIGHT = {
+  background: "rgba(255,230,0,0.2)",
+  border: `1.5px solid ${C.yellow}`,
+} as const;
+
+function useAgentTechniqueStepTransition(stepKey: string) {
+  const [visible, setVisible] = useState(true);
+  const [pulseStrong, setPulseStrong] = useState(false);
+  const prevKey = useRef(stepKey);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const reduceMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  useEffect(() => {
+    if (stepKey === prevKey.current) return;
+    prevKey.current = stepKey;
+
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+    setPulseStrong(false);
+
+    if (reduceMotion) {
+      setVisible(true);
+      return;
+    }
+
+    setVisible(false);
+    timers.current.push(
+      setTimeout(() => {
+        setVisible(true);
+        timers.current.push(
+          setTimeout(() => {
+            setPulseStrong(true);
+            timers.current.push(setTimeout(() => setPulseStrong(false), 300));
+          }, 250),
+        );
+      }, 250),
+    );
+  }, [stepKey, reduceMotion]);
+
+  const stepMotionStyle: React.CSSProperties = reduceMotion
+    ? { flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }
+    : {
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(8px)",
+        transition: "opacity 250ms ease-out, transform 250ms ease-out",
+      };
+
+  return { stepMotionStyle, pulseStrong };
+}
+
+/** Figma 4421:8439 — When to use card (Pattern Summary column D). */
+function AgentWhenToUseCard({ items }: { items: readonly string[] }) {
+  if (!items.length) return null;
+  return (
+    <div
+      style={{
+        background: C.offWhite,
+        border: `1.5px solid ${C.gray02}`,
+        borderRadius: 12,
+        padding: 18,
+        width: "100%",
+        flexShrink: 0,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <CircleHelp size={24} strokeWidth={1.75} color={C.offBlack} aria-hidden />
+        <span
+          style={{
+            fontFamily: F.bold,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            color: C.offBlack,
+          }}
+        >
+          When to use
+        </span>
+      </div>
+      <ul
+        style={{
+          margin: 0,
+          paddingLeft: 20,
+          fontFamily: F.regular,
+          fontSize: 13,
+          lineHeight: 1.55,
+          color: C.offBlack,
+        }}
+      >
+        {items.map(item => (
+          <li key={item} style={{ marginBottom: 4 }}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AgentTechniqueInstructionsPreview({
+  text,
+  pulseStrong,
+  footer,
+}: {
+  text: string;
+  pulseStrong?: boolean;
+  footer?: ReactNode;
+}) {
+  return (
+    <div
+      className={pulseStrong ? "agent-tech-strong-pulse" : undefined}
+      style={{
+        ...TECHNIQUE_INSTRUCTIONS_HIGHLIGHT,
+        borderRadius: 18,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        gap: 12,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            flexShrink: 0,
+            background: C.yellow,
+            border: `1.5px solid ${C.yellow}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          aria-hidden
+        >
+          <ClipboardList size={12} strokeWidth={1.75} color={C.dark2} />
+        </span>
+        <span style={{ fontFamily: F.bold, fontSize: 14, fontWeight: 700, color: C.dark2 }}>Instructions</span>
+        <Info size={14} strokeWidth={1.75} color={C.gray01} aria-hidden />
+      </div>
+      <div
+        style={{
+          borderRadius: 12,
+          padding: 14,
+          background: C.white,
+          border: `1px solid ${C.gray02}`,
+          maxHeight: 320,
+          overflowY: "auto",
+        }}
+      >
+        <pre
+          style={{
+            margin: 0,
+            fontFamily: F.regular,
+            fontSize: 13,
+            lineHeight: 1.55,
+            color: C.offBlack,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {text}
+        </pre>
+      </div>
+      {footer}
+    </div>
+  );
+}
+
+/** Figma 4421:8439 — dark summary rail + Agent Builder instructions preview. */
+function AgentTechniqueFigmaSplit({
+  headline,
+  body,
+  whenItems,
+  instructionText,
+  pulseStrong,
+  footer,
+}: {
+  headline: string;
+  body: string;
+  whenItems: readonly string[];
+  instructionText: string;
+  pulseStrong?: boolean;
+  footer?: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        minHeight: 0,
+        overflow: "hidden",
+        borderTop: `1px solid ${C.gray02}`,
+        background: C.white,
+      }}
+    >
+      <div
+        style={{
+          ...AGENT_DARK_RAIL_PANEL,
+          justifyContent: "space-between",
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <p style={AGENT_DARK_RAIL_TITLE}>{headline}</p>
+          {body && <p style={AGENT_DARK_RAIL_BODY}>{body}</p>}
+        </div>
+        <AgentWhenToUseCard items={whenItems} />
+      </div>
+      <AgentBuilderConfigurePreview>
+        <AgentTechniqueInstructionsPreview text={instructionText} pulseStrong={pulseStrong} footer={footer} />
+      </AgentBuilderConfigurePreview>
+    </div>
+  );
+}
+
+function AgentTechniqueSplitContent({
+  pattern,
+  pulseStrong,
+}: {
+  pattern: AgentTechniqueItem;
+  pulseStrong?: boolean;
+}) {
+  const { headline, body } = parseSummaryParts(pattern.summary);
+  const whenItems = parseWhenToUse(pattern.whenToUse);
+  const instructionText = formatTechniqueInstructionPreview(pattern.taxExample);
+
+  return (
+    <AgentTechniqueFigmaSplit
+      headline={headline}
+      body={body}
+      whenItems={whenItems}
+      instructionText={instructionText}
+      pulseStrong={pulseStrong}
+    />
+  );
+}
+
+function AgentTechniqueExampleSplitContent() {
+  return (
+    <AgentTechniqueFigmaSplit
+      headline="IT agent full example"
+      body="Copy this declarative-agent instruction set into Agent Builder → Configure → Instructions and adapt it for your team's tax workflows."
+      whenItems={[
+        "Complete instruction set for an IT agent",
+        "Structured for Agent Builder configure panel",
+        "Copy and adapt for your tax workflows",
+      ]}
+      instructionText={IT_AGENT_FULL_EXAMPLE}
+      footer={<CopyButton text={IT_AGENT_FULL_EXAMPLE} label="Copy all" />}
+    />
+  );
+}
+
+function AgentTechniquesTab({ openId }: { openId?: string } = {}) {
+  const navItems: AgentBuilderSidebarItem[] = [
+    ...AGENT_TECHNIQUE_PATTERNS.map(p => ({
       id: `pat-${p.n}`,
       label: p.name,
       badge: p.n,
@@ -2018,636 +3615,579 @@ function AgentTemplatesTab() {
     { id: "example", label: "IT agent full example", badge: "Ex", group: "Example" },
   ];
 
-  const [activeId, setActiveId] = useState(templateNavItems[0]?.id ?? "pat-01");
-  const activeIndex = templateNavItems.findIndex(item => item.id === activeId);
-  const active = templateNavItems[activeIndex] ?? templateNavItems[0];
-  const activePattern = AGENT_INSTRUCTION_PATTERNS.find(p => active.id === `pat-${p.n}`);
+  const [activeId, setActiveId] = useState(
+    openId && navItems.some(item => item.id === openId) ? openId : (navItems[0]?.id ?? "pat-01"),
+  );
+  const activeIndex = navItems.findIndex(item => item.id === activeId);
+  const active = navItems[activeIndex] ?? navItems[0];
+  const pattern = AGENT_TECHNIQUE_PATTERNS.find(p => active.id === `pat-${p.n}`);
+  const { stepMotionStyle, pulseStrong } = useAgentTechniqueStepTransition(activeId);
 
   return (
     <>
+      <style>{TECHNIQUE_STEP_STYLES}</style>
       <AgentBuilderShell
         fullPanel
-        sidebarTitle="Templates & Patterns"
-        sidebarItems={templateNavItems}
+        sidebarTitle="Techniques"
+        sidebarItems={navItems}
         activeSidebarId={activeId}
         onSidebarSelect={setActiveId}
       >
-        <div
-          style={{
-            padding: "16px 24px",
-            background: C.confidentBlack,
-            borderBottom: `1px solid rgba(255,255,255,0.12)`,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            flexShrink: 0,
-          }}
-        >
-          {active.badge && (
-            <span
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 6,
-                flexShrink: 0,
-                background: C.yellow,
-                color: C.dark2,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 700,
-                fontFamily: F.bold,
-              }}
-            >
-              {active.badge}
-            </span>
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontFamily: F.bold, fontSize: 15, fontWeight: 700, color: C.onDark, margin: 0, lineHeight: 1.3 }}>
-              {active.label}
-            </p>
-            {active.id !== "example" && (
-              <p style={{ fontFamily: F.regular, fontSize: 12, color: C.onDarkSubtle, margin: "4px 0 0", lineHeight: 1.45 }}>
-                Instruction template and design pattern
-              </p>
-            )}
-          </div>
-          <span style={{ fontFamily: F.bold, fontSize: 12, fontWeight: 700, color: C.yellow, letterSpacing: "0.04em" }}>
-            {activeIndex + 1}/{templateNavItems.length}
-          </span>
-        </div>
-
-        <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px 24px", minHeight: 0 }}>
+        <AgentPanelHeader
+          badge={active.badge}
+          title={pattern?.name ?? active.label}
+          counter={`${activeIndex + 1}/${navItems.length}`}
+        />
+        <div style={stepMotionStyle}>
           {active.id === "example" ? (
-            <FullWorkedExampleCard />
-          ) : activePattern ? (
-            <>
-              <AgentProse>{PATTERNS_SECTION_INTRO}</AgentProse>
-              <div style={{ marginTop: 16 }}>
-                <AgentPatternBody pattern={activePattern} />
-              </div>
-            </>
+            <AgentTechniqueExampleSplitContent />
+          ) : pattern ? (
+            <AgentTechniqueSplitContent pattern={pattern} pulseStrong={pulseStrong} />
           ) : null}
         </div>
-
-        <div
-          style={{
-            padding: "14px 24px",
-            borderTop: `1px solid ${C.gray02}`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            flexShrink: 0,
-            background: C.offWhite,
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setActiveId(templateNavItems[Math.max(0, activeIndex - 1)].id)}
-            disabled={activeIndex === 0}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "10px 16px",
-              minHeight: 44,
-              borderRadius: 8,
-              border: `1px solid ${C.gray02}`,
-              background: C.white,
-              cursor: activeIndex === 0 ? "not-allowed" : "pointer",
-              opacity: activeIndex === 0 ? 0.45 : 1,
-              fontFamily: F.regular,
-              fontSize: 13,
-              fontWeight: 700,
-              color: C.dark2,
-            }}
-          >
-            <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
-            Previous
-          </button>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-            {templateNavItems.map((item, i) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-label={`Go to ${item.label}`}
-                onClick={() => setActiveId(item.id)}
-                style={{
-                  width: i === activeIndex ? 22 : 8,
-                  height: 8,
-                  borderRadius: 999,
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  background: i === activeIndex ? C.yellow : C.gray02,
-                  transition: "width 0.2s, background 0.2s",
-                }}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setActiveId(templateNavItems[Math.min(templateNavItems.length - 1, activeIndex + 1)].id)}
-            disabled={activeIndex === templateNavItems.length - 1}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "10px 16px",
-              minHeight: 44,
-              borderRadius: 8,
-              border: "none",
-              background: activeIndex === templateNavItems.length - 1 ? C.gray02 : C.yellow,
-              cursor: activeIndex === templateNavItems.length - 1 ? "not-allowed" : "pointer",
-              opacity: activeIndex === templateNavItems.length - 1 ? 0.45 : 1,
-              fontFamily: F.regular,
-              fontSize: 13,
-              fontWeight: 700,
-              color: C.dark2,
-            }}
-          >
-            Next
-            <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
-          </button>
-        </div>
+        <AgentPager items={navItems} activeIndex={Math.max(0, activeIndex)} onSelect={setActiveId} />
       </AgentBuilderShell>
-      <p style={{ fontFamily: F.regular, fontSize: 12, color: C.gray01, textAlign: "center", marginTop: 12, lineHeight: 1.5 }}>
-        Source:{" "}
-        <a href={MS_LEARN_AGENT_INSTRUCTIONS} target="_blank" rel="noopener noreferrer" style={{ color: C.teamsViolet, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
-          Microsoft Learn — Instruction templates and design patterns
-          <ExternalLink size={12} strokeWidth={1.75} aria-hidden />
-        </a>
-      </p>
     </>
   );
 }
 
-/**
- * Rail avatars exported from Figma 3854:4153. They ship as raster images, so
- * each tile keeps a gradient underneath in the brand colours of its icon —
- * if an export is missing the row still reads as a coloured tile rather than
- * a broken image.
- */
-type AgentIcon = { readonly src?: string; readonly from: string; readonly to: string };
+const SUMMARY_TABLE_COLUMNS = ["Best Practice", "Likely failure", "Pattern"] as const;
 
-/**
- * Rail avatars from Figma 3854:4153. Only the M365 agent mark is exported into
- * the repo so far; the rest fall back to a gradient tile in their icon's brand
- * colours. Drop a PNG into public/agents/ and add `src` to switch one over —
- * never point `src` at a file that is not there, or the row renders a broken
- * image glyph instead of the tile.
- */
-const AGENT_ICONS: Record<
-  "researcher" | "analyst" | "labourCode" | "taxEvaluator" | "newAgent",
-  AgentIcon
-> = {
-  researcher:   { from: "#4696FF", to: "#22D3EE" },
-  analyst:      { from: "#B400FF", to: "#FF3C7E" },
-  labourCode:   { from: "#2BC7C7", to: "#2563EB" },
-  taxEvaluator: { from: "#FF7A45", to: "#FF3C7E" },
-  newAgent:     { src: "/pipeline/m365-agent-icon.png", from: "#7C5CFF", to: "#FF3C7E" },
+const summaryThStyle: React.CSSProperties = {
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
+  padding: "12px 16px",
+  textAlign: "left",
+  verticalAlign: "top",
+  fontFamily: F.bold,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: C.gray01,
+  background: C.offWhite,
+  borderBottom: `2px solid ${C.gray02}`,
+  borderRight: `1px solid ${C.gray02}`,
 };
 
-function AgentTile({ icon, size = 13, radius = 4 }: { icon: AgentIcon; size?: number; radius?: number }) {
+const summaryTdBase: React.CSSProperties = {
+  padding: "16px",
+  verticalAlign: "top",
+  borderBottom: `1px solid ${C.gray02}`,
+  borderRight: `1px solid ${C.gray02}`,
+  lineHeight: 1.55,
+  color: C.offBlack,
+};
+
+function SummaryCellList({ items }: { items: readonly string[] }) {
+  if (items.length === 0) return null;
+  if (items.length === 1) {
+    return (
+      <span style={{ fontFamily: F.light, fontSize: 13, fontWeight: 300, lineHeight: 1.55, color: C.offBlack }}>
+        {items[0]}
+      </span>
+    );
+  }
   return (
-    <span
+    <ul
       style={{
-        width: size, height: size, borderRadius: radius, flexShrink: 0, overflow: "hidden",
-        background: `linear-gradient(135deg, ${icon.from}, ${icon.to})`,
+        margin: 0,
+        paddingLeft: 18,
+        fontFamily: F.light,
+        fontSize: 13,
+        fontWeight: 300,
+        lineHeight: 1.55,
+        color: C.offBlack,
       }}
-      aria-hidden
     >
-      {icon.src && (
-        <img src={icon.src} alt="" style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
-      )}
-    </span>
+      {items.map(item => (
+        <li key={item} style={{ marginBottom: 8 }}>
+          {item}
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/**
- * Replica of the real M365 Copilot "create an agent" surface (Figma 3844:4740,
- * where it ships as a flat screenshot). Rebuilt as components rather than an
- * image so each of the 10 slides can drive the copy from the mailer sheet:
- * the Instructions field carries that slide's Examples, and the centre column
- * carries its Content bullets in place of the product's empty state.
- *
- * Three rails, matching the design's proportions of the 953px canvas:
- * Copilot nav (18%) · agent canvas (47%) · Agent Builder panel (35%).
- */
-function AgentBuilderCanvas({ slide }: { slide: AgentBestPracticeSlide }) {
-  const railItem = { fontFamily: F.regular, fontSize: 9, color: C.dark2 } as const;
-  const railLabel = {
-    fontFamily: F.regular, fontSize: 8, color: C.gray01, margin: "9px 0 4px",
-  } as const;
-  const agents = [
-    { name: "Researcher", icon: AGENT_ICONS.researcher },
-    { name: "Analyst", icon: AGENT_ICONS.analyst },
-    { name: "Labour Code Analyst", icon: AGENT_ICONS.labourCode },
-    { name: "Tax AI Assessment Evaluator", icon: AGENT_ICONS.taxEvaluator },
-  ];
-  const toneColor = { bad: colors.error, good: "#00A85A", neutral: C.gray01 } as const;
-
+/** Summary sheet from xlsx — plain 3-column table per learner question. */
+function AgentSummaryPlainTable({ rows }: { rows: readonly AgentSummaryRow[] }) {
   return (
-    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: C.white, overflow: "hidden" }}>
-      {/* Desktop window chrome */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 16, padding: "8px 16px", flexShrink: 0 }}>
-        <span style={{ width: 11, height: 1.5, background: C.gray01, display: "block" }} aria-hidden />
-        <span style={{ width: 9, height: 9, border: `1.5px solid ${C.gray01}`, borderRadius: 2, display: "block" }} aria-hidden />
-        <X size={13} strokeWidth={1.75} color={C.gray01} aria-hidden />
-      </div>
-
-      <div style={{ flex: 1, minHeight: 0, display: "flex", borderTop: `1px solid ${C.gray02}` }}>
-
-        {/* ── Copilot nav rail ── */}
-        <div style={{ flex: "0 0 104px", minWidth: 0, background: "linear-gradient(180deg, #FDF0E6 0%, #FBEAEA 45%, #F3EAF8 100%)", padding: "8px 7px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <CopilotIcon size={13} />
-            <svg width="14" height="14" viewBox="0 0 18 18" aria-hidden>
-              {[0, 1, 2].map(r => [0, 1, 2].map(c => (
-                <circle key={`${r}${c}`} cx={3 + c * 6} cy={3 + r * 6} r="1.4" fill={C.gray01} />
-              )))}
-            </svg>
-          </div>
-
-          {[{ label: "New chat", Icon: PenLine }, { label: "Search", Icon: Search }, { label: "Library", Icon: FileText }].map(({ label, Icon }) => (
-            <div key={label} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 5px", ...railItem }}>
-              <Icon size={11} strokeWidth={1.75} color={C.dark2} aria-hidden />
-              <span style={{ lineHeight: 1.3 }}>{label}</span>
-            </div>
+    <div style={{ overflowX: "auto", flex: 1, minHeight: 0 }}>
+      <table
+        style={{
+          width: "100%",
+          minWidth: 640,
+          tableLayout: "fixed",
+          borderCollapse: "collapse",
+          border: `1px solid ${C.gray02}`,
+          background: C.white,
+        }}
+      >
+        <colgroup>
+          <col style={{ width: "30%" }} />
+          <col style={{ width: "32%" }} />
+          <col style={{ width: "38%" }} />
+        </colgroup>
+        <thead>
+          <tr>
+            {SUMMARY_TABLE_COLUMNS.map((col, i) => (
+              <th
+                key={col}
+                scope="col"
+                style={{
+                  ...summaryThStyle,
+                  borderRight: i === SUMMARY_TABLE_COLUMNS.length - 1 ? "none" : summaryThStyle.borderRight,
+                }}
+              >
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr
+              key={row.practice}
+              style={{ background: index % 2 === 0 ? C.white : C.offWhite }}
+            >
+              <td
+                style={{
+                  ...summaryTdBase,
+                  fontFamily: F.bold,
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                {row.practice}
+              </td>
+              <td style={summaryTdBase}>
+                <SummaryCellList items={row.failures} />
+              </td>
+              <td style={{ ...summaryTdBase, borderRight: "none" }}>
+                <SummaryCellList items={row.patterns} />
+              </td>
+            </tr>
           ))}
-
-          <p style={railLabel}>Agents</p>
-          {agents.map(a => (
-            <div key={a.name} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 5px", ...railItem }}>
-              <AgentTile icon={a.icon} />
-              <span style={{ lineHeight: 1.3 }}>{a.name}</span>
-            </div>
-          ))}
-
-          {/* Selected — the agent being created */}
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 5px", background: "rgba(255,255,255,0.85)", borderRadius: 5, ...railItem, fontFamily: F.bold }}>
-            <AgentTile icon={AGENT_ICONS.newAgent} />
-            <span style={{ lineHeight: 1.3 }}>New agent</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 5px", ...railItem, color: C.gray01 }}>
-            <span style={{ fontFamily: F.bold, letterSpacing: "0.06em" }} aria-hidden>···</span>
-            <span style={{ lineHeight: 1.3 }}>More agents</span>
-          </div>
-
-          <p style={railLabel}>Chats</p>
-        </div>
-
-        {/* ── Agent canvas — carries this slide's Content ── */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", padding: "10px 16px 16px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12, flexShrink: 0 }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#00A85A" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="m9 12 2 2 4-4" />
-            </svg>
-            <span style={{ fontFamily: F.bold, fontSize: 13, color: C.gray01, letterSpacing: "0.08em" }} aria-hidden>···</span>
-          </div>
-
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
-            <p style={{ fontFamily: F.regular, fontSize: 12.5, color: C.dark2, textAlign: "center", lineHeight: 1.35, margin: 0, maxWidth: 150 }}>
-              Build your own specialist agent
-            </p>
-          </div>
-
-          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, padding: "8px 12px", border: `1px solid ${C.gray02}`, borderRadius: 999, boxShadow: "0 1px 4px rgba(0,0,0,0.07)" }}>
-            <span style={{ fontFamily: F.regular, fontSize: 14, color: C.gray01, lineHeight: 1 }} aria-hidden>+</span>
-            <span style={{ fontFamily: F.regular, fontSize: 9.5, color: C.gray01, flex: 1 }}>Message Agent Build</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.gray01} strokeWidth="1.75" strokeLinecap="round" aria-hidden>
-              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-              <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4" />
-            </svg>
-          </div>
-        </div>
-
-        {/* ── Agent Builder panel — carries this slide's Examples ── */}
-        <div style={{ flex: "0 0 46%", minWidth: 0, borderLeft: `1px solid ${C.gray02}`, padding: "10px 14px 14px", display: "flex", flexDirection: "column", gap: 11, overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 8px", borderRadius: 999, border: `1px solid ${C.gray02}`, fontFamily: F.regular, fontSize: 9, color: C.dark2, whiteSpace: "nowrap" }}>
-              <CopilotIcon size={10} /> Agent Builder
-            </span>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 6, border: `1px solid ${C.gray02}`, fontFamily: F.regular, fontSize: 9, color: C.dark2, whiteSpace: "nowrap" }}>
-              Configure <ChevronDown size={11} strokeWidth={2} aria-hidden />
-            </span>
-            <span style={{ flex: 1 }} />
-            <span style={{ display: "inline-flex", alignItems: "center", border: `1px solid ${C.gray02}`, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
-              <span style={{ width: 24, height: 24, background: C.offWhite, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: F.regular, fontSize: 14, color: C.dark2, lineHeight: 1 }} aria-hidden>+</span>
-              <span style={{ width: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", fontFamily: F.bold, fontSize: 11, color: C.dark2, letterSpacing: "0.06em" }} aria-hidden>···</span>
-              <span style={{ width: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
-                <X size={12} strokeWidth={1.75} color={C.dark2} aria-hidden />
-              </span>
-            </span>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 11, flexShrink: 0 }}>
-            <svg width="30" height="30" viewBox="0 0 40 40" style={{ flexShrink: 0 }} aria-hidden>
-              <defs>
-                <linearGradient id="agentAvatar" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#2BC7C7" />
-                  <stop offset="100%" stopColor="#2563EB" />
-                </linearGradient>
-              </defs>
-              <rect width="40" height="40" rx="11" fill="url(#agentAvatar)" />
-              {/* Hexagon outline enclosing the </> glyph, per the product mark */}
-              <path d="M20 9.5l8 4.8v11.4l-8 4.8-8-4.8V14.3z" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinejoin="round" opacity="0.95" />
-              <path d="M17.6 16.8L14.2 20l3.4 3.2M22.4 16.8L25.8 20l-3.4 3.2" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <p style={{ fontFamily: F.bold, fontSize: 13.5, fontWeight: 700, color: C.dark2, margin: 0, whiteSpace: "nowrap" }}>New Agent</p>
-            <PenLine size={13} strokeWidth={1.75} color={C.gray01} aria-hidden />
-            <span style={{ flex: 1 }} />
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: F.regular, fontSize: 11, color: C.gray01, whiteSpace: "nowrap" }}>
-              Auto <ChevronDown size={11} strokeWidth={2} aria-hidden />
-            </span>
-          </div>
-          <p style={{ fontFamily: F.regular, fontSize: 9, color: C.gray01, margin: "-5px 0 0", flexShrink: 0 }}>Describe your agent</p>
-
-          {/* Instructions card — the inner field carries the slide's Examples */}
-          <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.gray02}`, borderRadius: 9, padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-              <p style={{ fontFamily: F.bold, fontSize: 10, fontWeight: 700, color: C.dark2, margin: 0 }}>Instructions</p>
-              <span style={{ fontFamily: F.regular, fontSize: 10, color: C.gray01 }} aria-hidden>ⓘ</span>
-              <span style={{ flex: 1 }} />
-              <ExternalLink size={12} strokeWidth={1.75} color={C.gray01} aria-hidden />
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, border: `1px solid ${C.gray02}`, borderRadius: 6, padding: 9, display: "flex", flexDirection: "column", gap: 9, overflowY: "auto" }}>
-              {slide.examples.map((block, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 9 }}>
-                  {block.tone === "bad" && <XCircle size={12} strokeWidth={2} color={colors.error} style={{ flexShrink: 0, marginTop: 1 }} aria-hidden />}
-                  {block.tone === "good" && <CheckCircle size={12} strokeWidth={2} color="#00A85A" style={{ flexShrink: 0, marginTop: 1 }} aria-hidden />}
-                  {block.tone === "neutral" && <span style={{ width: 5, height: 5, borderRadius: "50%", background: C.gray01, flexShrink: 0, marginTop: 7 }} aria-hidden />}
-                  <div style={{ minWidth: 0 }}>
-                    {block.label && (
-                      <p style={{ fontFamily: F.bold, fontSize: 8.5, fontWeight: 700, color: toneColor[block.tone], margin: "0 0 2px" }}>
-                        {block.label}
-                      </p>
-                    )}
-                    {block.lines.map((line, j) => (
-                      <p key={j} style={{ fontFamily: F.regular, fontSize: 9, color: C.dark2, lineHeight: 1.45, margin: j === 0 ? 0 : "2px 0 0" }}>
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function AgentBestPracticesTab() {
-  const [slideIndex, setSlideIndex] = useState(0);
-  const slide = AGENT_BEST_PRACTICES_SLIDES[slideIndex];
-  const total = AGENT_BEST_PRACTICES_SLIDES.length;
-
-  const sidebarItems: AgentBuilderSidebarItem[] = AGENT_BEST_PRACTICES_SLIDES.map(s => ({
-    id: `bp-${s.n}`,
-    label: s.heading,
-    badge: s.n,
-    group: "EY Tax Slides",
+function AgentSummaryTab() {
+  const navItems: AgentBuilderSidebarItem[] = AGENT_SUMMARY_PARTS.map(part => ({
+    id: `sum-${part.n}`,
+    label: part.question,
+    badge: part.n,
+    group: "Learner questions",
   }));
+
+  const [activeId, setActiveId] = useState(navItems[0]?.id ?? "sum-01");
+  const activeIndex = navItems.findIndex(item => item.id === activeId);
+  const part = AGENT_SUMMARY_PARTS.find(p => activeId === `sum-${p.n}`) ?? AGENT_SUMMARY_PARTS[0];
 
   return (
     <AgentBuilderShell
       fullPanel
-      sidebarTitle="Best Practices"
-      sidebarItems={sidebarItems}
-      activeSidebarId={`bp-${slide.n}`}
-      onSidebarSelect={id => {
-        const n = id.replace("bp-", "");
-        const idx = AGENT_BEST_PRACTICES_SLIDES.findIndex(s => s.n === n);
-        if (idx >= 0) setSlideIndex(idx);
-      }}
+      sidebarTitle="Summary"
+      sidebarItems={navItems}
+      activeSidebarId={activeId}
+      onSidebarSelect={setActiveId}
     >
-      {/* ── Section label + counter ── */}
-      <div
-        style={{
-          padding: "14px 24px",
-          background: C.white,
-          borderBottom: `1px solid ${C.gray02}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexShrink: 0,
-        }}
-      >
-        <span
-          style={{
-            padding: "7px 14px",
-            borderRadius: 6,
-            background: C.yellow,
-            color: C.confidentBlack,
-            fontFamily: F.bold,
-            fontSize: 13,
-            fontWeight: 700,
-            whiteSpace: "nowrap",
-          }}
-        >
-          M365 No-Code Agent: Instruction elements
-        </span>
-        <span style={{ flex: 1 }} />
-        <span style={{ fontFamily: F.bold, fontSize: 13, fontWeight: 700, color: C.gray01, letterSpacing: "0.04em" }}>
-          {slideIndex + 1}/{total}
-        </span>
+      <AgentPanelHeader
+        badge={part.n}
+        title={part.question}
+        counter={`${activeIndex + 1}/${navItems.length}`}
+      />
+      <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px", minHeight: 0, display: "flex", flexDirection: "column" }}>
+        <AgentSummaryPlainTable rows={part.rows} />
       </div>
-
-      {/* ── Slide body — teaching copy left, live agent surface right ── */}
-      <div style={{ flex: 1, minHeight: 0, display: "flex", background: C.confidentBlack, overflow: "hidden" }}>
-
-        {/* Left — title, subtitle, content, CTA, EY mark */}
-        <div
-          style={{
-            flex: "0 0 36%",
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            padding: "26px 24px 20px",
-            overflowY: "auto",
-            background: C.eyBgCard,
-            borderRight: `1px solid ${C.borderOnDark}`,
-          }}
-        >
-          <div style={{ flexShrink: 0 }}>
-            <h3 style={{ fontFamily: F.bold, fontSize: 25, fontWeight: 700, color: C.onDark, margin: 0, lineHeight: 1.2 }}>
-              {slide.heading}
-            </h3>
-            <span style={{ display: "block", width: 44, height: 3, background: C.yellow, marginTop: 10 }} aria-hidden />
-          </div>
-
-          <div style={{ flexShrink: 0, padding: "11px 15px", background: C.surfaceOnDark, border: `1px solid ${C.borderOnDark}`, borderLeft: `3px solid ${C.yellow}`, borderRadius: 6 }}>
-            <p style={{ fontFamily: F.regular, fontSize: 13.5, color: C.onDarkMuted, margin: 0, lineHeight: 1.5 }}>
-              {slide.sub}
-            </p>
-          </div>
-
-          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 11 }}>
-            {slide.content.map((line, i) => (
-              <li key={i} style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
-                <span style={{ width: 6, height: 6, background: C.yellow, flexShrink: 0, marginTop: 7 }} aria-hidden />
-                <span style={{ fontFamily: F.regular, fontSize: 13.5, color: C.onDarkMuted, lineHeight: 1.6 }}>
-                  {line.startsWith("- ") ? line.slice(2) : line}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          <div style={{ flex: 1, minHeight: 12 }} />
-
-          <a
-            href={MS_LEARN_AGENT_INSTRUCTIONS}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 7, padding: "10px 18px", background: C.yellow, color: C.confidentBlack, borderRadius: 4, fontFamily: F.bold, fontSize: 13, fontWeight: 700, textDecoration: "none", alignSelf: "flex-start" }}
-          >
-            Know more <ArrowRight size={14} strokeWidth={2} aria-hidden />
-          </a>
-        </div>
-
-        {/* Right — the agent-creation surface, floating as in the mailer */}
-        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", padding: "20px 22px 20px 0", background: C.confidentBlack }}>
-          <div style={{ flex: 1, minWidth: 0, height: "100%", maxHeight: 430, display: "flex", background: C.white, border: `1px solid ${C.gray02}`, borderRadius: 12, boxShadow: "0 10px 34px rgba(0,0,0,0.13)", overflow: "hidden" }}>
-            <AgentBuilderCanvas slide={slide} />
-          </div>
-        </div>
-      </div>
-
-      <div
-        style={{
-          padding: "14px 24px",
-          borderTop: `1px solid ${C.gray02}`,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          flexShrink: 0,
-          background: C.offWhite,
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => setSlideIndex(i => Math.max(0, i - 1))}
-          disabled={slideIndex === 0}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "10px 16px",
-            minHeight: 44,
-            borderRadius: 8,
-            border: `1px solid ${C.gray02}`,
-            background: C.white,
-            cursor: slideIndex === 0 ? "not-allowed" : "pointer",
-            opacity: slideIndex === 0 ? 0.45 : 1,
-            fontFamily: F.regular,
-            fontSize: 13,
-            fontWeight: 700,
-            color: C.dark2,
-          }}
-        >
-          <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
-          Previous
-        </button>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-          {AGENT_BEST_PRACTICES_SLIDES.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              aria-label={`Go to slide ${i + 1}`}
-              onClick={() => setSlideIndex(i)}
-              style={{
-                width: i === slideIndex ? 22 : 8,
-                height: 8,
-                borderRadius: 999,
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                background: i === slideIndex ? C.yellow : C.gray02,
-                transition: "width 0.2s, background 0.2s",
-              }}
-            />
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={() => setSlideIndex(i => Math.min(total - 1, i + 1))}
-          disabled={slideIndex === total - 1}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "10px 16px",
-            minHeight: 44,
-            borderRadius: 8,
-            border: "none",
-            background: slideIndex === total - 1 ? C.gray02 : C.yellow,
-            cursor: slideIndex === total - 1 ? "not-allowed" : "pointer",
-            opacity: slideIndex === total - 1 ? 0.45 : 1,
-            fontFamily: F.regular,
-            fontSize: 13,
-            fontWeight: 700,
-            color: C.dark2,
-          }}
-        >
-          Next
-          <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
-        </button>
-      </div>
+      <AgentPager items={navItems} activeIndex={Math.max(0, activeIndex)} onSelect={setActiveId} />
     </AgentBuilderShell>
   );
 }
 
-function AgentHubTabs() {
-  const [activeSubTab, setActiveSubTab] = useState<AgentHubTabId>("guide");
+const PEEK_FOCUSABLE =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/** Summary stay-put peek: technique card for one pattern, no Techniques tab jump. */
+function AgentPatternPeekSheet({
+  patternId,
+  onClose,
+}: {
+  patternId: string;
+  onClose: () => void;
+}) {
+  const pattern = AGENT_TECHNIQUE_PATTERNS.find(p => `pat-${p.n}` === patternId);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    if (!pattern) {
+      onClose();
+    }
+  }, [pattern, onClose]);
+
+  useEffect(() => {
+    if (!pattern) return;
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !overlayRef.current) return;
+      const focusable = overlayRef.current.querySelectorAll<HTMLElement>(PEEK_FOCUSABLE);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      previousFocusRef.current?.focus?.();
+    };
+  }, [pattern, onClose]);
+
+  if (!pattern) return null;
 
   return (
-    <div>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ display: "inline-flex", gap: 8, background: C.dark2, borderRadius: 12, padding: 8, flexWrap: "wrap", justifyContent: "center" }}>
-          {AGENT_HUB_TABS.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setActiveSubTab(t.id)}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 8,
-                border: "none",
-                cursor: "pointer",
-                fontSize: 13,
-                fontFamily: F.regular,
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                background: activeSubTab === t.id ? C.yellow : "transparent",
-                color: activeSubTab === t.id ? C.dark2 : C.gray02,
-                boxShadow: activeSubTab === t.id ? "0 1px 6px rgba(0,0,0,0.25)" : "none",
-                transition: "background 0.15s, color 0.15s, box-shadow 0.15s",
-              }}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 80,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: `24px var(--ey-content-inline-pad, 24px)`,
+        background: `color-mix(in srgb, ${C.confidentBlack} 62%, transparent)`,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          width: "min(760px, var(--ey-content-width), 100%)",
+          maxHeight: "min(90vh, 720px)",
+          height: "min(90vh, 680px)",
+          background: C.white,
+          borderRadius: 14,
+          border: `1px solid ${C.gray02}`,
+          borderTop: `4px solid ${C.yellow}`,
+          boxShadow: `0 24px 64px color-mix(in srgb, ${C.confidentBlack} 28%, transparent)`,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: "18px 20px",
+            background: C.offWhite,
+            borderBottom: `1px solid ${C.gray02}`,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              flexShrink: 0,
+              background: C.yellow,
+              color: C.offBlack,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: F.bold,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            {pattern.n}
+          </span>
+          <h2
+            id={titleId}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              margin: 0,
+              fontFamily: F.bold,
+              fontSize: 16,
+              fontWeight: 700,
+              lineHeight: 1.3,
+              letterSpacing: "-0.01em",
+              color: C.offBlack,
+            }}
+          >
+            {pattern.name}
+          </h2>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              flexShrink: 0,
+              minHeight: 44,
+              padding: "8px 12px",
+              borderRadius: 8,
+              border: `1px solid ${C.gray02}`,
+              background: C.white,
+              cursor: "pointer",
+              fontFamily: F.bold,
+              fontSize: 13,
+              fontWeight: 700,
+              color: C.offBlack,
+            }}
+          >
+            Close
+            <X size={16} strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: "24px 28px 28px", background: C.white }}>
+          <AgentTechniquePatternCard key={pattern.n} pattern={pattern} />
         </div>
       </div>
-
-      {activeSubTab === "guide" && <AgentInstructionsHub />}
-      {activeSubTab === "templates" && <AgentTemplatesTab />}
-      {activeSubTab === "best-practices" && <AgentBestPracticesTab />}
     </div>
   );
 }
 
+const AGENT_HUB_TABS = [
+  { id: "elements", label: "Elements" },
+  { id: "techniques", label: "Techniques" },
+  { id: "summary", label: "Summary" },
+] as const;
+type AgentHubTabId = (typeof AGENT_HUB_TABS)[number]["id"];
+
+export function AgentHubTabs({ variant = "hub" }: { variant?: "hub" | "rail" } = {}) {
+  const [activeSubTab, setActiveSubTab] = useState<AgentHubTabId>("elements");
+  const [guideOpenId, setGuideOpenId] = useState<string | undefined>();
+  const [previewPatternId, setPreviewPatternId] = useState<string | null>(null);
+
+  const closePatternPeek = useCallback(() => setPreviewPatternId(null), []);
+
+  const selectHubTab = (id: AgentHubTabId) => {
+    setGuideOpenId(undefined);
+    setPreviewPatternId(null);
+    setActiveSubTab(id);
+  };
+
+  const patternPeekSheet = previewPatternId ? (
+    <AgentPatternPeekSheet
+      key={previewPatternId}
+      patternId={previewPatternId}
+      onClose={closePatternPeek}
+    />
+  ) : null;
+
+  const fieldGuideTabs = (
+    <div
+      role="tablist"
+      aria-label="Instruction guide views"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        width: "min(520px, 100%)",
+        margin: 0,
+        padding: 5,
+        border: `1px solid ${C.gray02}`,
+        borderRadius: 12,
+        background: C.white,
+        boxShadow: `0 12px 30px color-mix(in srgb, ${C.confidentBlack} 10%, transparent)`,
+      }}
+    >
+      {AGENT_HUB_TABS.map(t => {
+        const selected = activeSubTab === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => selectHubTab(t.id)}
+            style={{
+              position: "relative",
+              minHeight: 46,
+              padding: "10px 18px",
+              borderRadius: 8,
+              border: "none",
+              cursor: "pointer",
+              fontSize: 14,
+              fontFamily: selected ? F.bold : F.regular,
+              fontWeight: selected ? 700 : 400,
+              background: selected ? C.confidentBlack : "transparent",
+              color: selected ? C.white : C.gray01,
+              transition: "background 150ms ease, color 150ms ease",
+            }}
+          >
+            {t.label}
+            {selected && (
+              <span
+                aria-hidden
+                style={{
+                  position: "absolute",
+                  left: 18,
+                  right: 18,
+                  bottom: 6,
+                  height: 2,
+                  borderRadius: 2,
+                  background: C.yellow,
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (variant === "rail") {
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <TabRail
+            tabs={[...AGENT_HUB_TABS]}
+            active={activeSubTab}
+            onChange={selectHubTab}
+          />
+        </div>
+        <div style={{ marginTop: 16 }}>
+          {activeSubTab === "elements" && <AgentElementsTab openId={guideOpenId} />}
+          {activeSubTab === "techniques" && <AgentTechniquesTab openId={guideOpenId} />}
+          {activeSubTab === "summary" && (
+            <AgentSummaryTab />
+          )}
+        </div>
+        {patternPeekSheet}
+      </div>
+    );
+  }
+
+  // Hub only: Field Guide chrome replaces the old yellow pills, not the agent tour above.
+  return (
+    <div className="page" style={{ marginTop: 32 }}>
+      <header
+        style={{
+          position: "relative",
+          overflow: "hidden",
+          borderRadius: "14px 14px 0 0",
+          background: C.confidentBlack,
+          color: C.white,
+          textAlign: "left",
+        }}
+      >
+        <span
+          aria-hidden
+          style={{
+            position: "absolute",
+            inset: "0 0 auto",
+            height: 4,
+            background: spectrumCss(1),
+          }}
+        />
+        <div style={{ padding: "36px 28px 56px" }}>
+          <p
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 9,
+              margin: "0 0 12px",
+              color: C.yellow,
+              fontFamily: F.bold,
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Lightbulb size={18} strokeWidth={1.75} aria-hidden />
+            Agent builder field guide
+          </p>
+          <h2
+            style={{
+              margin: "0 0 12px",
+              color: C.white,
+              fontFamily: F.bold,
+              fontSize: "clamp(26px, 3vw, 36px)",
+              fontWeight: 700,
+              lineHeight: 1.08,
+              letterSpacing: "-0.025em",
+            }}
+          >
+            Write instructions agents can follow
+          </h2>
+          <p
+            style={{
+              margin: 0,
+              maxWidth: 560,
+              color: C.onDarkMuted,
+              fontFamily: F.light,
+              fontSize: 15,
+              lineHeight: 1.6,
+            }}
+          >
+            Find a proven practice, understand the failure it prevents, and copy an instruction you can adapt. Every example is taken directly from the approved workbook.
+          </p>
+        </div>
+      </header>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          marginTop: -28,
+          position: "relative",
+          zIndex: 2,
+        }}
+      >
+        {fieldGuideTabs}
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        {activeSubTab === "elements" && <AgentElementsTab openId={guideOpenId} />}
+        {activeSubTab === "techniques" && <AgentTechniquesTab openId={guideOpenId} />}
+        {activeSubTab === "summary" && (
+          <AgentSummaryTab />
+        )}
+      </div>
+      {patternPeekSheet}
+    </div>
+  );
+}
+
+
 // ── App icon — real MS 365 / Office product logos from public/pipeline/ ───────
-function AppIcon({ logo, label, size = 20 }: { logo: string; label: string; size?: number }) {
+function AppIcon({ logo, label, size = 24 }: { logo: string; label: string; size?: number }) {
   return (
     <img
       src={logo}
@@ -2666,7 +4206,7 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
   return (
     <div style={{ position: "relative", zIndex: 1, width: 560, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
       {/* Laptop mockup + popping apps */}
-      <div style={{ position: "relative", width: "100%", minHeight: 400, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "relative", width: "100%", minHeight: 430, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {/* Keyboard base */}
         <div style={{ position: "absolute", bottom: 38, width: "94%", maxWidth: 472, height: 50, background: `linear-gradient(180deg, ${C.dark2}, ${C.dark})`, borderRadius: "6px 6px 20px 20px", transform: "rotateX(55deg)", boxShadow: "0 24px 44px rgba(0,0,0,0.5)" }} />
         {/* Laptop screen */}
@@ -2708,49 +4248,6 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
             <span style={{ position: "absolute", bottom: -22, fontSize: 11, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", fontFamily: F.regular, fontWeight: 700 }}>{app.label}</span>
           </button>
         ))}
-
-        {/* M365 Agent — stage tile; same white backdrop as other popping apps */}
-        <button
-          onClick={() => onOpenApp(LAPTOP_STAGE_AGENT.id)}
-          title={`Open ${LAPTOP_STAGE_AGENT.label} tax use cases`}
-          style={{
-            position: "absolute",
-            width: 64, height: 64,
-            borderRadius: 18,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            border: "1px solid rgba(255,255,255,0.5)",
-            cursor: "pointer",
-            background: C.white,
-            boxShadow: "0 14px 30px rgba(0,0,0,0.4)",
-            zIndex: 20,
-            animation: "laptopStageFloat 5s ease-in-out infinite",
-            transition: "transform 0.2s, box-shadow 0.2s",
-            ...LAPTOP_STAGE_AGENT.pos,
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.12) translateY(-3px)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "none"; }}
-        >
-          <img src={LAPTOP_STAGE_AGENT.logo} alt={LAPTOP_STAGE_AGENT.label} style={{ width: 40, height: 40, objectFit: "contain" }} />
-          <span style={{ position: "absolute", bottom: -22, fontSize: 11, color: "rgba(255,255,255,0.85)", whiteSpace: "nowrap", fontFamily: F.regular, fontWeight: 700 }}>{LAPTOP_STAGE_AGENT.label}</span>
-        </button>
-      </div>
-
-      {/* Coming-soon dock — apps without prompt content yet. Real logos are
-          shown at reduced opacity so they stay muted/inert rather than
-          competing with the 5 live, popping apps. */}
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", maxWidth: 500 }}>
-        {LAPTOP_COMING_SOON_APPS.map(app => (
-          <div
-            key={app.label}
-            title={`${app.label} — coming soon`}
-            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 66, cursor: "default" }}
-          >
-            <div style={{ width: 44, height: 44, borderRadius: 14, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.14)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <img src={app.logo} alt={app.label} style={{ width: 24, height: 24, objectFit: "contain", opacity: 0.6 }} />
-            </div>
-            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", textAlign: "center", lineHeight: 1.2, fontFamily: F.regular, fontWeight: 700 }}>{app.label}</span>
-          </div>
-        ))}
       </div>
 
       <style>{`
@@ -2763,26 +4260,43 @@ function LaptopStage({ onOpenApp }: { onOpenApp: (id: TabId) => void }) {
   );
 }
 
+const AGENT_VIEW_PILLS = [
+  { id: "what", label: "What" },
+  { id: "how", label: "How" },
+  { id: "drafting", label: "Effective Drafting" },
+] as const;
+type AgentViewId = (typeof AGENT_VIEW_PILLS)[number]["id"];
+
 // ── Full tab section ──────────────────────────────────────────────────────────
-function TabSection({ tabId }: { tabId: TabId }) {
+function TabSection({ tabId, surface = "offWhite" }: { tabId: TabId; surface?: "offWhite" | "white" }) {
   const d = SECTION_DATA[tabId];
   const tabMeta = TABS.find(t => t.id === tabId)!;
-  // Always offWhite so this surface matches #prompt-repository above (no color break).
+  const [agentView, setAgentView] = useState<AgentViewId>("what");
+  // Default offWhite matches #prompt-repository. White is only for #m365-agent.
+  const background = surface === "white" ? C.white : C.offWhite;
   return (
-    <div style={{ background: C.offWhite, padding: `48px 0 64px` }}>
+    <div style={{ background, padding: `48px 0 64px` }}>
       <div style={{ ...contentRailStyle }}>
       {/* Tab header — centered for all tabs */}
       <header style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 36 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 }}>
-          <AppIcon logo={tabMeta.logo} label={APP_NAME[tabId]} />
-          <span style={{ fontFamily: F.bold, fontWeight: 700, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: d.eyebrowColor }}>{d.eyebrow}</span>
-        </div>
-        <p style={{ fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, color: C.dark2, marginBottom: 12, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking }}>{d.h2}</p>
-        <p style={{ fontFamily: F.regular, fontSize: typeScale.body.size, color: C.gray01, lineHeight: 1.6, maxWidth: 720, margin: "0 auto" }}>{d.subtitle}</p>
+        <p style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, color: C.dark2, margin: 0, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking }}>
+          {/* Header title mark only — tab pills keep the default 24px AppIcon. */}
+          <AppIcon logo={tabMeta.logo} label={APP_NAME[tabId]} size={40} />
+          {d.h2}
+        </p>
       </header>
 
       {tabId === "agent" ? (
-        <AgentHubTabs />
+        <>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <TabRail tabs={[...AGENT_VIEW_PILLS]} active={agentView} onChange={setAgentView} />
+          </div>
+          {agentView === "what" && <M365AgentHowExplorer />}
+          {agentView === "how" && (
+            <AgentInstructionComponents />
+          )}
+          {agentView === "drafting" && <AgentHubTabs />}
+        </>
       ) : (
         <CopilotScene tabId={tabId} />
       )}
@@ -2791,86 +4305,64 @@ function TabSection({ tabId }: { tabId: TabId }) {
   );
 }
 
-// ── Useful Links (from Figma: 5 cards — mail, book-open, help-circle, compass, settings) ──
-// Line icons for Useful Links — 24×24 stroke, EY gray02 (#C4C4CD) on dark surface
-const LINK_ICONS = {
-  mail: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4C4CD" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2"/>
-      <path d="M2 7l10 7 10-7"/>
-    </svg>
-  ),
-  book: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4C4CD" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-    </svg>
-  ),
-  helpCircle: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4C4CD" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
-      <circle cx="12" cy="17" r=".5" fill="#C4C4CD"/>
-    </svg>
-  ),
-  compass: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4C4CD" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
-    </svg>
-  ),
-  lock: (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C4C4CD" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2"/>
-      <path d="M7 11V7a5 5 0 0110 0v4"/>
-    </svg>
-  ),
+// Useful Links — top 30% holds a Lucide line icon on a yellow-accent tile.
+type UsefulLink = {
+  title: string;
+  body: string;
+  cta: string;
+  icon: LucideIcon;
 };
 
-const USEFUL_LINKS = [
-  { icon: LINK_ICONS.mail,       title: "Outlook Copilot Resources",  body: "Access quick reference sheets and guides for secure email automation.",                   cta: "View Guides" },
-  { icon: LINK_ICONS.book,       title: "EY Prompt Library",           body: "Explore verified prompts created and vetted specifically by professional services.",       cta: "Browse Library" },
-  { icon: LINK_ICONS.helpCircle, title: "Copilot FAQs",                body: "Find quick answers regarding workspace licenses, token limits, and prompt accuracy.",      cta: "Read FAQs" },
-  { icon: LINK_ICONS.compass,    title: "Explore Agents",              body: "Discover AI agents built for specific EY workflows, from tax research to audit support.",  cta: "Explore Agents" },
-  { icon: LINK_ICONS.lock,       title: "Manage Access",               body: "Review your Copilot license status, request access, or manage permissions for your team.", cta: "Manage Access" },
+const USEFUL_LINKS: UsefulLink[] = [
+  { title: "Outlook Copilot Resources", body: "Access quick reference sheets and guides for secure email automation.",                  cta: "View Guides",    icon: Mail },
+  { title: "EY Prompt Library",         body: "Explore verified prompts created and vetted specifically by professional services.",      cta: "Browse Library", icon: BookOpen },
+  { title: "Copilot FAQs",              body: "Find quick answers regarding workspace licenses, token limits, and prompt accuracy.",     cta: "Read FAQs",      icon: CircleHelp },
+  { title: "Explore Agents",            body: "Discover AI agents built for specific EY workflows, from tax research to audit support.", cta: "Explore Agents", icon: Bot },
+  { title: "Manage Access",             body: "Review your Copilot license status, request access, or manage permissions for your team.",cta: "Manage Access",  icon: ShieldCheck },
 ];
 
 type SecurityChecklistItem = {
   num: string;
   title: string;
   body: string;
-  image: string;
-  italic?: boolean;
+  image?: string;
+  italicBody?: string;
+  /** When false, card is text-only (no infographic lightbox). */
+  hasInfographic?: boolean;
 };
 
-// ── Security checklist (4-step — click card to open infographic lightbox) ────
+// ── Security checklist (4-step — cards 1–3 open infographic lightbox) ────────
 const SECURITY_CHECKLIST: SecurityChecklistItem[] = [
   {
     num: "1",
-    title: "Quick Check Before You Use Copilot",
-    body: "Ask yourself: Would I be comfortable if M365 Copilot referenced this content in a colleague's prompt?",
-    image: "/security/copilot1.png",
-    italic: true,
+    title: "Before You Upload: Check Who Really Has Access",
+    body: 'Find and remove broad access (e.g., “People in EY”). Once someone opens that link, they’re added to the access list and the file becomes eligible for Copilot in their prompts.',
+    image: "/security/copilot4.png",
   },
   {
     num: "2",
-    title: "Sharing Smartly: Choose Links That Limit Visibility",
-    body: 'When sending links, choose "People you choose" (or "People with existing access") instead of org-wide sharing.',
-    image: "/security/copilot2.png",
-  },
-  {
-    num: "3",
     title: "Sensitivity Labels: Your First Line of Copilot Control",
     body: "Add EY sensitivity labels to emails and files so Copilot is blocked for others (note: the label owner can still use their labelled content).",
     image: "/security/copilot3.png",
   },
   {
+    num: "3",
+    title: "Sharing Smartly: Choose Links That Limit Visibility",
+    body: 'When sending links, choose “People you choose” (or “People with existing access”) instead of org-wide sharing.',
+    image: "/security/copilot2.png",
+  },
+  {
     num: "4",
-    title: "Before You Upload: Check Who Really Has Access",
-    body: 'Find and remove broad access (e.g., "People in EY"). Once someone opens that link, they\'re added to the access list and the file becomes eligible for Copilot in their prompts.',
-    image: "/security/copilot4.png",
+    title: "Quick Check Before You Use Copilot",
+    body: "Ask yourself:",
+    italicBody: "Would I be comfortable if M365 Copilot referenced this content in a colleague’s prompt?",
+    hasInfographic: false,
   },
 ];
+
+const LIGHTBOX_PAD = 24;
+const LIGHTBOX_MIN_ZOOM = 1;
+const LIGHTBOX_MAX_ZOOM = 4;
 
 function SecurityImageLightbox({
   item,
@@ -2879,9 +4371,30 @@ function SecurityImageLightbox({
   item: SecurityChecklistItem;
   onClose: () => void;
 }) {
-  const dialogRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const scaleRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
+  const dragRef = useRef<{ panX: number; panY: number; startX: number; startY: number } | null>(null);
+
+  const [scale, setScale] = useState(LIGHTBOX_MIN_ZOOM);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  const clampScale = (next: number) =>
+    Math.min(LIGHTBOX_MAX_ZOOM, Math.max(LIGHTBOX_MIN_ZOOM, next));
+
+  const applyScale = (next: number) => {
+    const clamped = clampScale(next);
+    scaleRef.current = clamped;
+    setScale(clamped);
+    if (clamped <= LIGHTBOX_MIN_ZOOM) {
+      panRef.current = { x: 0, y: 0 };
+      setPan({ x: 0, y: 0 });
+    }
+  };
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -2893,9 +4406,9 @@ function SecurityImageLightbox({
         onClose();
         return;
       }
-      if (e.key !== "Tab" || !dialogRef.current) return;
+      if (e.key !== "Tab" || !overlayRef.current) return;
 
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      const focusable = overlayRef.current.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
       if (focusable.length === 0) return;
@@ -2922,9 +4435,92 @@ function SecurityImageLightbox({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      applyScale(scaleRef.current + (e.deltaY > 0 ? -0.12 : 0.12));
+    };
+
+    viewport.addEventListener("wheel", onWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY,
+      );
+      pinchRef.current = { dist, scale: scaleRef.current };
+      dragRef.current = null;
+    } else if (e.touches.length === 1 && scaleRef.current > LIGHTBOX_MIN_ZOOM) {
+      dragRef.current = {
+        panX: panRef.current.x,
+        panY: panRef.current.y,
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY,
+      );
+      applyScale(pinchRef.current.scale * (dist / pinchRef.current.dist));
+    } else if (e.touches.length === 1 && dragRef.current && scaleRef.current > LIGHTBOX_MIN_ZOOM) {
+      e.preventDefault();
+      const next = {
+        x: dragRef.current.panX + (e.touches[0].clientX - dragRef.current.startX),
+        y: dragRef.current.panY + (e.touches[0].clientY - dragRef.current.startY),
+      };
+      panRef.current = next;
+      setPan(next);
+    }
+  };
+
+  const onTouchEnd = () => {
+    pinchRef.current = null;
+    dragRef.current = null;
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch" || scaleRef.current <= LIGHTBOX_MIN_ZOOM) return;
+    dragRef.current = {
+      panX: panRef.current.x,
+      panY: panRef.current.y,
+      startX: e.clientX,
+      startY: e.clientY,
+    };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current || scaleRef.current <= LIGHTBOX_MIN_ZOOM) return;
+    const next = {
+      x: dragRef.current.panX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.panY + (e.clientY - dragRef.current.startY),
+    };
+    panRef.current = next;
+    setPan(next);
+  };
+
+  const onPointerUp = () => {
+    dragRef.current = null;
+  };
+
   return (
     <div
-      role="presentation"
+      ref={overlayRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${item.title} security infographic`}
       onClick={onClose}
       style={{
         position: "fixed",
@@ -2935,59 +4531,84 @@ function SecurityImageLightbox({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 24,
+        padding: LIGHTBOX_PAD,
       }}
     >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${item.title} security infographic`}
-        onClick={(e) => e.stopPropagation()}
+      <button
+        ref={closeRef}
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close infographic"
         style={{
-          position: "relative",
+          position: "fixed",
+          top: LIGHTBOX_PAD,
+          right: LIGHTBOX_PAD,
+          zIndex: 9999,
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          background: C.surfaceOnDark,
+          border: `1px solid ${C.borderOnDark}`,
+          color: C.onDark,
+          cursor: "pointer",
           display: "flex",
-          flexDirection: "column",
-          alignItems: "flex-end",
-          gap: 12,
-          maxWidth: "min(92vw, 1200px)",
-          maxHeight: "92vh",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <button
-          ref={closeRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Close infographic"
+        <X size={22} strokeWidth={1.75} aria-hidden />
+      </button>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "min(92vw, 1200px)",
+          maxHeight: "92vh",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          ref={viewportRef}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
           style={{
-            width: 44,
-            height: 44,
-            borderRadius: "50%",
-            background: C.surfaceOnDark,
-            border: `1px solid ${C.borderOnDark}`,
-            color: C.onDark,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
+            overflow: "hidden",
+            touchAction: "none",
+            cursor: scale > LIGHTBOX_MIN_ZOOM ? "grab" : "zoom-in",
+            maxWidth: "100%",
+            maxHeight: "92vh",
           }}
         >
-          <X size={22} strokeWidth={1.75} aria-hidden />
-        </button>
-        <img
-          src={item.image}
-          alt={item.title}
-          style={{
-            maxWidth: "100%",
-            maxHeight: "calc(92vh - 68px)",
-            width: "auto",
-            height: "auto",
-            objectFit: "contain",
-            borderRadius: 12,
-            boxShadow: `0 24px 64px color-mix(in srgb, ${C.dark} 60%, transparent)`,
-          }}
-        />
+          <img
+            src={item.image}
+            alt={item.title}
+            draggable={false}
+            style={{
+              display: "block",
+              maxWidth: "min(92vw, 1200px)",
+              maxHeight: "92vh",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              borderRadius: 12,
+              boxShadow: `0 24px 64px color-mix(in srgb, ${C.dark} 60%, transparent)`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+              transformOrigin: "center center",
+              userSelect: "none",
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -3006,9 +4627,11 @@ export default function M365CopilotHub({
   const [securityLightbox, setSecurityLightbox] = useState<SecurityChecklistItem | null>(null);
 
   const openApp = (id: TabId) => {
-    setActiveTab(id);
+    // Agent has its own Learn section; app pills stay in the prompt repository.
+    const targetId = id === "agent" ? "m365-agent" : "prompt-repository";
+    if (id !== "agent") setActiveTab(id);
     setTimeout(() => {
-      document.getElementById("prompt-repository")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
   };
 
@@ -3067,13 +4690,17 @@ export default function M365CopilotHub({
       {/* ── Repository Tabs — CENTERED header (Figma: RepositoryTabs) ────────── */}
       <section id="prompt-repository" style={{ background: C.offWhite, padding: `64px 0 0`, textAlign: "center", scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
         <div style={{ ...contentRailStyle }}>
-        <SectionAnchorTitle align="center">M365 Apps</SectionAnchorTitle>
+        <SectionAnchorTitle
+          align="center"
+          style={{ fontSize: typeScale.h2.size, letterSpacing: typeScale.h2.tracking, lineHeight: 1.2, marginBottom: 12 }}
+        >
+          M365 in MS Apps
+        </SectionAnchorTitle>
         <p style={{ fontSize: 11, color: C.gray01, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12, fontWeight: 700 }}>EXPLORE PROMPT CATEGORIES</p>
-        <h2 style={{ fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking, marginBottom: 12, color: C.dark2 }}>Sample Prompt Repository for using Copilot in Tax</h2>
-        <p style={{ fontSize: 15, color: C.gray01, marginBottom: 32 }}>Select your preferred M365 application tool below to view optimized, compliant corporate-ready prompts.</p>
+        <p style={{ fontSize: 15, color: C.gray01, marginBottom: 32 }}>Select your preferred MS application tool below to view optimized, compliant corporate-ready prompts.</p>
         {/* Tab row — centered. Dark container from tokens: offBlack (#2E2E38) */}
-        <div style={{ display: "inline-flex", gap: 8, background: C.dark2, borderRadius: 12, padding: 8 }}>
-          {TABS.map(t => (
+        <div style={{ display: "inline-flex", flexWrap: "wrap", justifyContent: "center", gap: 8, background: C.dark2, borderRadius: 12, padding: 8 }}>
+          {APP_TABS.map(t => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
@@ -3096,9 +4723,13 @@ export default function M365CopilotHub({
       </section>
 
       {/* ── Active tab section ──────────────────────────────────────────────── */}
-      {/* key={activeTab} forces a clean remount per tab so the prompt-panel's
-          typing animation state doesn't leak between apps on switch. */}
+      {/* key={activeTab} remounts each app so Copilot typing state does not leak. */}
       <TabSection key={activeTab} tabId={activeTab} />
+
+      {/* Agent is its own Learn section (header tab #m365-agent), not a repository pill. */}
+      <section id="m365-agent" style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
+        <TabSection tabId="agent" surface="white" />
+      </section>
 
       {/* ── Useful Links (Figma: useful-links-section-redesign) ─────────────── */}
       <section id="useful-links" style={{ background: C.dark2, padding: `${spacing.sectionPaddingY} 0 64px`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
@@ -3106,16 +4737,59 @@ export default function M365CopilotHub({
         <SectionAnchorTitle theme="dark" align="center">Useful Links</SectionAnchorTitle>
         <h2 style={{ fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, color: C.white, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking, marginBottom: 12, textAlign: "center" }}>Useful Links</h2>
         <p style={{ fontSize: 15, color: C.gray02, marginBottom: 48, textAlign: "center" }}>Handy EY resources to check your system access, explore deeper templates, and use generative AI safely.</p>
-        <div style={{ display: "flex", gap: 20 }}>
+        <div style={{ display: "flex", gap: 20, alignItems: "stretch" }}>
           {USEFUL_LINKS.map(l => (
-            <div key={l.title} style={{ flex: "1 1 0", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "24px 20px", display: "flex", flexDirection: "column", gap: 12, transition: "transform 0.15s", cursor: "default" }}>
-              <div style={{ width: 48, height: 48, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>{l.icon}</div>
-              <p style={{ fontFamily: F.bold, fontWeight: 700, fontSize: 15, color: C.white, lineHeight: 1.3 }}>{l.title}</p>
-              <p style={{ fontSize: 13, color: "#C4C4CD", flex: 1, lineHeight: 1.55 }}>{l.body}</p>
-              <a href="#" style={{ fontFamily: F.bold, fontSize: 14, color: C.yellow, textDecoration: "none", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                {l.cta} <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </a>
-            </div>
+            <article
+              key={l.title}
+              style={{
+                flex: "1 1 0",
+                minWidth: 0,
+                minHeight: 320,
+                background: C.eyBgCard,
+                border: `1px solid ${C.borderOnDark}`,
+                borderRadius: 16,
+                overflow: "hidden",
+                display: "grid",
+                gridTemplateRows: "30% 1fr",
+                cursor: "default",
+              }}
+            >
+              <div
+                aria-hidden
+                style={{
+                  minHeight: 0,
+                  background: C.surfaceOnDark,
+                  borderBottom: `1px solid ${C.borderOnDark}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <span
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 18,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: C.yellowAlpha12,
+                    border: `1px solid ${C.eyebrowGold}`,
+                    boxShadow: `0 0 0 5px ${C.yellowAlpha10}`,
+                    color: C.yellow,
+                  }}
+                >
+                  <l.icon size={32} strokeWidth={1.75} />
+                </span>
+              </div>
+              <div style={{ padding: "20px 20px 24px", display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
+                <p style={{ fontFamily: F.bold, fontWeight: 700, fontSize: 15, color: C.white, lineHeight: 1.3, margin: 0 }}>{l.title}</p>
+                <p style={{ fontFamily: F.regular, fontSize: 13, color: C.gray02, flex: 1, lineHeight: 1.55, margin: 0 }}>{l.body}</p>
+                <a href="#" style={{ fontFamily: F.bold, fontSize: 14, color: C.yellow, textDecoration: "none", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  {l.cta} <ArrowRight size={14} strokeWidth={1.75} aria-hidden />
+                </a>
+              </div>
+            </article>
           ))}
         </div>
         </div>
@@ -3124,11 +4798,9 @@ export default function M365CopilotHub({
       {/* ── Security (Figma: security-case-studies — 4 horizontal cards) ─────── */}
       <section id="security" style={{ background: C.dark, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }}>
         <div style={{ ...contentRailStyle }}>
-        <SectionAnchorTitle theme="dark" align="center">Security &amp; Governance</SectionAnchorTitle>
         <header style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 40 }}>
-          {/* GOVERNANCE & TRUST kicker badge */}
           <div style={{ display: "inline-flex", alignItems: "center", background: "rgba(255,230,0,0.12)", border: "1px solid rgba(255,230,0,0.25)", borderRadius: 20, padding: "5px 14px", marginBottom: 24 }}>
-            <span style={{ fontFamily: F.bold, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.yellow }}>GOVERNANCE &amp; TRUST</span>
+            <span style={{ fontFamily: F.bold, fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.yellow }}>Security &amp; Governance</span>
           </div>
           <h2 style={{ fontFamily: F.bold, fontSize: typeScale.h2.size, fontWeight: 700, color: C.white, lineHeight: 1.2, letterSpacing: typeScale.h2.tracking, marginBottom: 14 }}>Enterprise-Grade Security</h2>
           <p style={{ fontFamily: F.bold, fontSize: typeScale.subheading.size, fontWeight: 700, color: C.white, marginBottom: 10 }}>
@@ -3138,64 +4810,97 @@ export default function M365CopilotHub({
             Before you let Copilot loose on tax data, work through these four access and sharing checks.
           </p>
         </header>
-        {/* 4-step checklist — click a card to open its security infographic */}
+        {/* 4-step checklist — cards 1–3 open security infographic on click */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 26 }}>
-          {SECURITY_CHECKLIST.map((step) => (
-            <button
-              key={step.num}
-              type="button"
-              onClick={() => setSecurityLightbox(step)}
-              aria-label={`View ${step.title} infographic`}
-              style={{
-                background: C.dark2,
-                border: `1px solid ${C.borderOnDark}`,
-                borderRadius: 12,
-                padding: "24px 22px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 12,
-                cursor: "pointer",
-                textAlign: "left",
-                fontFamily: F.regular,
-                transition: "border-color 0.15s, transform 0.15s, box-shadow 0.15s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = C.yellowAlpha12;
-                e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = `0 8px 24px color-mix(in srgb, ${C.dark} 35%, transparent)`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = C.borderOnDark;
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.yellowAlpha12;
-                e.currentTarget.style.outline = `2px solid ${C.yellow}`;
-                e.currentTarget.style.outlineOffset = "2px";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = C.borderOnDark;
-                e.currentTarget.style.outline = "none";
-              }}
-            >
-              <p style={{ fontFamily: F.bold, fontWeight: 700, fontSize: typeScale.h2.size, color: C.yellow, margin: 0, lineHeight: 1 }}>
-                {step.num}
-              </p>
-              <p
+          {SECURITY_CHECKLIST.map((step) => {
+            const cardBody = (
+              <>
+                <p style={{ fontFamily: F.bold, fontWeight: 700, fontSize: typeScale.h2.size, color: C.yellow, margin: 0, lineHeight: 1 }}>
+                  {step.num}
+                </p>
+                <p
+                  style={{
+                    fontFamily: F.regular,
+                    fontSize: 14,
+                    color: C.gray02,
+                    margin: 0,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {step.body}
+                </p>
+                {step.italicBody && (
+                  <p
+                    style={{
+                      fontFamily: F.regular,
+                      fontSize: 14,
+                      color: C.gray02,
+                      margin: 0,
+                      lineHeight: 1.6,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    {step.italicBody}
+                  </p>
+                )}
+              </>
+            );
+
+            const cardStyle: React.CSSProperties = {
+              background: C.dark2,
+              border: `1px solid ${C.borderOnDark}`,
+              borderRadius: 12,
+              padding: "24px 22px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              textAlign: "left",
+              fontFamily: F.regular,
+            };
+
+            if (step.hasInfographic === false) {
+              return (
+                <div key={step.num} style={cardStyle}>
+                  {cardBody}
+                </div>
+              );
+            }
+
+            return (
+              <button
+                key={step.num}
+                type="button"
+                onClick={() => setSecurityLightbox(step)}
+                aria-label={`View ${step.title} infographic`}
                 style={{
-                  fontFamily: F.regular,
-                  fontSize: 14,
-                  color: C.gray02,
-                  margin: 0,
-                  lineHeight: 1.6,
-                  fontStyle: step.italic ? "italic" : "normal",
+                  ...cardStyle,
+                  cursor: "pointer",
+                  transition: "border-color 0.15s, transform 0.15s, box-shadow 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = C.yellowAlpha12;
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = `0 8px 24px color-mix(in srgb, ${C.dark} 35%, transparent)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = C.borderOnDark;
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = C.yellowAlpha12;
+                  e.currentTarget.style.outline = `2px solid ${C.yellow}`;
+                  e.currentTarget.style.outlineOffset = "2px";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = C.borderOnDark;
+                  e.currentTarget.style.outline = "none";
                 }}
               >
-                {step.body}
-              </p>
-            </button>
-          ))}
+                {cardBody}
+              </button>
+            );
+          })}
         </div>
         </div>
       </section>
@@ -3207,12 +4912,9 @@ export default function M365CopilotHub({
         />
       )}
 
-      {/* Shared dark CTA — Phase 1 complete */}
-      <EYWhatsNext
-        title="You've completed Phase 1"
-        ctaLabel="Back to Tax Labs"
-        onContinue={() => onNavigate?.("/phase1")}
-        meta="Phase 1 covered: AI foundations, tax prompting, and M365 Copilot"
+      <AscentModuleProgressSection
+        moduleKey="m1_3"
+        onNextStepCta={() => onNavigate?.("/phase2")}
       />
 
     </div>

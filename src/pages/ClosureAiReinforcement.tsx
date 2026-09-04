@@ -1,60 +1,468 @@
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { Check, ChevronLeft, ChevronRight, Eye, RotateCcw, X } from "lucide-react";
 import { SiteHeader } from "../design-kit/SiteHeader";
-import { ModuleHeader, SUBNAV_SCROLL_MARGIN, SUBNAV_SCROLL_OFFSET, useModuleSectionHashScroll } from "../design-kit/LearningNav";
-import { EYWhatsNext, EYWhatsNextHighlight } from "../design-kit/EYWhatsNext";
+import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
 import { colors, contentRailStyle, fonts, layout, spacing, spectrumCss, typeScale } from "../design-kit/tokens";
+import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
 import heroImg from "../assets/images/GettyImages-1399150019.jpg";
 import { StepBadge } from "../design-kit/EYCard";
-import { EYQuote } from "../design-kit/EYTypography";
+import { EYButton } from "../design-kit/EYButton";
+import { EYBody, EYCaption, EYEyebrow, EYHeading, EYQuote } from "../design-kit/EYTypography";
 
 export const PHASE4_LABEL = "Phase 4: Closure & AI Reinforcement";
 export const PHASE4_NUMBER = 4;
 
 const PHASE4_SECTIONS = [
   { id: "p4-risk",       label: "The Risk",       group: "learn" as const },
-  { id: "p4-playbook",   label: "The Playbook",   group: "learn" as const },
   { id: "p4-checks",     label: "The Checks",     group: "learn" as const },
   { id: "p4-checklist",  label: "Your Checklist", group: "apply" as const },
-  { id: "p4-org",        label: "For Organisations", group: "apply" as const },
-  { id: "whats-next",   label: "What's Next",       group: "apply" as const },
+  { id: "p4-lead-governance", label: "Lead with governance", group: "apply" as const },
+  { id: "journey-progress", label: "Ascent",  group: "apply" as const },
 ];
 
-// ── Slide 2: Recognise the Risk ──────────────────────────────────────────────
-const RISK_CARDS = [
+const RESPONSIBLE_USE_NEWS = [
   {
-    num: "01",
-    title: "Incorrect content",
-    body: "Facts, dates, calculations or technical statements may be wrong.",
+    src: "/reference-images/p4-news-data-leakage.png",
+    tag: "Data leakage",
+    headline: "Samsung Bans ChatGPT After Sensitive Code Leak",
+    source: "Forbes",
+    date: "2 May 2023",
+    description: "Following multiple incidents involving confidential source code and internal information being uploaded to ChatGPT, Samsung imposed company-wide restrictions on generative AI tools.",
+    isReal: true,
   },
   {
-    num: "02",
-    title: "Fabricated or misapplied authorities",
-    body: "A provision, circular, judgment, quotation or citation may not exist—or may not support the conclusion.",
+    src: "/reference-images/p4-news-cbdt-chatgpt.png",
+    tag: "Unreviewed filing",
+    headline: "CBDT Says ChatGPT Returns Can Be Filed With No Professional Review",
+    source: "Briefing",
+    date: "August 2026",
+    description: "This one is made up for the room. No tax authority treats an unreviewed AI draft as a completed return. A professional still has to check and sign off.",
+    isReal: false,
   },
   {
-    num: "03",
-    title: "Hidden assumptions",
-    body: "AI may fill information gaps without clearly telling the user.",
+    src: "/reference-images/p4-news-confidentiality.png",
+    tag: "Confidentiality exposure",
+    headline: "Major Banks Restricted Employee Use of ChatGPT",
+    source: "Forbes",
+    date: "2023",
+    description: "Financial institutions including JPMorgan imposed restrictions on ChatGPT due to concerns that employees could inadvertently expose sensitive financial and customer information.",
+    isReal: true,
   },
   {
-    num: "04",
-    title: "Confidentiality exposure",
-    body: "Client, taxpayer, employee or transaction information may enter an inappropriate tool or unsuitable source.",
+    src: "/reference-images/p4-news-copilot-gst.png",
+    tag: "Auto-submit",
+    headline: "Copilot Now Submits GST Returns With No Human Reviewer",
+    source: "Dispatch",
+    date: "August 2026",
+    description: "This one is made up for the room. Copilot can help draft a working paper. It cannot file a GST return on its own, and a human still has to review it.",
+    isReal: false,
   },
   {
-    num: "05",
-    title: "Bias or incomplete perspective",
-    body: "The output may reflect gaps or imbalance in the source information.",
+    src: "/reference-images/p4-news-shadow-ai.png",
+    tag: "Shadow AI",
+    headline: "38% of Korean Workers Use Personal AI, Exposing Firms to Shadow AI Risk",
+    source: "Seoul Economic Daily",
+    date: "27 July 2026",
+    description: "A Samsung SDS survey found that 38% of employees were using personally subscribed AI services for work instead of enterprise-approved platforms.",
+    isReal: true,
   },
   {
-    num: "06",
-    title: "Uncontrolled action",
-    body: "A no-code Agent may retrieve, draft, organise or communicate information beyond its intended role.",
+    src: "/reference-images/p4-news-tokenmaxxing.png",
+    tag: "Tokenmaxxing",
+    headline: "Uber CTO Says Tokenmaxxing Era Is Ending After AI Budget Burnout",
+    source: "The Hans India",
+    date: "2026",
+    description: "Uber's CTO warned against indiscriminately consuming AI tokens and model capacity without considering cost, efficiency, or business value.",
+    isReal: true,
+  },
+  {
+    src: "/reference-images/p4-news-value-leakage.png",
+    tag: "Value leakage",
+    headline: "IBM Apptio Helps CFOs Connect AI Spend to Business Value",
+    source: "CFO Dive",
+    date: "2026",
+    description: "As AI budgets grow, many leadership teams struggle to distinguish genuine business impact from AI experimentation and usage statistics.",
+    isReal: true,
   },
 ] as const;
 
+type NewsArticle = (typeof RESPONSIBLE_USE_NEWS)[number];
+const NEWS_FOCUS = `2px solid ${colors.yellow}`;
+
+function NewsLightbox({
+  src,
+  caption,
+  onClose,
+}: {
+  src: string;
+  caption: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Full article view"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9000,
+        background: "rgba(26,26,36,0.88)",
+        backdropFilter: "blur(10px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        style={{
+          position: "fixed",
+          top: 24,
+          right: 28,
+          width: 44,
+          height: 44,
+          borderRadius: "50%",
+          background: "rgba(255,255,255,0.1)",
+          border: `1px solid ${colors.borderOnDark}`,
+          color: colors.white,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <X size={20} strokeWidth={1.75} aria-hidden />
+      </button>
+      <img
+        src={src}
+        alt={caption}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "88vw",
+          maxHeight: "84vh",
+          borderRadius: 12,
+          boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+        }}
+      />
+      <p
+        style={{
+          position: "fixed",
+          bottom: 28,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "rgba(0,0,0,0.7)",
+          border: `1px solid ${colors.borderOnDark}`,
+          borderRadius: 20,
+          padding: "8px 20px",
+          fontFamily: fonts.regular,
+          fontSize: 12,
+          color: colors.onDarkMuted,
+          margin: 0,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {caption}
+      </p>
+    </div>
+  );
+}
+
+function ResponsibleUseNewsCard({
+  article,
+  revealed,
+  onGuess,
+  onOpenClipping,
+}: {
+  article: NewsArticle;
+  revealed: boolean;
+  onGuess: () => void;
+  onOpenClipping: () => void;
+}) {
+  const tone = revealed ? (article.isReal ? "real" : "fake") : "idle";
+  const bodyBg = tone === "real" ? colors.success : tone === "fake" ? colors.destructive : colors.white;
+  const bodyText = tone === "idle" ? colors.offBlack : colors.white;
+  const mutedText = tone === "idle" ? colors.gray01 : colors.white;
+
+  return (
+    <article
+      aria-label={
+        revealed
+          ? `${article.headline} — ${article.isReal ? "Real" : "Fake"}`
+          : `${article.headline}. Ask the room, then choose Real or Fake.`
+      }
+      style={{
+        background: colors.white,
+        borderRadius: 0,
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        textAlign: "left",
+        boxShadow: "0 2px 8px rgba(26,26,36,0.08)",
+        width: "100%",
+      }}
+    >
+      <div style={{ position: "relative", width: "100%", height: 180, overflow: "hidden", flexShrink: 0, lineHeight: 0 }}>
+        <img
+          src={article.src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center center", display: "block" }}
+        />
+      </div>
+      <div
+        style={{
+          padding: "16px 16px 18px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          flex: 1,
+          minHeight: 0,
+          background: bodyBg,
+          transition: "background 160ms ease",
+        }}
+      >
+        {revealed && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontFamily: fonts.bold,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: colors.white,
+            }}
+          >
+            {article.isReal ? <Check size={14} strokeWidth={2} aria-hidden /> : <X size={14} strokeWidth={2} aria-hidden />}
+            {article.isReal ? "Real" : "Fake"}
+          </span>
+        )}
+        <p style={{ fontFamily: fonts.bold, fontSize: 15, color: bodyText, margin: 0, lineHeight: 1.4, letterSpacing: "-0.01em" }}>
+          {article.headline}
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontFamily: fonts.regular, fontSize: 11, color: mutedText }}>{article.date}</span>
+          <span aria-hidden style={{ fontSize: 11, color: tone === "idle" ? colors.gray02 : colors.white }}>|</span>
+          <span style={{ fontFamily: fonts.bold, fontSize: 11, color: bodyText }}>{article.source}</span>
+        </div>
+        {revealed ? (
+          <>
+            <p style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.white, margin: 0, lineHeight: 1.55, flex: 1 }}>
+              {article.description}
+            </p>
+            {article.isReal && (
+            <button
+              type="button"
+              onClick={onOpenClipping}
+              aria-label={`View clipping: ${article.headline}`}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                marginTop: 4,
+                padding: 0,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontFamily: fonts.bold,
+                fontSize: 12,
+                fontWeight: 700,
+                color: colors.white,
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+              onFocus={(e) => { e.currentTarget.style.outline = NEWS_FOCUS; }}
+              onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+            >
+              <Eye size={14} strokeWidth={1.75} aria-hidden />
+              View clipping
+            </button>
+            )}
+          </>
+        ) : (
+          <div style={{ display: "flex", gap: 8, marginTop: "auto", paddingTop: 8 }}>
+            <EYButton type="button" size="sm" variant="primary" onClick={onGuess} aria-label={`Reveal ${article.headline} as Real or Fake`}>
+              Real
+            </EYButton>
+            <EYButton type="button" size="sm" variant="secondary" onClick={onGuess} aria-label={`Reveal ${article.headline} as Real or Fake`}>
+              Fake
+            </EYButton>
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+const NEWS_CARD_GAP = 20;
+
+function CarouselChevron({
+  dir,
+  onClick,
+}: {
+  dir: "prev" | "next";
+  onClick: () => void;
+}) {
+  const Icon = dir === "prev" ? ChevronLeft : ChevronRight;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={dir === "prev" ? "Previous headline" : "Next headline"}
+      style={{
+        position: "absolute",
+        top: "50%",
+        [dir === "prev" ? "left" : "right"]: 0,
+        transform: "translateY(-50%)",
+        zIndex: 3,
+        width: 44,
+        height: 44,
+        borderRadius: "50%",
+        border: `1px solid ${colors.gray02}`,
+        background: colors.white,
+        color: colors.offBlack,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        boxShadow: "0 2px 8px rgba(26,26,36,0.10)",
+        padding: 0,
+      }}
+      onFocus={(e) => { e.currentTarget.style.outline = NEWS_FOCUS; }}
+      onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+    >
+      <Icon size={20} strokeWidth={1.75} aria-hidden />
+    </button>
+  );
+}
+
+function ResponsibleUseNewsCarousel({
+  revealed,
+  onGuess,
+  onOpenClipping,
+}: {
+  revealed: Record<string, boolean>;
+  onGuess: (src: string) => void;
+  onOpenClipping: (article: NewsArticle) => void;
+}) {
+  const count = RESPONSIBLE_USE_NEWS.length;
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const slots = useMemo(
+    () =>
+      ([-1, 0, 1] as const).map((offset) => ({
+        offset,
+        article: RESPONSIBLE_USE_NEWS[(activeIndex + offset + count) % count],
+      })),
+    [activeIndex, count],
+  );
+
+  const go = (delta: number) => {
+    setActiveIndex((i) => (i + delta + count) % count);
+  };
+
+  return (
+    <div>
+      <div
+        role="list"
+        aria-label="Real or Fake headlines"
+        aria-live="polite"
+        style={{ position: "relative", padding: "8px 28px", marginBottom: 20 }}
+      >
+        <CarouselChevron dir="prev" onClick={() => go(-1)} />
+        <CarouselChevron dir="next" onClick={() => go(1)} />
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr)",
+            gap: NEWS_CARD_GAP,
+            alignItems: "center",
+          }}
+        >
+          {slots.map(({ offset, article }) => {
+            const isCenter = offset === 0;
+            return (
+              <motion.div
+                key={article.src}
+                role="listitem"
+                layout
+                initial={{ opacity: 0, scale: 0.86 }}
+                animate={{
+                  opacity: isCenter ? 1 : 0.48,
+                  scale: isCenter ? 1 : 0.88,
+                  zIndex: isCenter ? 2 : 1,
+                }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                style={{ minWidth: 0, transformOrigin: "center center" }}
+              >
+                <ResponsibleUseNewsCard
+                  article={article}
+                  revealed={Boolean(revealed[article.src])}
+                  onGuess={() => onGuess(article.src)}
+                  onOpenClipping={() => onOpenClipping(article)}
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "center" }}>
+        {RESPONSIBLE_USE_NEWS.map((article, i) => (
+          <button
+            key={article.src}
+            type="button"
+            aria-label={`Go to headline ${i + 1}: ${article.tag}`}
+            aria-current={i === activeIndex ? "true" : undefined}
+            onClick={() => setActiveIndex(i)}
+            style={{
+              width: i === activeIndex ? 22 : 8,
+              height: 8,
+              borderRadius: 999,
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              background: i === activeIndex ? colors.yellow : colors.gray02,
+              transition: "width 0.2s, background 0.2s",
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RecogniseTheRisk() {
+  const [lightbox, setLightbox] = useState<NewsArticle | null>(null);
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
+  const revealedCount = RESPONSIBLE_USE_NEWS.filter((a) => revealed[a.src]).length;
+  const allRevealed = revealedCount === RESPONSIBLE_USE_NEWS.length;
+
+  const guess = (src: string) => {
+    setRevealed((prev) => (prev[src] ? prev : { ...prev, [src]: true }));
+  };
+
   return (
     <section
       id="p4-risk"
@@ -62,95 +470,104 @@ function RecogniseTheRisk() {
       style={{
         scrollMarginTop: SUBNAV_SCROLL_MARGIN,
         background: colors.white,
+        borderTop: `1px solid ${colors.gray02}`,
         padding: `${spacing.sectionPaddingY} 0`,
         width: "100%",
       }}
     >
       <div style={{ ...contentRailStyle }}>
-        {/* eyebrow/heading/subheading: center-aligned on all non-hero sections */}
-        <p style={{ fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking, textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 12px", textAlign: "center" }}>
-          Recognise the Risk
-        </p>
-        <h2
+        <EYEyebrow style={{ textAlign: "center", marginBottom: 12 }}>Icebreaker</EYEyebrow>
+        <EYHeading
           id="risk-heading"
-          style={{ fontFamily: fonts.bold, fontSize: "clamp(22px, 3vw, 36px)", color: colors.offBlack, margin: "0 0 16px", letterSpacing: "-0.02em", lineHeight: 1.1, textAlign: "center" }}
-        >
-          Why Responsible Use Matters
-        </h2>
-        <p style={{ fontFamily: fonts.regular, fontSize: "clamp(15px, 1.5vw, 17px)", color: colors.gray01, maxWidth: 620, margin: "0 0 48px", lineHeight: 1.6, textAlign: "center", marginLeft: "auto", marginRight: "auto" }}>
-          An AI response may appear polished, detailed and confident—even when part of it is incomplete, misleading or incorrect.
-        </p>
-
-        {/* 2-col × 3-row grid — all 6 in one viewport, no interaction, clean gridlines only */}
-        <div
-          role="list"
-          aria-label="AI output risks"
+          level={2}
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            borderTop: `1px solid rgba(26,26,36,0.08)`,
+            fontSize: "clamp(22px, 3vw, 36px)",
+            margin: "0 0 12px",
+            textAlign: "center",
           }}
         >
-          {RISK_CARDS.map((card, i) => {
-            const isLeftCol = i % 2 === 0;
-            const isLastRow = i >= RISK_CARDS.length - 2;
-            return (
-              <motion.div
-                key={card.num}
-                role="listitem"
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ delay: i * 0.07, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "44px 1fr",
-                  gap: "0 16px",
-                  padding: isLeftCol ? "20px 28px 20px 0" : "20px 0 20px 28px",
-                  borderRight: isLeftCol ? `1px solid rgba(26,26,36,0.08)` : "none",
-                  borderBottom: isLastRow ? "none" : `1px solid rgba(26,26,36,0.08)`,
-                  alignItems: "start",
-                }}
-              >
-                <StepBadge n={card.num} color={colors.frameRed} variant="outline" size={32} />
-                <div>
-                  <p style={{ fontFamily: fonts.bold, fontSize: "clamp(13px, 1.2vw, 15px)", color: colors.offBlack, margin: "0 0 4px", lineHeight: 1.3 }}>
-                    {card.title}
-                  </p>
-                  <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.gray01, margin: 0, lineHeight: 1.6 }}>
-                    {card.body}
-                  </p>
-                </div>
-              </motion.div>
-            );
-          })}
+          Real or Fake?
+        </EYHeading>
+        <EYBody style={{ margin: "0 auto 24px", textAlign: "center", maxWidth: 560, color: colors.gray01 }}>
+          Ask the room. Then tap Real or Fake.
+        </EYBody>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+            marginBottom: 20,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setRevealed({})}
+            disabled={revealedCount === 0}
+            aria-label="Refresh icebreaker — hide all answers"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 14px",
+              borderRadius: 999,
+              border: `1px solid ${colors.gray02}`,
+              background: colors.offWhite,
+              color: colors.offBlack,
+              fontFamily: fonts.bold,
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: "0.04em",
+              textTransform: "uppercase",
+              cursor: revealedCount === 0 ? "not-allowed" : "pointer",
+              opacity: revealedCount === 0 ? 0.45 : 1,
+            }}
+            onFocus={(e) => { e.currentTarget.style.outline = NEWS_FOCUS; }}
+            onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+          >
+            <RotateCcw size={14} strokeWidth={2} aria-hidden />
+            Refresh
+          </button>
+          <EYCaption style={{ margin: 0, color: colors.gray01 }}>
+            {revealedCount > 0
+              ? `${revealedCount} of ${RESPONSIBLE_USE_NEWS.length} revealed`
+              : "Tap Real or Fake to reveal the answer."}
+          </EYCaption>
         </div>
 
-        {/* Callout strip — verbatim from PDF slide 2: yellow left border, left=yellow bold, right=white regular */}
-        <motion.div
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ delay: 0.2, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            marginTop: 44,
-            background: colors.confidentBlack,
-            borderLeft: `4px solid ${colors.yellow}`,
-            borderRadius: 6,
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 32,
-            padding: "24px 28px",
-            alignItems: "center",
-          }}
-        >
-          <p style={{ fontFamily: fonts.bold, fontSize: "clamp(14px, 1.4vw, 17px)", color: colors.yellow, margin: 0, lineHeight: 1.45 }}>
-            Professional risk begins when an AI output is accepted without examination.
-          </p>
-          <p style={{ fontFamily: fonts.regular, fontSize: "clamp(13px, 1.2vw, 15px)", color: colors.onDark, margin: 0, lineHeight: 1.55, textAlign: "center" }}>
-            When an AI error leaves the chat window, it can become a professional error.
-          </p>
-        </motion.div>
+        <ResponsibleUseNewsCarousel
+          revealed={revealed}
+          onGuess={guess}
+          onOpenClipping={(article) => { if (article.isReal) setLightbox(article); }}
+        />
+
+        {allRevealed && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              fontFamily: fonts.regular,
+              fontSize: typeScale.body.size,
+              color: colors.offBlack,
+              textAlign: "center",
+              margin: "28px 0 0",
+              lineHeight: 1.5,
+            }}
+          >
+            The real ones happened. The fakes are the shortcuts that still need a human. Next: the checks that stop this in a tax file.
+          </motion.p>
+        )}
+
+        {lightbox && (
+          <NewsLightbox
+            src={lightbox.src}
+            caption={`${lightbox.source} — ${lightbox.headline} · ${lightbox.date}`}
+            onClose={() => setLightbox(null)}
+          />
+        )}
       </div>
     </section>
   );
@@ -255,22 +672,6 @@ function PlaceholderBlock({
 }
 
 // ── Hero ──────────────────────────────────────────────────────────────────────
-const FLOW_STEPS = [
-  { label: "AI assists", color: colors.frameBlue },
-  { label: "Human verifies", color: colors.yellow },
-  { label: "Professional decides", color: colors.frameGreen },
-] as const;
-
-const LEARNED_BULLETS = [
-  "Give AI effective instructions",
-  "Use prompts for tax activities",
-  "Identify suitable AI use cases",
-  "Design no-code Agents",
-  "Review AI-assisted outputs",
-];
-
-const CAPABILITY_CHIPS = ["search", "organise", "compare", "analyse", "draft"];
-
 const DOES_NOT_BULLETS = [
   "The facts used",
   "The authorities cited",
@@ -281,48 +682,6 @@ const DOES_NOT_BULLETS = [
 ];
 
 function HeroSection() {
-  const ruleRef = useRef<HTMLDivElement>(null);
-  const [ruleVisible, setRuleVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ruleRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setRuleVisible(true); obs.disconnect(); } },
-      { threshold: 0.1 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-
-  const cardStyle: React.CSSProperties = {
-    background: colors.eyBgCard,
-    border: `1px solid ${colors.borderOnDark}`,
-    borderRadius: 10,
-    padding: "28px 28px 32px",
-  };
-
-  // `c: string` — without it the default narrows the param to the literal
-  // "#FFE600" and every other token colour is rejected.
-  const eyebrowStyle = (c: string = colors.yellow): React.CSSProperties => ({
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: c,
-    margin: "0 0 10px",
-  });
-
-  const bulletStyle: React.CSSProperties = {
-    fontFamily: fonts.regular,
-    fontSize: 14,
-    color: colors.onDarkMuted,
-    lineHeight: 1.6,
-    margin: "0 0 6px 0",
-    paddingLeft: 16,
-    position: "relative",
-  };
-
   return (
     <section
       aria-labelledby="hero-heading"
@@ -341,40 +700,24 @@ function HeroSection() {
       {/* Left scrim — keeps type readable over the image bloom */}
       <div aria-hidden="true" style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(26,26,36,0.97) 0%, rgba(26,26,36,0.84) 45%, rgba(26,26,36,0.45) 72%, rgba(26,26,36,0.28) 100%)", pointerEvents: "none" }} />
       <div style={{ ...contentRailStyle, display: "flex", flexDirection: "column", position: "relative", zIndex: 1 }}>
-
-        {/* H1 */}
         <h1 id="hero-heading" style={{ fontFamily: fonts.bold, fontSize: "clamp(28px, 3.4vw, 48px)", letterSpacing: "-0.025em", lineHeight: 1.1, margin: 0 }}>
           <span style={{ color: colors.white }}>From Using AI</span><br />
           <span style={{ color: colors.yellow, whiteSpace: "nowrap" }}>to Using AI Responsibly</span>
         </h1>
-
-        {/* Subheading */}
         <p style={{ fontFamily: fonts.regular, fontSize: "clamp(14px, 1.4vw, 17px)", color: colors.onDarkMuted, margin: "0 0 36px", lineHeight: 1.65, maxWidth: 560 }}>
           A practical governance playbook for senior tax and finance professionals.
         </p>
-
       </div>
     </section>
   );
 }
 
-// ── Hero context — Today's Question + capability cards + flow (separated from dark hero) ─
+// ── Hero context — three differentiated accountability cards (Echo 44d60a89) ─
 function HeroContextSection() {
-  const cardStyle: React.CSSProperties = {
-    background: colors.white,
-    border: `1px solid ${colors.gray02}`,
+  const cardBase: React.CSSProperties = {
     borderRadius: 10,
     padding: "28px 28px 32px",
   };
-
-  const eyebrowStyle = (c: string = colors.eyebrowGold): React.CSSProperties => ({
-    fontFamily: fonts.bold,
-    fontSize: typeScale.label.size,
-    letterSpacing: typeScale.label.tracking,
-    textTransform: "uppercase",
-    color: c,
-    margin: "0 0 10px",
-  });
 
   const bulletStyle: React.CSSProperties = {
     fontFamily: fonts.regular,
@@ -386,6 +729,9 @@ function HeroContextSection() {
     position: "relative",
   };
 
+  const bulletsLeft = DOES_NOT_BULLETS.slice(0, 3);
+  const bulletsRight = DOES_NOT_BULLETS.slice(3);
+
   return (
     <section
       style={{
@@ -395,227 +741,56 @@ function HeroContextSection() {
       }}
     >
       <div style={{ ...contentRailStyle }}>
-
-        {/* Today's Question card */}
-        <div style={{ ...cardStyle, borderTop: `3px solid ${colors.yellow}`, marginBottom: 24 }}>
-          <p style={eyebrowStyle()}>Today's Question</p>
-          <p style={{ fontFamily: fonts.bold, fontSize: "clamp(15px, 1.6vw, 20px)", color: colors.offBlack, margin: 0, lineHeight: 1.5 }}>
-            How do you use these capabilities without compromising accuracy, confidentiality, professional judgment or trust?
-          </p>
-        </div>
-
-        {/* Two-column capability cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 20, marginBottom: 32 }}>
-          {/* Left card */}
-          <div style={{ ...cardStyle, borderTop: `3px solid ${colors.yellow}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginBottom: 24 }}>
+          <div style={{ ...cardBase, background: colors.white, border: `1px solid ${colors.gray02}`, borderTop: `3px solid ${colors.frameBlue}` }}>
             <h2 style={{ fontFamily: fonts.bold, fontSize: "clamp(15px, 1.8vw, 18px)", color: colors.offBlack, margin: "0 0 20px", lineHeight: 1.3 }}>
-              AI Can Assist the Work.<br />You Remain Accountable.
+              AI Does Not Take Responsibility For
             </h2>
-            <p style={eyebrowStyle()}>You have learned how to:</p>
-            <ul style={{ margin: "0 0 20px", padding: 0, listStyle: "none" }}>
-              {LEARNED_BULLETS.map((b) => (
+            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {bulletsLeft.map((b) => (
                 <li key={b} style={bulletStyle}>
-                  <span aria-hidden="true" style={{ position: "absolute", left: 0, color: colors.yellow }}>›</span>
+                  <span aria-hidden="true" style={{ position: "absolute", left: 0, color: colors.frameBlue }}>›</span>
                   {b}
                 </li>
               ))}
             </ul>
-            <p style={{ fontFamily: fonts.regular, fontSize: 14, color: colors.gray01, fontStyle: "italic", margin: 0, lineHeight: 1.5 }}>
-              Now comes the most important question: How do you use these capabilities without compromising accuracy, confidentiality, professional judgment or trust?
+          </div>
+
+          <div style={{ ...cardBase, background: colors.white, border: `1px solid ${colors.gray02}`, borderTop: `3px solid ${colors.frameOrange}` }}>
+            <h2 style={{ fontFamily: fonts.bold, fontSize: "clamp(15px, 1.8vw, 18px)", color: colors.offBlack, margin: "0 0 20px", lineHeight: 1.3 }}>
+              You Remain Accountable For
+            </h2>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {bulletsRight.map((b) => (
+                <li key={b} style={bulletStyle}>
+                  <span aria-hidden="true" style={{ position: "absolute", left: 0, color: colors.frameOrange }}>›</span>
+                  {b}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div style={{ ...cardBase, background: colors.confidentBlack, border: `1px solid ${colors.gray02}`, borderTop: `3px solid ${colors.yellow}`, display: "flex", alignItems: "center" }}>
+            <p
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: "clamp(15px, 1.8vw, 18px)",
+                color: colors.white,
+                margin: 0,
+                lineHeight: 1.45,
+                textAlign: "center",
+                width: "100%",
+              }}
+            >
+              How do you use AI capabilities without compromising accuracy, confidentiality, professional judgement or trust?
             </p>
           </div>
-
-          {/* Right card */}
-          <div style={{ ...cardStyle, borderTop: `3px solid ${colors.frameBlue}` }}>
-            <p style={eyebrowStyle(colors.frameBlue)}>AI May Help You</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
-              {CAPABILITY_CHIPS.map((chip) => (
-                <span key={chip} style={{ background: colors.offWhite, border: `1px solid ${colors.gray02}`, borderRadius: 20, padding: "4px 12px", fontFamily: fonts.regular, fontSize: 13, color: colors.offBlack }}>
-                  {chip}
-                </span>
-              ))}
-            </div>
-            <p style={eyebrowStyle()}>AI does not take responsibility for:</p>
-            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-              {DOES_NOT_BULLETS.map((b) => (
-                <li key={b} style={bulletStyle}>
-                  <span aria-hidden="true" style={{ position: "absolute", left: 0, color: colors.yellow }}>›</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Flow row */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 0, justifyContent: "center" }}>
-            {FLOW_STEPS.map((step, i) => (
-              <motion.div
-                key={step.label}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.15, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-                style={{ display: "flex", alignItems: "center" }}
-              >
-                <span style={{ background: step.color, borderRadius: 20, padding: "8px 20px", fontFamily: fonts.bold, fontSize: 14, color: step.color === colors.yellow ? colors.offBlack : colors.white, whiteSpace: "nowrap" }}>
-                  {step.label}
-                </span>
-                {i < FLOW_STEPS.length - 1 && (
-                  <span aria-hidden="true" style={{ fontFamily: fonts.bold, fontSize: 18, color: colors.gray01, padding: "0 12px" }}>→</span>
-                )}
-              </motion.div>
-            ))}
-          </div>
-          <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.gray01, margin: 0, textAlign: "center", maxWidth: 480 }}>
-            AI assists. The professional assesses, decides and remains accountable.
-          </p>
-        </div>
-
-      </div>
-    </section>
-  );
-}
-
-// ── Slide 3: The Responsible AI Journey ─────────────────────────────────────
-const JOURNEY_STEPS = [
-  { n: 1, label: "DEFINE",   color: colors.frameBlue,    question: "What am I trying to achieve?" },
-  { n: 2, label: "DECIDE",   color: colors.yellow,       question: "Is AI suitable for this activity?" },
-  { n: 3, label: "PROTECT",  color: colors.frameGreen,   question: "What information will AI receive?" },
-  { n: 4, label: "CONTROL",  color: colors.framePurple,  question: "What instructions, sources and boundaries will I provide?" },
-  { n: 5, label: "VERIFY",   color: colors.frameOrange,  question: "Are the facts, calculations and authorities correct?" },
-  { n: 6, label: "APPROVE",  color: colors.frameRed,     question: "Has an appropriately qualified person reviewed the output?" },
-  { n: 7, label: "RECORD",   color: colors.frameBlue,    question: "What evidence of review, decisions or issues should be retained?" },
-] as const;
-
-function ResponsibleAIJourney() {
-  const [active, setActive] = useState(0);
-  const step = JOURNEY_STEPS[active];
-
-  return (
-    <section
-      id="p4-playbook"
-      aria-labelledby="playbook-heading"
-      style={{
-        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-        background: colors.confidentBlack,
-        padding: `${spacing.sectionPaddingY} 0`,
-        width: "100%",
-      }}
-    >
-      <div style={{ ...contentRailStyle }}>
-        {/* Center-aligned header */}
-        <p style={{ fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking, textTransform: "uppercase", color: colors.yellow, margin: "0 0 12px", textAlign: "center" }}>
-          Use the Playbook
-        </p>
-        <h2
-          id="playbook-heading"
-          style={{ fontFamily: fonts.bold, fontSize: "clamp(22px, 3vw, 36px)", color: colors.onDark, margin: "0 0 12px", letterSpacing: "-0.02em", lineHeight: 1.1, textAlign: "center" }}
-        >
-          The Responsible AI Journey
-        </h2>
-        <p style={{ fontFamily: fonts.regular, fontSize: "clamp(14px, 1.4vw, 16px)", color: colors.onDarkMuted, maxWidth: 620, margin: "0 auto 48px", lineHeight: 1.6, textAlign: "center" }}>
-          Every responsible use of AI should pass through seven checkpoints.
-        </p>
-
-        {/* Hint above pills */}
-        <p style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.onDarkSubtle, textAlign: "center", margin: "0 0 16px" }}>
-          Click any checkpoint to explore it
-        </p>
-
-        {/* Clickable label rail — all 7 always visible */}
-        <div
-          role="tablist"
-          aria-label="Responsible AI checkpoints"
-          className="journey-tabs-rail"
-          style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "8px 0", marginBottom: 24 }}
-        >
-          {JOURNEY_STEPS.map((s, i) => {
-            const isActive = i === active;
-            return (
-              <Fragment key={s.n}>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls="journey-panel"
-                  onClick={() => setActive(i)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "7px 12px",
-                    borderRadius: 32,
-                    justifySelf: "center",
-                    border: `1.5px solid ${isActive ? s.color : colors.borderOnDark}`,
-                    background: isActive ? `${s.color}18` : "transparent",
-                    cursor: "pointer",
-                    transition: "border-color 0.2s, background 0.2s",
-                  }}
-                >
-                  <StepBadge n={s.n} color={s.color} size={22} />
-                  <span style={{
-                    fontFamily: fonts.bold,
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: isActive ? s.color : colors.onDarkMuted,
-                    transition: "color 0.2s",
-                  }}>
-                    {s.label}
-                  </span>
-                </button>
-              </Fragment>
-            );
-          })}
-        </div>
-
-        {/* Active question panel */}
-        <motion.div
-          id="journey-panel"
-          role="tabpanel"
-          key={active}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            background: colors.eyBgCard,
-            border: `1px solid ${colors.borderOnDark}`,
-            borderTop: `3px solid ${step.color}`,
-            borderRadius: 10,
-            padding: "24px 36px",
-            marginBottom: 24,
-            minHeight: 110,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-          }}
-        >
-          <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: step.color, margin: "0 0 16px" }}>
-            Step {step.n} — {step.label}
-          </p>
-          <p style={{ fontFamily: fonts.quote, fontStyle: "italic", fontSize: "clamp(20px, 2.4vw, 30px)", color: colors.onDark, margin: 0, lineHeight: 1.4 }}>
-            {step.question}
-          </p>
-        </motion.div>
-
-        {/* Callout strip — verbatim PDF, yellow left border */}
-        <div
-          style={{
-            background: colors.eyBgCard,
-            borderLeft: `4px solid ${colors.yellow}`,
-            borderRadius: 6,
-            padding: "20px 28px",
-          }}
-        >
-          <p style={{ fontFamily: fonts.bold, fontSize: "clamp(13px, 1.3vw, 15px)", color: colors.yellow, margin: 0, lineHeight: 1.5 }}>
-            Responsible AI is not one final check. It is a discipline applied throughout the task.
-          </p>
         </div>
       </div>
     </section>
   );
 }
+
 
 // ── TheChecks ─────────────────────────────────────────────────────────────────
 
@@ -659,6 +834,12 @@ function Check1Body() {
   ];
   return (
     <div>
+      {/* Journey Checkpoint callout */}
+      <div style={{ background: colors.confidentBlack, borderRadius: 8, padding: "14px 18px", marginBottom: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+        <p style={{ fontFamily: fonts.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colors.yellow, margin: 0 }}>Journey Checkpoint</p>
+        <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.white, margin: 0 }}><strong>DEFINE:</strong> What am I trying to achieve?</p>
+        <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.white, margin: 0 }}><strong>DECIDE:</strong> Is AI suitable for this activity?</p>
+      </div>
       {/* Zone A: PSIO — unified horizontal panel, 4 columns */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(46,46,56,0.10)", marginBottom: 14 }}>
         {psio.map((q, i) => (
@@ -676,11 +857,40 @@ function Check1Body() {
         ))}
       </div>
 
-      {/* Zone B: Traffic-light suitability tiers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 14 }}>
+      {/* Zone B: Traffic-light suitability tiers — shared header row so bars stay equal height when labels wrap */}
+      <div
+        className="check1-tiers"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gridTemplateRows: "auto 1fr",
+          gap: 10,
+          marginBottom: 14,
+          alignItems: "stretch",
+        }}
+      >
         {tiers.map((tier) => (
-          <div key={tier.label} style={{ borderRadius: 8, overflow: "hidden", border: `1px solid ${tier.color}` }}>
-            <div style={{ background: tier.color, padding: "10px 14px", display: "flex", alignItems: "flex-start", gap: 8 }}>
+          <div
+            key={tier.label}
+            style={{
+              display: "grid",
+              gridTemplateRows: "subgrid",
+              gridRow: "span 2",
+              borderRadius: 8,
+              overflow: "hidden",
+              border: `1px solid ${tier.color}`,
+              minWidth: 0,
+            }}
+          >
+            <div style={{
+              background: tier.color,
+              padding: "10px 14px",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 8,
+              boxSizing: "border-box",
+              height: "100%",
+            }}>
               <span style={{ fontFamily: fonts.bold, fontSize: 14, color: colors.white, lineHeight: 1, flexShrink: 0, marginTop: 1 }}>{tier.icon}</span>
               <p style={{ fontFamily: fonts.bold, fontSize: 11, color: colors.white, margin: 0, lineHeight: 1.4 }}>{tier.label}</p>
             </div>
@@ -694,6 +904,12 @@ function Check1Body() {
           </div>
         ))}
       </div>
+      <style>{`
+        @media (max-width: 800px) {
+          .check1-tiers { grid-template-columns: 1fr !important; grid-template-rows: none !important; }
+          .check1-tiers > div { display: flex !important; flex-direction: column; grid-row: auto !important; }
+        }
+      `}</style>
 
       <CheckCallout text="If the purpose, information, reviewer or verification method is unclear—pause and seek guidance before proceeding." />
     </div>
@@ -723,6 +939,11 @@ function Check2Body() {
   ];
   return (
     <div>
+      {/* Journey Checkpoint callout */}
+      <div style={{ background: colors.confidentBlack, borderRadius: 8, padding: "14px 18px", marginBottom: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+        <p style={{ fontFamily: fonts.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colors.yellow, margin: 0 }}>Journey Checkpoint</p>
+        <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.white, margin: 0 }}><strong>PROTECT:</strong> What information will AI receive?</p>
+      </div>
       {/* Zone A: 8 pre-flight questions as 2×4 numbered cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(46,46,56,0.10)", marginBottom: 14 }}>
         {questions.map((q, i) => (
@@ -787,6 +1008,11 @@ function Check3Body() {
   ];
   return (
     <div>
+      {/* Journey Checkpoint callout */}
+      <div style={{ background: colors.confidentBlack, borderRadius: 8, padding: "14px 18px", marginBottom: 18, display: "flex", flexDirection: "column", gap: 8 }}>
+        <p style={{ fontFamily: fonts.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colors.yellow, margin: 0 }}>Journey Checkpoint</p>
+        <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.white, margin: 0 }}><strong>CONTROL:</strong> What instructions, sources and boundaries will I provide?</p>
+      </div>
       {/* Zone A: unified 3×2 sequenced dimension panel */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderRadius: 10, overflow: "hidden", border: "1px solid rgba(46,46,56,0.10)", marginBottom: 14 }}>
         {dimensions.map((d, i) => (
@@ -877,6 +1103,11 @@ function Check5Body() {
   ] as const;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Journey Checkpoint callout */}
+      <div style={{ background: colors.confidentBlack, borderRadius: 8, padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <p style={{ fontFamily: fonts.regular, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: colors.yellow, margin: 0 }}>Journey Checkpoint</p>
+        <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.white, margin: 0 }}><strong>VERIFY:</strong> Are the facts, calculations and authorities correct?</p>
+      </div>
       {/* Zone A: VERIFY — 3×2 unified panel */}
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(46,46,56,0.1)" }}>
         {verifyCards.map((card, i) => (
@@ -943,98 +1174,6 @@ function Check5Body() {
   );
 }
 
-function Check67Body() {
-  const parts = [
-    {
-      label: "Part A — Human approval",
-      color: colors.frameGreen, // frameGreen on confidentBlack = 7.76:1 ✓ WCAG AA
-      items: [
-        "Reviewed by an appropriately qualified person",
-        "Material errors and omissions corrected",
-        "Assumptions and limitations considered",
-        "Final communication is appropriate for its audience",
-        "Responsible professional approved the final work",
-      ],
-    },
-    {
-      label: "Part B — Appropriate record",
-      color: colors.frameBlue, // frameBlue on confidentBlack = 5.80:1 ✓ WCAG AA
-      items: [
-        "Purpose and use case",
-        "Tool used",
-        "Material prompt or Agent instructions",
-        "Sources or knowledge repositories used",
-        "Significant assumptions and limitations",
-        "Facts, authorities and calculations checked",
-        "Material corrections made",
-        "Reviewer or approver",
-        "Issues identified and escalated",
-      ],
-    },
-    {
-      label: "Part C — Escalate when",
-      color: colors.frameRed, // frameRed on confidentBlack = 4.84:1 ✓ WCAG AA
-      items: [
-        "Sensitive information may have been disclosed",
-        "A source, citation or quotation cannot be verified",
-        "An Agent acts outside its defined purpose",
-        "Access permissions appear inappropriate",
-        "Outputs are persistently inaccurate or misleading",
-        "A potentially biased or unfair outcome is identified",
-        "Use conflicts with organisational or client requirements",
-        "Reviewer cannot independently support the conclusion",
-      ],
-    },
-  ] as const;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* Zone A: Three dark columns — part headers on dark = all accessible */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        {parts.map((part) => (
-          <div
-            key={part.label}
-            style={{
-              background: colors.confidentBlack,
-              borderTop: `3px solid ${part.color}`,
-              borderRadius: 10,
-              padding: "18px 16px",
-            }}
-          >
-            <p style={{ fontFamily: fonts.bold, fontSize: 13, color: part.color, margin: "0 0 12px", lineHeight: 1.3 }}>
-              {part.label}
-            </p>
-            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-              {part.items.map((item) => (
-                <li key={item} style={{ position: "relative", paddingLeft: 12, marginBottom: 7, fontFamily: fonts.regular, fontSize: 12, color: colors.onDark, lineHeight: 1.5 }}>
-                  <span aria-hidden="true" style={{ position: "absolute", left: 0, top: "0.55em", width: 4, height: 4, borderRadius: "50%", background: part.color }} />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
-      {/* Zone B: Hero callout — yellow text on dark (yellow on confidentBlack ≈ 14:1 ✓) */}
-      <div style={{ background: colors.confidentBlack, borderLeft: `4px solid ${colors.yellow}`, borderRadius: 6, padding: "18px 22px" }}>
-        <p style={{ fontFamily: fonts.bold, fontSize: 14, color: colors.yellow, margin: 0, lineHeight: 1.55 }}>
-          Documentation is not about saving everything. It is about retaining the appropriate evidence that responsible review occurred.
-        </p>
-      </div>
-
-      {/* Zone C: Leader note — offBlack on offWhite (14:1 ✓) */}
-      <div style={{ borderLeft: `3px solid rgba(46,46,56,0.2)`, background: colors.offWhite, borderRadius: "0 6px 6px 0", padding: "12px 14px" }}>
-        <p style={{ fontFamily: fonts.bold, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 4px" }}>
-          Leader note
-        </p>
-        <p style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.gray01, margin: 0, lineHeight: 1.6 }}>
-          Consider whether AI-enabled efficiencies affect time recording, pricing, billing or client communication, in accordance with applicable policies and engagement terms.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 const CHECKS_META = [
   { n: "1",   label: "Check 1: Pause Before You Prompt",                                subtitle: "Clarify the purpose, suitability, impact and ownership before using AI.",                                                                              journey: "DEFINE • DECIDE",  color: colors.frameBlue,   onColor: colors.offBlack, Body: Check1Body  },
@@ -1042,38 +1181,53 @@ const CHECKS_META = [
   { n: "3",   label: "Check 3: A Responsible Prompt Sets Boundaries",                   subtitle: "A responsible prompt does not merely tell AI what to do—it also tells AI where to stop.",                                                               journey: "CONTROL",          color: colors.framePurple, onColor: colors.white,    Body: Check3Body  },
   { n: "4",   label: "Check 4: Build No-Code Agents with Guardrails",                   subtitle: "No Agent should have broader access, authority or autonomy than its approved purpose requires.",                                                         journey: "CONTROL",          color: colors.frameTeal,   onColor: colors.offBlack, Body: Check4Body  },
   { n: "5",   label: "Check 5: Do Not Approve What You Cannot Defend",                  subtitle: "Evaluate whether the output's stated rationale is supported by verified facts, calculations and authorities.",                                            journey: "VERIFY",           color: colors.frameOrange, onColor: colors.offBlack, Body: Check5Body  },
-  { n: "6·7", label: "Checks 6 and 7: Responsible Use Must Be Reviewable",              subtitle: "Human approval, an appropriate review trail and prompt escalation complete the control cycle.",                                                           journey: "APPROVE • RECORD", color: colors.frameMagenta, onColor: colors.offBlack, Body: Check67Body },
 ];
 
 function TheChecks() {
-  const [openIdx, setOpenIdx] = useState<number>(0);
-  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [openSet, setOpenSet] = useState<Set<number>>(() => new Set([0]));
+  const savedScrollRef = useRef<{ top: number; el: HTMLElement } | null>(null);
+  const openKey = useMemo(() => [...openSet].sort((a, b) => a - b).join(","), [openSet]);
+
+  useLayoutEffect(() => {
+    const saved = savedScrollRef.current;
+    if (!saved) return;
+    saved.el.scrollTop = saved.top;
+    savedScrollRef.current = null;
+  }, [openKey]);
+
+  const toggleCheck = (index: number, scrollEl: HTMLElement | null) => {
+    if (scrollEl) savedScrollRef.current = { top: scrollEl.scrollTop, el: scrollEl };
+    setOpenSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   return (
     <section
       id="p4-checks"
       aria-labelledby="checks-heading"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN, background: colors.offWhite, padding: `${spacing.sectionPaddingY} 0`, width: "100%" }}
+      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN, background: colors.offWhite, borderTop: `1px solid ${colors.gray02}`, padding: `${spacing.sectionPaddingY} 0`, width: "100%" }}
     >
       <div style={{ ...contentRailStyle }}>
         <p style={{ fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking, textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 12px", textAlign: "center" }}>
           The Checks
         </p>
         <h2 id="checks-heading" style={{ fontFamily: fonts.bold, fontSize: "clamp(26px, 3vw, 36px)", color: colors.offBlack, margin: "0 0 14px", lineHeight: 1.2, textAlign: "center" }}>
-          Seven Checks for Responsible AI
+          Checks for Responsible AI
         </h2>
         <p style={{ fontFamily: fonts.regular, fontSize: "clamp(15px, 1.4vw, 18px)", color: colors.gray01, margin: "0 auto 48px", lineHeight: 1.6, textAlign: "center", maxWidth: 620 }}>
           Each check maps to a step in the Responsible AI Journey. Apply them throughout the task—not only at the end.
         </p>
 
-        {/* Accordion */}
-        <div role="list" aria-label="The seven checks">
+        <div role="list" aria-label="The five checks" style={{ overflowAnchor: "none" }}>
           {CHECKS_META.map((check, i) => {
-            const isOpen = openIdx === i;
+            const isOpen = openSet.has(i);
             return (
               <div
                 key={check.n}
-                ref={el => { rowRefs.current[i] = el; }}
                 role="listitem"
                 style={{
                   borderTop: i === 0 ? `1px solid rgba(46,46,56,0.1)` : "none",
@@ -1082,65 +1236,50 @@ function TheChecks() {
                   background: colors.white,
                   boxShadow: isOpen ? "0 2px 12px rgba(46,46,56,0.10)" : "none",
                   transition: "border-left-color 0.25s ease, box-shadow 0.25s ease",
-                  scrollMarginTop: SUBNAV_SCROLL_MARGIN,
                 }}
               >
                 <button
                   type="button"
                   aria-expanded={isOpen}
                   aria-controls={`check-body-${i}`}
-                  onClick={() => {
-                    const next = isOpen ? -1 : i;
-                    setOpenIdx(next);
-                    if (next !== -1) {
-                      requestAnimationFrame(() => {
-                        const el = rowRefs.current[next];
-                        if (!el) return;
-                        const container = el.closest(".overflow-auto") as HTMLElement | null;
-                        if (container) {
-                          const elTop = el.getBoundingClientRect().top;
-                          const containerTop = container.getBoundingClientRect().top;
-                          const target = container.scrollTop + elTop - containerTop - SUBNAV_SCROLL_OFFSET - 8;
-                          container.scrollTo({ top: target, behavior: "smooth" });
-                        } else {
-                          el.scrollIntoView({ behavior: "smooth", block: "start" });
-                        }
-                      });
-                    }
+                  onClick={(e) => {
+                    const container = e.currentTarget.closest(".overflow-auto") as HTMLElement | null;
+                    toggleCheck(i, container);
                   }}
                   style={{ width: "100%", display: "flex", alignItems: "flex-start", gap: 14, padding: "18px 20px", background: "none", border: "none", cursor: "pointer", textAlign: "left" }}
                 >
                   <span style={{
                     display: "inline-flex", alignItems: "center", justifyContent: "center",
                     width: 32, height: 32, borderRadius: "50%", flexShrink: 0, marginTop: 1,
-                    background: isOpen ? colors.offBlack : "transparent",
-                    border: `1.5px solid ${isOpen ? colors.offBlack : "rgba(46,46,56,0.25)"}`,
-                    color: isOpen ? colors.yellow : colors.gray01,
-                    fontFamily: fonts.bold, fontSize: check.n === "6·7" ? 9 : 13,
+                    background: isOpen ? colors.offBlack : `${check.color}22`,
+                    border: `1.5px solid ${isOpen ? colors.offBlack : check.color}`,
+                    color: isOpen ? colors.yellow : colors.offBlack,
+                    fontFamily: fonts.bold, fontSize: 13,
                     transition: "background 0.25s, border-color 0.25s, color 0.25s",
                   }}>
                     {check.n}
                   </span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: "block", fontFamily: fonts.bold, fontSize: "clamp(13px, 1.3vw, 15px)", color: isOpen ? colors.offBlack : colors.gray01, transition: "color 0.2s", lineHeight: 1.3 }}>
+                    <span style={{ display: "block", fontFamily: fonts.bold, fontSize: "clamp(13px, 1.3vw, 15px)", color: colors.offBlack, transition: "color 0.2s", lineHeight: 1.3 }}>
                       {check.label}
                     </span>
-                    <span style={{ display: "block", fontFamily: fonts.regular, fontSize: 12, color: isOpen ? colors.gray01 : colors.gray02, marginTop: 3, lineHeight: 1.5, transition: "color 0.2s" }}>
+                    <span style={{ display: "block", fontFamily: fonts.regular, fontSize: 12, color: colors.gray01, marginTop: 3, lineHeight: 1.5, transition: "color 0.2s" }}>
                       {check.subtitle}
                     </span>
                   </div>
                   <span style={{
                     fontFamily: fonts.bold, fontSize: 10, letterSpacing: "0.07em", textTransform: "uppercase",
                     flexShrink: 0, marginTop: 2, whiteSpace: "nowrap",
-                    background: isOpen ? colors.offBlack : "transparent",
-                    color: isOpen ? colors.yellow : colors.gray02,
-                    borderRadius: 3, padding: isOpen ? "3px 7px" : "3px 0px",
-                    transition: "background 0.25s, color 0.25s, padding 0.25s",
+                    background: isOpen ? colors.offBlack : `${check.color}22`,
+                    color: isOpen ? colors.yellow : colors.offBlack,
+                    border: isOpen ? "none" : `1px solid ${check.color}`,
+                    borderRadius: 3, padding: "3px 7px",
+                    transition: "background 0.25s, color 0.25s",
                   }}>
                     {check.journey}
                   </span>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ flexShrink: 0, marginTop: 4, transition: "transform 0.3s ease", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
-                    <path d="M4 6l4 4 4-4" stroke={colors.gray01} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 6l4 4 4-4" stroke={colors.offBlack} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </button>
                 <div
@@ -1162,6 +1301,213 @@ function TheChecks() {
   );
 }
 
+// ── Lead with governance (Figma 4009:16919 — comparison, not a quiz) ──────────
+// Copy from Figma. Dark slide 2-col lists adapted to EY light surfaces.
+const LEAD_GOVERNANCE_OUTCOMES = [
+  "Understand and mitigate the risks of AI before they materialize",
+  "Proactively identify high-value areas for AI deployment",
+  "Develop direct value generation through clear and consistent innovation",
+  "Scale learnings and leading practices discovered in early pilots",
+  "Accelerate ROI by protecting revenue in addition to generating it",
+  "Adopt AI at scale and increase impact across functions and BUs",
+  "Have a focused and consistent approach to innovation and scaling",
+] as const;
+
+const DONT_LEAD_GOVERNANCE_OUTCOMES = [
+  "Adopt AI in silos which limits scale, ROI, and visibility",
+  "Create prioritization chaos, which results in fragmented investment",
+  "Reactively address risks, damaging both reputation and finances",
+  "Repeat mistakes across BUs throughout the AI adoption lifecycle",
+  "Result in slow-paced innovation, culture regression and reduced collaboration",
+] as const;
+
+function GovernanceBulletCols({
+  items,
+  leftCount,
+  Icon,
+  iconColor,
+}: {
+  items: readonly string[];
+  leftCount: number;
+  Icon: typeof Check;
+  iconColor: string;
+}) {
+  const cols = [items.slice(0, leftCount), items.slice(leftCount)];
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: "16px 24px",
+      }}
+    >
+      {cols.map((col, i) => (
+        <ul key={i} style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 16 }}>
+          {col.map((text) => (
+            <li key={text} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <Icon size={16} strokeWidth={1.75} color={iconColor} aria-hidden style={{ flexShrink: 0, marginTop: 3 }} />
+              <span style={{ fontFamily: fonts.regular, fontSize: 14, lineHeight: 1.6, color: colors.offBlack }}>
+                {text}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  );
+}
+
+function GovernanceCompareCard({
+  marker,
+  Icon,
+  iconColor,
+  titleBefore,
+  titleEmph,
+  items,
+  leftCount,
+  hierarchyRank,
+}: {
+  marker: string;
+  Icon: typeof Check;
+  iconColor: string;
+  titleBefore: string;
+  titleEmph: string;
+  items: readonly string[];
+  leftCount: number;
+  hierarchyRank: 1 | 2;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isDontLead = hierarchyRank === 2;
+  // Don't-lead chrome uses destructive + alpha (Team Briefing weak-brief), not solid red.
+  const edge = isDontLead ? `${marker}4d` : marker;
+  const hairline = isDontLead
+    ? hovered ? `${marker}4d` : `${marker}33`
+    : hovered ? marker : colors.gray02;
+  return (
+    <article
+      aria-labelledby={hierarchyRank === 1 ? "p4-lead-card-title" : "p4-dont-lead-card-title"}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: isDontLead ? `${marker}0a` : colors.offWhite,
+        border: `1px solid ${hairline}`,
+        ...(isDontLead ? {} : { borderLeft: `6px solid ${edge}` }),
+        borderRadius: 8,
+        padding: 32,
+        display: "grid",
+        gridTemplateRows: "subgrid",
+        gridRow: "span 2",
+        rowGap: 24,
+        minWidth: 0,
+        transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+        boxShadow: hovered ? "0 4px 16px rgba(46,46,56,0.10)" : "none",
+      }}
+    >
+      <header style={{ display: "flex", flexDirection: "column", gap: 8, justifyContent: "space-between", minHeight: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <span
+            aria-hidden
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 28,
+              height: 28,
+              borderRadius: "50%",
+              flexShrink: 0,
+              marginTop: 2,
+              background: hierarchyRank === 1 ? colors.yellow : `${marker}0d`,
+              border: hierarchyRank === 1 ? "none" : `1.5px solid ${edge}`,
+            }}
+          >
+            <Icon size={14} strokeWidth={2} color={hierarchyRank === 1 ? colors.offBlack : marker} />
+          </span>
+          <h3
+            id={hierarchyRank === 1 ? "p4-lead-card-title" : "p4-dont-lead-card-title"}
+            style={{
+              fontFamily: fonts.regular,
+              fontSize: 20,
+              fontWeight: 400,
+              letterSpacing: "-0.02em",
+              color: colors.offBlack,
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            {titleBefore}{" "}
+            <span style={{ fontFamily: fonts.bold, fontWeight: 700 }}>{titleEmph}</span>
+          </h3>
+        </div>
+        <div style={{ height: 1, background: colors.gray02 }} />
+      </header>
+      <GovernanceBulletCols items={items} leftCount={leftCount} Icon={Icon} iconColor={iconColor} />
+    </article>
+  );
+}
+
+function LeadWithGovernance() {
+  return (
+    <section
+      id="p4-lead-governance"
+      aria-labelledby="p4-lead-governance-title"
+      style={{
+        background: colors.white,
+        padding: spacing.sectionPadding,
+        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
+      }}
+    >
+      <div style={contentRailStyle}>
+        <div style={{ marginBottom: 40, textAlign: "center" }}>
+          <EYEyebrow style={{ color: colors.gray01, marginBottom: 16 }}>
+            Lead with governance
+          </EYEyebrow>
+          <EYHeading id="p4-lead-governance-title" level={2} style={{ color: colors.offBlack, marginBottom: 0 }}>
+            Enterprise Governance
+          </EYHeading>
+        </div>
+
+        <div
+          className="gov-compare-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+            gridTemplateRows: "auto 1fr",
+            gap: 32,
+            alignItems: "stretch",
+          }}
+        >
+          <GovernanceCompareCard
+            marker={colors.yellow}
+            Icon={Check}
+            iconColor={colors.success}
+            titleBefore="Organizations who"
+            titleEmph="Lead with governance"
+            items={LEAD_GOVERNANCE_OUTCOMES}
+            leftCount={4}
+            hierarchyRank={1}
+          />
+          <GovernanceCompareCard
+            marker={colors.destructive}
+            Icon={X}
+            iconColor={colors.destructive}
+            titleBefore="Organizations who"
+            titleEmph="Do not lead with governance"
+            items={DONT_LEAD_GOVERNANCE_OUTCOMES}
+            leftCount={3}
+            hierarchyRank={2}
+          />
+        </div>
+        <style>{`
+          @media (max-width: 800px) {
+            .gov-compare-grid { grid-template-columns: 1fr !important; grid-template-rows: none !important; }
+            .gov-compare-grid > article { display: flex !important; flex-direction: column; grid-row: auto !important; }
+          }
+        `}</style>
+      </div>
+    </section>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function ClosureAiReinforcement({
   onBack,
@@ -1176,7 +1522,7 @@ export default function ClosureAiReinforcement({
 
   return (
     <div
-      className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0 overflow-x-clip"
+      className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0"
       data-name="EY.ai Tax Labs - Phase 4"
     >
       <SiteHeader variant="learning" onNavigate={onNavigate} skipLinkTarget="#phase4-content" />
@@ -1197,8 +1543,6 @@ export default function ClosureAiReinforcement({
         <HeroContextSection />
 
         <RecogniseTheRisk />
-
-        <ResponsibleAIJourney />
 
         <TheChecks />
 
@@ -1421,113 +1765,14 @@ export default function ClosureAiReinforcement({
           </div>
         </section>
 
-        {/* ── p4-org ────────────────────────────────────────────────────── */}
-        <section
-          id="p4-org"
-          style={{
-            background: colors.offWhite,
-            padding: spacing.sectionPadding,
-            scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-          }}
-        >
-          <div style={contentRailStyle}>
-            {/* Header */}
-            <div style={{ textAlign: "center", marginBottom: 48 }}>
-              <p style={{
-                fontFamily: fonts.bold, fontSize: 10, letterSpacing: "0.1em",
-                textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 12px",
-              }}>
-                GOVERNANCE COMPANION
-              </p>
-              <h2 style={{
-                fontFamily: fonts.bold, fontSize: 32, color: colors.confidentBlack,
-                margin: "0 0 14px", lineHeight: 1.2,
-              }}>
-                Organisational governance companion
-              </h2>
-              <p style={{
-                fontFamily: fonts.regular, fontSize: 17, color: colors.gray01,
-                margin: "0 auto", maxWidth: 640, lineHeight: 1.6,
-              }}>
-                A responsible-AI checklist to keep AI use visible, owned, controlled and continually reassessed.
-              </p>
-            </div>
-
-            {/* 3×2 card grid — white cards on offWhite, accent stripe top border */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 36 }}>
-              {[
-                { accent: colors.frameBlue,    title: "Direction",               items: ["Establish responsible-AI principles", "Align AI use with organisational values", "Maintain acceptable-use policies and practical guidance", "Monitor legal, regulatory and professional developments"] },
-                { accent: colors.framePurple,  title: "Ownership",               items: ["Assign accountable owners", "Define approval and escalation routes", "Include tax, finance, legal, risk, privacy, security and technology perspectives"] },
-                { accent: colors.eyebrowGold,  title: "Visibility",              items: ["Maintain visibility over material AI tools and Agents", "Identify owners, users, data sources, permissions and purposes", "Assess use cases based on risk and potential impact"] },
-                { accent: colors.frameGreen,   title: "Controls",                items: ["Apply access, security, privacy, human-review and documentation controls", "Vet third-party AI before professional use or purchase", "Test prompts and Agents before wider deployment", "Establish procedures for errors, breaches and unintended outcomes"] },
-                { accent: colors.frameOrange,  title: "Enablement",              items: ["Provide practical, role-appropriate training", "Train users on data protection, limitations, verification and escalation", "Use case studies to make responsible-AI risks understandable", "Keep policies and support routes accessible"] },
-                { accent: colors.frameTeal,    title: "Monitoring + reassessment", items: ["Monitor performance, access and compliance issues", "Capture user feedback and reported concerns", "Review outdated or conflicting knowledge sources", "Reassess governance as technology, regulation and use cases evolve"] },
-              ].map((card) => (
-                <div
-                  key={card.title}
-                  style={{
-                    background: colors.white,
-                    borderTopWidth: 3, borderTopStyle: "solid", borderTopColor: card.accent,
-                    borderRightWidth: 1, borderRightStyle: "solid", borderRightColor: "rgba(0,0,0,0.08)",
-                    borderBottomWidth: 1, borderBottomStyle: "solid", borderBottomColor: "rgba(0,0,0,0.08)",
-                    borderLeftWidth: 1, borderLeftStyle: "solid", borderLeftColor: "rgba(0,0,0,0.08)",
-                    borderRadius: 10,
-                    padding: "22px 20px",
-                  }}
-                >
-                  <p style={{
-                    fontFamily: fonts.bold, fontSize: 15, color: colors.confidentBlack,
-                    margin: "0 0 16px", lineHeight: 1.25,
-                  }}>
-                    {card.title}
-                  </p>
-                  <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
-                    {card.items.map((item) => (
-                      <li
-                        key={item}
-                        style={{
-                          display: "flex", alignItems: "flex-start", gap: 9,
-                          marginBottom: 8, fontFamily: fonts.regular,
-                          fontSize: 13, color: colors.gray01, lineHeight: 1.5,
-                        }}
-                      >
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            flexShrink: 0, display: "inline-block",
-                            width: 10, height: 10, marginTop: "0.25em",
-                            border: `1.5px solid ${colors.gray01}`,
-                            borderRadius: 2,
-                          }}
-                        />
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* Tagline — yellow fails on offWhite; use confidentBlack */}
-            <p style={{
-              fontFamily: fonts.bold, fontSize: 17, color: colors.confidentBlack,
-              textAlign: "center", margin: 0, lineHeight: 1.55,
-            }}>
-              Make governance practical: visible ownership, clear controls and regular reassessment.
-            </p>
-          </div>
-        </section>
+        <LeadWithGovernance />
       </main>
 
-      {/* ── EYWhatsNext ─────────────────────────────────────────────────── */}
-      <EYWhatsNext
-        id="whats-next"
-        eyebrow="Knowledge Check"
-        title={<>Responsible AI <EYWhatsNextHighlight>Control Room</EYWhatsNextHighlight></>}
-        description="Act as the AI Review Committee. Work through 10 real-world scenarios — identify the risk, make the decision and choose the missing control. Put everything from this module to the test."
-        ctaLabel="Enter the Control Room"
-        onContinue={() => window.open("/control-room.html", "_blank", "noopener")}
-        meta="Interactive assessment  ·  10 scenarios  ·  40 points"
+      {/* Journey progress — continue via Control Room trek CTA */}
+      <AscentModuleProgressSection
+        moduleKey="m4"
+        id="journey-progress"
+        onNextStepCta={() => window.open("/control-room.html", "_blank", "noopener")}
       />
     </div>
   );

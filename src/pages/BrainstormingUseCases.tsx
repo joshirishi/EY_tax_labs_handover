@@ -1,8 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Lock, PlusCircle } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, PlusCircle, QrCode, X } from "lucide-react";
+import { PromptBookshelfLibrary } from "../components/PromptBookshelfLibrary";
+import { WorkshopLibraryShareActions } from "../components/WorkshopLibraryShareActions";
+import { UseCaseBucketCards } from "../components/UseCaseBucketCards";
+import {
+  EMPTY_USE_CASE_DRAFTS,
+  moveUseCaseEntry,
+  readStoredUseCaseEntries,
+  type UseCaseBucketId,
+  writeStoredUseCaseEntries,
+} from "../data/use-case-buckets";
 import { SiteHeader } from "../design-kit/SiteHeader";
 import { ModuleHeader, SUBNAV_SCROLL_MARGIN, useModuleSectionHashScroll } from "../design-kit/LearningNav";
-import { EYWhatsNext, EYWhatsNextHighlight } from "../design-kit/EYWhatsNext";
+import { AscentModuleProgressSection } from "../imports/Frame353/ascentCurriculum";
+import { AGENT_TEMPLATE_LIBRARY } from "../data/agent-template-library";
 import { PHASE2_LABEL, PHASE2_NUMBER } from "../design-kit/curriculum";
 import { colors, contentRailStyle, fonts, layout, spacing, spectrumCss, typeScale } from "../design-kit/tokens";
 import heroImg from "../assets/images/GettyImages-2212662948.jpg";
@@ -15,14 +26,10 @@ import heroImg from "../assets/images/GettyImages-2212662948.jpg";
  */
 const PHASE2_SECTIONS = [
   { id: "quick-recall", label: "Quick Recall", group: "learn" as const },
-  { id: "memory-refresh", label: "Memory Refresh", group: "learn" as const },
   { id: "problem-first", label: "Problem First", group: "learn" as const },
-  { id: "guided-examples", label: "Prompt Examples", group: "learn" as const },
-  { id: "agent-examples", label: "Agent Examples", group: "learn" as const },
-  { id: "use-case-map", label: "Activity Choice", group: "apply" as const },
-  { id: "live-brainstorm", label: "Live Brainstorm", group: "apply" as const },
+  { id: "your-use-cases", label: "Your Use Cases", group: "apply" as const },
   { id: "deliverables", label: "Outputs", group: "apply" as const },
-  { id: "next-steps", label: "What's Next", group: "apply" as const },
+  { id: "workshop-library", label: "Library", group: "apply" as const },
 ];
 
 // ── Quick Recall data — verbatim from PDF slide 2 ────────────────────────────
@@ -59,6 +66,20 @@ const AGENT_ROLE = [
   "Uses specified knowledge sources",
   "Follows workflows and restrictions",
   "Produces outputs for human review",
+];
+
+const PROCODE_TASKS = [
+  "Complex multi-step automation",
+  "Custom integrations with enterprise systems",
+  "Advanced data transformation pipelines",
+  "Scalable workflow orchestration",
+];
+
+const PROCODE_ROLE = [
+  "Built by developers or technical teams",
+  "Requires coding and API access",
+  "Suited for organisation-wide deployment",
+  "Maintained with version control and testing",
 ];
 
 // ── Animation keyframes injected once ────────────────────────────────────────
@@ -112,239 +133,17 @@ const TO_ITEMS = [
   "Discovering your own priority opportunities",
 ];
 
-// ── Memory Refresh data — verbatim from PDF slide 3 ─────────────────────────
-const PROMPT_ELEMENTS = [
-  { n: 1, kw: "Persona",       sub: "Perspective" },
-  { n: 2, kw: "Context",       sub: "Relevant facts" },
-  { n: 3, kw: "Objective",     sub: "What AI should do" },
-  { n: 4, kw: "Instructions",  sub: "Steps and criteria" },
-  { n: 5, kw: "Sources",       sub: "Material to use" },
-  { n: 6, kw: "Output",        sub: "Format and detail" },
-  { n: 7, kw: "Constraints",   sub: "What not to assume or do" },
-  { n: 8, kw: "Review",        sub: "What the user must verify" },
-];
-
-const AGENT_ELEMENTS = [
-  { n: 1, kw: "Purpose",               sub: "Goal to accomplish" },
-  { n: 2, kw: "General guidance",      sub: "Directions, tone, restrictions" },
-  { n: 3, kw: "Skills",                sub: "Support expected" },
-  { n: 4, kw: "Workflow",              sub: "Steps to follow" },
-  { n: 5, kw: "Knowledge",             sub: "Approved information" },
-  { n: 6, kw: "Errors & limitations",  sub: "When to stop or clarify" },
-  { n: 7, kw: "Examples",              sub: "Appropriate interaction" },
-  { n: 8, kw: "Follow-up & closing",   sub: "How to complete the exchange" },
-];
-
-// ── Memory Refresh section ───────────────────────────────────────────────────
-function MemoryRefreshSection() {
-  const [activeTab, setActiveTab] = useState<"prompt" | "agent">("prompt");
-  const [subsVisible, setSubsVisible] = useState(false);
-  const [hoveredTile, setHoveredTile] = useState<number | null>(null);
-
-  const isPrompt = activeTab === "prompt";
-  const elements = isPrompt ? PROMPT_ELEMENTS : AGENT_ELEMENTS;
-  const accentColor = isPrompt ? colors.yellow : colors.framePurple;
-  const accentText = isPrompt ? colors.confidentBlack : colors.white;
-
-  const switchTab = (tab: "prompt" | "agent") => {
-    setActiveTab(tab);
-    setSubsVisible(false);
-  };
-
-  return (
-    <section
-      id="memory-refresh"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-        background: colors.confidentBlack,
-        padding: `${spacing.sectionPaddingY} 0`,
-        width: "100%",
-      }}
-    >
-      <div style={{ ...contentRailStyle }}>
-
-        {/* Eyebrow + heading */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking,
-            textTransform: "uppercase", color: colors.yellow, margin: "0 0 12px",
-          }}>
-            Memory Refresh
-          </p>
-          <h2 style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(22px, 3.5vw, 36px)",
-            color: colors.white,
-            margin: "0 0 8px",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.1,
-          }}>
-            Good Outcomes Begin with Clear Instructions
-          </h2>
-          <p style={{
-            fontFamily: fonts.regular, fontSize: "clamp(14px, 1.5vw, 16px)",
-            color: colors.onDarkMuted, margin: 0, lineHeight: 1.5,
-          }}>
-            Recall the building blocks — without repeating the full Phase 1 training.
-          </p>
-        </div>
-
-        {/* Tab toggle + show descriptions row */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 28,
-          gap: 12,
-        }}>
-        <div style={{
-          display: "inline-flex",
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 8,
-          padding: 4,
-          gap: 4,
-        }}>
-          {(["prompt", "agent"] as const).map((tab) => {
-            const active = activeTab === tab;
-            const tabAccent = tab === "prompt" ? colors.yellow : colors.framePurple;
-            const tabText = tab === "prompt" ? colors.confidentBlack : colors.white;
-            const label = tab === "prompt" ? "Effective Prompt" : "Effective M365 Agent instructions";
-            return (
-              <button
-                key={tab}
-                onClick={() => switchTab(tab)}
-                style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 13,
-                  letterSpacing: "-0.01em",
-                  color: active ? tabText : colors.gray01,
-                  background: active ? tabAccent : "transparent",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "8px 18px",
-                  cursor: "pointer",
-                  transition: "background 200ms, color 200ms",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-          {/* Show/hide descriptions — right-aligned, inline with tabs */}
-          <button
-            onClick={() => setSubsVisible((v) => !v)}
-            style={{
-              fontFamily: fonts.bold, fontSize: 12,
-              color: accentColor,
-              background: "transparent",
-              border: `1px solid ${accentColor}`,
-              borderRadius: 20, padding: "6px 16px",
-              cursor: "pointer", letterSpacing: "-0.01em",
-              display: "inline-flex", alignItems: "center", gap: 6,
-              opacity: 0.85,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {subsVisible ? "Hide descriptions" : "Show descriptions"}
-            {subsVisible ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        </div>
-
-        {/* 2×4 tile grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: "clamp(8px, 1.2vw, 14px)",
-          marginBottom: 20,
-        }}>
-          {elements.map((el) => {
-            const showSub = subsVisible || hoveredTile === el.n;
-            const isHovered = hoveredTile === el.n;
-            return (
-              <div
-                key={`${activeTab}-${el.n}`}
-                onMouseEnter={() => setHoveredTile(el.n)}
-                onMouseLeave={() => setHoveredTile(null)}
-                style={{
-                  background: isHovered ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.06)",
-                  border: `1px solid ${isHovered ? accentColor : "rgba(255,255,255,0.1)"}`,
-                  borderRadius: 8,
-                  padding: "clamp(14px, 1.5vw, 20px)",
-                  animation: "ey-slide-up 260ms cubic-bezier(.22,.68,0,1.05) both",
-                  animationDelay: `${el.n * 30}ms`,
-                  cursor: "default",
-                  transition: "background 180ms, border-color 180ms",
-                }}
-              >
-                <span style={{
-                  fontFamily: fonts.bold, fontSize: 11,
-                  color: accentColor, display: "block", marginBottom: 6,
-                }}>
-                  {el.n}
-                </span>
-                <span style={{
-                  fontFamily: fonts.bold, fontSize: 13,
-                  color: colors.white, lineHeight: 1.3, display: "block",
-                }}>
-                  {el.kw}
-                </span>
-                {showSub && (
-                  <span style={{
-                    fontFamily: fonts.regular, fontSize: 12,
-                    color: colors.onDarkMuted, lineHeight: 1.4,
-                    display: "block", marginTop: 6,
-                    borderTop: "1px solid rgba(255,255,255,0.08)",
-                    paddingTop: 6,
-                    animation: "ey-hero-fade-up 200ms cubic-bezier(.22,.68,0,1.05) both",
-                  }}>
-                    {el.sub}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Show/hide descriptions */}
-        {/* Transition line — verbatim from PDF */}
-        <div style={{
-          borderTop: "1px solid rgba(255,255,255,0.1)",
-          paddingTop: 28,
-          textAlign: "center",
-        }}>
-          <p style={{
-            fontFamily: fonts.regular, fontSize: "clamp(14px, 1.5vw, 17px)",
-            color: colors.onDarkMuted, margin: "0 0 4px",
-          }}>
-            Now that we know how to instruct AI,
-          </p>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: "clamp(15px, 1.6vw, 18px)",
-            color: colors.yellow, margin: 0, letterSpacing: "-0.01em",
-          }}>
-            which tax activities are worth redesigning?
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ── Problem First data — verbatim from PDF slide 4 ──────────────────────────
 const PROBLEM_STEPS = [
   {
     n: "01",
-    q: "What work is being performed?",
-    details: ["Tax process and key activities", "Trigger and required output"],
+    q: "Where does effort or friction arise?",
+    details: ["Searching, reviewing, comparing, drafting", "Follow-ups, tracking, evidence and reporting"],
   },
   {
     n: "02",
-    q: "Where does effort or friction arise?",
-    details: ["Searching, reviewing, comparing, drafting", "Follow-ups, tracking, evidence and reporting"],
+    q: "What work is being performed?",
+    details: ["Tax process and key activities", "Trigger and required output"],
   },
   {
     n: "03",
@@ -389,25 +188,12 @@ function ProblemFirstSection() {
 
       <div style={{ ...contentRailStyle }}>
 
-        {/* Eyebrow + heading + progress */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8 }}>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking,
-            textTransform: "uppercase", color: colors.eyebrowGold, margin: 0,
-          }}>
-            Problem First
-          </p>
-          {!promptVisible && (
-            <span style={{
-              fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em",
-              color: colors.gray01, background: colors.offWhite,
-              border: `1px solid ${colors.gray02}`,
-              borderRadius: 20, padding: "3px 12px",
-            }}>
-              {revealed} of {PROBLEM_STEPS.length}
-            </span>
-          )}
-        </div>
+        <p style={{
+          fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking,
+          textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 8px",
+        }}>
+          Problem First
+        </p>
 
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <h2 style={{
@@ -532,24 +318,22 @@ function ProblemFirstSection() {
           })}
         </div>
 
-        {/* Workshop prompt — appears after all 4 revealed */}
+        {/* Workshop strip — appears after all 4 revealed */}
         {promptVisible && (
           <div
             style={{
               marginTop: 8,
               background: colors.yellow,
               borderRadius: 10,
-              padding: "clamp(24px, 3vw, 36px)",
+              padding: "clamp(20px, 2.5vw, 32px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 24,
+              flexWrap: "wrap",
               animation: "ey-slide-up 420ms cubic-bezier(.22,.68,0,1.05) both",
             }}
           >
-            <p style={{
-              fontFamily: fonts.bold, fontSize: 10,
-              letterSpacing: "0.1em", textTransform: "uppercase",
-              color: colors.confidentBlack, margin: "0 0 12px", opacity: 0.6,
-            }}>
-              Workshop Prompt
-            </p>
             <p style={{
               fontFamily: fonts.bold,
               fontSize: "clamp(16px, 2vw, 20px)",
@@ -557,9 +341,37 @@ function ProblemFirstSection() {
               margin: 0,
               lineHeight: 1.45,
               letterSpacing: "-0.01em",
+              flex: "1 1 240px",
             }}>
-              Which tax processes consume the most effort today — and which individual activities create that effort?
+              Let&apos;s begin brainstorming?
             </p>
+            <div
+              aria-label="QR code placeholder"
+              style={{
+                width: 88,
+                height: 88,
+                flexShrink: 0,
+                background: colors.white,
+                border: `1px solid ${colors.confidentBlack}`,
+                borderRadius: 8,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+              }}
+            >
+              <QrCode size={36} strokeWidth={1.75} color={colors.confidentBlack} aria-hidden />
+              <span style={{
+                fontFamily: fonts.bold,
+                fontSize: 10,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: colors.gray01,
+              }}>
+                QR
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -660,6 +472,266 @@ const GUIDED_EXAMPLES = [
     outcome: "Produces updated SOPs or a gap analysis highlighting required changes to align with current requirements.",
   },
 ];
+
+const RECALL_PROMPT_EXAMPLES = GUIDED_EXAMPLES.slice(0, 4);
+const RECALL_AGENT_EXAMPLES = AGENT_TEMPLATE_LIBRARY.slice(0, 4);
+
+type RecallExampleKind = "prompt" | "agent";
+
+type RecallExampleDetail = {
+  kind: RecallExampleKind;
+  name: string;
+  fields: { label: string; body: string }[];
+};
+
+function agentRecallFields(agent: (typeof AGENT_TEMPLATE_LIBRARY)[number]): RecallExampleDetail["fields"] {
+  const bodyFor = (sub: string) => agent.slides.find((s) => s.sub === sub)?.body ?? "";
+  return [
+    { label: "Purpose", body: bodyFor("Purpose") },
+    { label: "Actions", body: bodyFor("Actions") },
+    { label: "Outcome", body: bodyFor("Outcome") },
+  ];
+}
+
+/** Overlay with purpose / approach or actions / outcome for a Quick Recall example. */
+function RecallExampleModal({ detail, onClose }: { detail: RecallExampleDetail; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const isPrompt = detail.kind === "prompt";
+  const accent = isPrompt ? colors.yellow : colors.framePurple;
+  const badgeColor = isPrompt ? colors.confidentBlack : colors.white;
+
+  useEffect(() => {
+    closeRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="presentation"
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9998,
+        background: `color-mix(in srgb, ${colors.confidentBlack} 72%, transparent)`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recall-example-title"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(560px, 100%)",
+          maxHeight: "88vh",
+          overflowY: "auto",
+          background: colors.white,
+          borderRadius: 10,
+          borderTop: `4px solid ${accent}`,
+          boxShadow: `0 20px 48px color-mix(in srgb, ${colors.confidentBlack} 28%, transparent)`,
+          padding: "24px 28px 28px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 18 }}>
+          <div>
+            <span
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: badgeColor,
+                background: isPrompt ? colors.yellow : colors.framePurple,
+                borderRadius: 4,
+                padding: "3px 10px",
+                display: "inline-block",
+                marginBottom: 10,
+              }}
+            >
+              {isPrompt ? "Prompt" : "M365 Agent"}
+            </span>
+            <h3
+              id="recall-example-title"
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: 22,
+                color: colors.offBlack,
+                margin: 0,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.2,
+              }}
+            >
+              {detail.name}
+            </h3>
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Close example"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: colors.offWhite,
+              border: `1px solid ${colors.gray02}`,
+              color: colors.offBlack,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <X size={18} strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
+
+        {detail.fields.map((field, i) => (
+          <div key={field.label} style={{ marginBottom: i === detail.fields.length - 1 ? 0 : 20 }}>
+            {i > 0 && <div style={{ height: 1, background: colors.gray02, marginBottom: 16 }} />}
+            <p
+              style={{
+                fontFamily: fonts.bold,
+                fontSize: 10,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: colors.eyebrowGold,
+                margin: "0 0 8px",
+              }}
+            >
+              {field.label}
+            </p>
+            <p
+              style={{
+                fontFamily: fonts.regular,
+                fontSize: 14,
+                color: colors.offBlack,
+                margin: 0,
+                lineHeight: 1.6,
+              }}
+            >
+              {field.body}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Your Use Cases — workshop buckets (Prompt / Agent / Pro Code) ─────────────
+function UseCaseBucketsSection() {
+  const [entries, setEntries] = useState<Record<UseCaseBucketId, string[]>>(() => readStoredUseCaseEntries());
+  const [drafts, setDrafts] = useState<Record<UseCaseBucketId, string>>(EMPTY_USE_CASE_DRAFTS);
+
+  useEffect(() => {
+    writeStoredUseCaseEntries(entries);
+  }, [entries]);
+
+  const addEntry = (bucketId: UseCaseBucketId) => {
+    const text = drafts[bucketId].trim();
+    if (!text) return;
+    setEntries((prev) => ({ ...prev, [bucketId]: [...prev[bucketId], text] }));
+    setDrafts((prev) => ({ ...prev, [bucketId]: "" }));
+  };
+
+  const removeEntry = (bucketId: UseCaseBucketId, index: number) => {
+    setEntries((prev) => ({
+      ...prev,
+      [bucketId]: prev[bucketId].filter((_, i) => i !== index),
+    }));
+  };
+
+  const moveEntry = (
+    fromBucket: UseCaseBucketId,
+    fromIndex: number,
+    toBucket: UseCaseBucketId,
+    toIndex?: number,
+  ) => {
+    setEntries((prev) => moveUseCaseEntry(prev, fromBucket, fromIndex, toBucket, toIndex));
+  };
+
+  return (
+    <section
+      id="your-use-cases"
+      style={{
+        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
+        background: colors.confidentBlack,
+        padding: `${spacing.sectionPaddingY} 0`,
+        width: "100%",
+      }}
+    >
+      <div style={{ ...contentRailStyle }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <p style={{
+            fontFamily: fonts.bold,
+            fontSize: typeScale.label.size,
+            letterSpacing: typeScale.label.tracking,
+            textTransform: "uppercase",
+            color: colors.yellow,
+            margin: "0 0 12px",
+          }}>
+            Your Use Cases
+          </p>
+          <h2 style={{
+            fontFamily: fonts.bold,
+            fontSize: "clamp(22px, 3.5vw, 36px)",
+            color: colors.onDark,
+            margin: "0 0 8px",
+            letterSpacing: "-0.02em",
+            lineHeight: 1.1,
+          }}>
+            Sort Each Idea into the Right Box
+          </h2>
+          <p style={{
+            fontFamily: fonts.regular,
+            fontSize: "clamp(13px, 1.4vw, 15px)",
+            color: colors.onDarkMuted,
+            margin: 0,
+            lineHeight: 1.5,
+            maxWidth: 680,
+            marginLeft: "auto",
+            marginRight: "auto",
+          }}>
+            Use the same Prompt, M365 Agent and Pro Code buckets from Quick Recall.
+            Add tax activities from your workshop discussion — one box per lever.
+            Drag an idea into another box if you change your mind.
+          </p>
+        </div>
+
+        <UseCaseBucketCards
+          sectionId="your-use-cases"
+          entries={entries}
+          editable
+          drafts={drafts}
+          onDraftChange={(bucketId, value) => setDrafts((prev) => ({ ...prev, [bucketId]: value }))}
+          onAdd={addEntry}
+          onRemove={removeEntry}
+          onMove={moveEntry}
+        />
+      </div>
+    </section>
+  );
+}
 
 // ── Guided Examples section ──────────────────────────────────────────────────
 function GuidedExamplesSection() {
@@ -926,866 +998,121 @@ function GuidedExamplesSection() {
           </div>
         </div>
 
-        {/* Discussion prompt — always visible below */}
+
+      </div>
+    </section>
+  );
+}
+
+// ── Workshop Library — browsable prompt template shelf ───────────────────────
+function WorkshopLibrarySection() {
+  return (
+    <section
+      id="workshop-library"
+      style={{
+        scrollMarginTop: SUBNAV_SCROLL_MARGIN,
+        background: colors.offWhite,
+        padding: `${spacing.sectionPaddingY} 0`,
+        width: "100%",
+      }}
+    >
+      <div style={{ ...contentRailStyle }}>
+        {/* Deliverable 3 — dark header + bookshelf in one frame */}
         <div
-          id="discussion-prompt"
           style={{
-            marginTop: 24,
-            background: colors.yellow,
+            background: colors.white,
+            border: `1px solid ${colors.gray02}`,
             borderRadius: 10,
-            padding: "clamp(24px, 3vw, 36px)",
-            animation: isLast ? "ey-slide-up 300ms cubic-bezier(.22,.68,0,1.05) both" : undefined,
+            overflow: "hidden",
           }}
         >
-          <p style={{
-            fontFamily: fonts.bold, fontSize: 10,
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            color: colors.confidentBlack, margin: "0 0 12px", opacity: 0.6,
-          }}>
-            Discussion Prompt
-          </p>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(16px, 2vw, 20px)",
-            color: colors.confidentBlack,
-            margin: 0,
-            lineHeight: 1.45,
-            letterSpacing: "-0.01em",
-          }}>
-            Which recurring tax activity would benefit from stronger extraction, comparison, analysis,
-            explanation, validation or a first draft?
-          </p>
-        </div>
-
-      </div>
-    </section>
-  );
-}
-
-// ── M365 Agent Examples data — verbatim from PDF slide 6 ───────────────────
-const AGENT_EXAMPLES = [
-  {
-    name: "Tax Knowledge Retrieval Agent",
-    purpose: "Acts as a centralized knowledge assistant for locating historical tax positions, precedents and supporting materials.",
-    actions: "Searches approved repositories containing tax opinions, notices, submissions, laws, policies and knowledge documents.",
-    outcome: "Enables faster research, improves consistency in tax positions and reduces time spent searching for information.",
-  },
-  {
-    name: "Transfer Pricing Documentation Agent",
-    purpose: "Supports preparation and maintenance of transfer pricing documentation and supporting evidence.",
-    actions: "Reviews related-party schedules, TP reports, benchmarking studies, GL records and supporting documentation.",
-    outcome: "Identifies transactions, summarizes supporting information, highlights exceptions and improves audit readiness.",
-  },
-  {
-    name: "Advance Tax Reviewer Agent",
-    purpose: "Assists tax teams in reviewing advance tax computations and identifying key movements between reporting periods.",
-    actions: "Compares current and prior quarter computations, validates changes in assumptions and workings, and analyses variances across tax forecasts and calculations.",
-    outcome: "Produces variance analysis narratives, management summary notes and review observations that support faster validation, stakeholder reporting and decision-making.",
-  },
-  {
-    name: "Tax Information Request Agent",
-    purpose: "Streamlines the collection and management of information required from stakeholders during tax projects.",
-    actions: "Drafts information requests, reviews responses, summarizes stakeholder inputs and identifies missing information.",
-    outcome: "Reduces follow-up effort and improves the completeness and quality of information received.",
-  },
-  {
-    name: "Assessment Evidence Agent",
-    purpose: "Assists tax teams in gathering and organizing supporting evidence for audits, assessments and disputes.",
-    actions: "Searches SharePoint, Teams, Outlook and supporting repositories for relevant documentation and correspondence.",
-    outcome: "Creates issue-wise evidence packs, highlights missing support and strengthens audit preparedness.",
-  },
-  {
-    name: "Tax Leadership Reporting Agent",
-    purpose: "Provides leadership with periodic consolidated visibility over tax activities, developments and risks.",
-    actions: "Collects status updates, auditor comments, legislative changes and regional tax developments for analysis.",
-    outcome: "Produces executive dashboards, management reports and briefing materials to support decision-making.",
-  },
-  {
-    name: "Personalized Tracker Agent (including Compliance Tracker)",
-    purpose: "Acts as a centralized monitoring tool for tax compliance activities, deadlines and action items.",
-    actions: "Maintains compliance calendars, trackers, filing records and related correspondence.",
-    outcome: "Identifies upcoming, due and overdue obligations, highlights risks and supports timely compliance management.",
-  },
-  {
-    name: "Repetitive Tax Correspondence Agent",
-    purpose: "Standardizes recurring tax communications across stakeholders, management and employees.",
-    actions: "Generates communication templates, drafts correspondence, refines messaging and applies approved communication standards.",
-    outcome: "Improves consistency, reduces drafting effort and accelerates turnaround of routine communications.",
-  },
-  {
-    name: "Second Brain Agent",
-    purpose: "Acts as a personalized tax knowledge companion that helps professionals quickly access information, insights and prior work products accumulated over time.",
-    actions: "Searches across emails, meeting notes, presentations, research materials, working papers, tax opinions and enterprise repositories to build contextual understanding.",
-    outcome: "Enables users to retrieve historical knowledge, identify relevant precedents, surface action items and obtain context-aware guidance without manually searching through multiple sources.",
-  },
-];
-
-// ── M365 Agent Examples section ──────────────────────────────────────────────
-function AgentExamplesSection() {
-  const [activeIdx, setActiveIdx] = useState<number>(0);
-
-  const agent = AGENT_EXAMPLES[activeIdx];
-
-  return (
-    <section
-      id="agent-examples"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-        background: colors.white,
-        padding: `${spacing.sectionPaddingY} 0`,
-        width: "100%",
-      }}
-    >
-      <div style={{ ...contentRailStyle }}>
-
-        {/* Eyebrow + heading + intro */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking,
-            textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 12px",
-          }}>
-            Guided Examples
-          </p>
-          <h2 style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(22px, 3.5vw, 36px)",
-            color: colors.offBlack,
-            margin: "0 0 8px",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.1,
-          }}>
-            EY-Guided M365 Agent Examples
-          </h2>
-          <p style={{
-            fontFamily: fonts.regular, fontSize: "clamp(13px, 1.4vw, 15px)",
-            color: colors.gray01, margin: 0, lineHeight: 1.5,
-          }}>
-            Purpose, actions and outcome as summarised in Sheet1 of Sample use cases.xlsx.
-            Agents are reusable assistants for clearly defined business scenarios.
-          </p>
-        </div>
-
-        {/* Tile rows — detail panel injects after the row containing the active tile */}
-        {[0, 1, 2].map((rowIdx) => {
-          const rowStart = rowIdx * 3;
-          const rowAgents = AGENT_EXAMPLES.slice(rowStart, rowStart + 3);
-          const activeRow = Math.floor(activeIdx / 3);
-          const showPanel = activeRow === rowIdx;
-
-          return (
-            <div key={rowIdx} style={{ marginBottom: 10 }}>
-              {/* Tile row */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 10,
-              }}>
-                {rowAgents.map((a, i) => {
-                  const idx = rowStart + i;
-                  const isActive = activeIdx === idx;
-                  return (
-                    <button
-                      key={a.name}
-                      onClick={() => setActiveIdx(idx)}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: 10,
-                        padding: "14px 16px",
-                        background: isActive ? "rgba(134,48,255,0.08)" : colors.white,
-                        border: `1px solid ${isActive ? colors.framePurple : colors.gray02}`,
-                        borderBottom: isActive ? `3px solid ${colors.framePurple}` : `1px solid ${colors.gray02}`,
-                        borderRadius: 6,
-                        cursor: "pointer",
-                        textAlign: "left",
-                        transition: "background 180ms, border-color 180ms",
-                        userSelect: "none",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) (e.currentTarget as HTMLElement).style.background = "rgba(134,48,255,0.03)";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) (e.currentTarget as HTMLElement).style.background = colors.white;
-                      }}
-                    >
-                      <span style={{
-                        fontFamily: fonts.bold, fontSize: 11,
-                        color: isActive ? colors.framePurple : colors.gray01,
-                        lineHeight: 1.4, flexShrink: 0, marginTop: 1,
-                      }}>
-                        {String(idx + 1).padStart(2, "0")}
-                      </span>
-                      <span style={{
-                        fontFamily: fonts.bold, fontSize: 12,
-                        color: isActive ? colors.framePurple : colors.offBlack,
-                        lineHeight: 1.35, letterSpacing: "-0.01em",
-                        transition: "color 180ms",
-                      }}>
-                        {a.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Detail panel — only for the active row */}
-              {showPanel && (
-                <div
-                  key={activeIdx}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "clamp(16px, 2vw, 28px)",
-                    background: colors.white,
-                    borderTop: `1px solid ${colors.gray02}`,
-                    borderRight: `1px solid ${colors.gray02}`,
-                    borderBottom: `1px solid ${colors.gray02}`,
-                    borderLeft: `3px solid ${colors.framePurple}`,
-                    borderRadius: 8,
-                    padding: "clamp(16px, 2vw, 24px) clamp(20px, 2.5vw, 28px)",
-                    minHeight: 140,
-                    animation: "ey-slide-up 180ms cubic-bezier(.22,.68,0,1.05) both",
-                    marginTop: 8,
-                    marginBottom: 10,
-                  }}
-                >
-                  {[
-                    { label: "Purpose", body: agent.purpose },
-                    { label: "Actions", body: agent.actions },
-                    { label: "Outcome", body: agent.outcome },
-                  ].map(({ label, body }) => (
-                    <div key={label}>
-                      <p style={{
-                        fontFamily: fonts.bold, fontSize: 10, letterSpacing: "0.1em",
-                        textTransform: "uppercase", color: colors.eyebrowGold,
-                        margin: "0 0 8px",
-                      }}>
-                        {label}
-                      </p>
-                      <p style={{
-                        fontFamily: fonts.regular, fontSize: 13,
-                        color: colors.offBlack, margin: 0, lineHeight: 1.6,
-                      }}>
-                        {body}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Discussion prompt */}
-        <div style={{
-          marginTop: 6,
-          background: "rgba(134,48,255,0.07)",
-          border: `1px solid rgba(134,48,255,0.18)`,
-          borderLeft: `3px solid ${colors.framePurple}`,
-          borderRadius: 10,
-          padding: "clamp(20px, 2.5vw, 28px)",
-        }}>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: 10,
-            letterSpacing: "0.1em", textTransform: "uppercase",
-            color: colors.framePurple, margin: "0 0 12px",
-          }}>
-            Discussion Prompt
-          </p>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(16px, 2vw, 20px)",
-            color: colors.offBlack,
-            margin: 0,
-            lineHeight: 1.45,
-            letterSpacing: "-0.01em",
-          }}>
-            Which recurring tax workflow repeatedly requires people to search, collect,
-            coordinate, track or report?
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ── Activity-Level Choice section (Slide 7) ─────────────────────────────────
-const ACTIVITY_ROWS = [
-  { activity: "Request projected financials from business units", pain: "Multiple follow-ups", type: "agent" as const, response: "M365 Agent" },
-  { activity: "Collect qualitative tax inputs", pain: "Inputs buried in email and Teams", type: "agent" as const, response: "M365 Agent" },
-  { activity: "Summarise business changes affecting forecast", pain: "Manual review of communications and forecasts", type: "prompt" as const, response: "Prompt" },
-  { activity: "Compare current and prior-quarter assumptions", pain: "Time spent reviewing historical workings", type: "prompt" as const, response: "Prompt" },
-  { activity: "Prepare variance narrative", pain: "Manual drafting", type: "prompt" as const, response: "Prompt" },
-  { activity: "Consolidate business-unit comments", pain: "Inputs received through different channels", type: "agent" as const, response: "M365 Agent" },
-  { activity: "Draft communication to Treasury or business", pain: "Recurring communication within a broader workflow", type: "both" as const, response: "Prompt and/or Agent — subject to workflow design" },
-  { activity: "Archive challans, approvals and supporting files", pain: "Manual document organisation", type: "agent" as const, response: "M365 Agent" },
-];
-
-const LEGEND_CARDS = [
-  {
-    key: "prompt" as const,
-    title: "Consider a Prompt",
-    accentColor: "#0076A8",
-    bullets: [
-      "User-initiated task",
-      "Defined input",
-      "Interpretation, review or drafting",
-      "Output varies with facts",
-      "Professional closely involved",
-    ],
-  },
-  {
-    key: "agent" as const,
-    title: "Consider an Agent",
-    accentColor: "#B400FF",
-    bullets: [
-      "Activity repeats",
-      "Multiple people or repositories",
-      "Collection, retrieval or tracking",
-      "Workflow can be instructed",
-      "Outputs and escalation can be defined",
-    ],
-  },
-  {
-    key: "both" as const,
-    title: "Consider both",
-    accentColor: "#168736",
-    bullets: [
-      "Agent coordinates or retrieves",
-      "Prompt interprets, analyses or drafts",
-    ],
-  },
-];
-
-const BADGE_CONFIG = {
-  prompt: { bg: "rgba(0,118,168,0.10)", color: "#0076A8" },
-  agent:  { bg: "rgba(180,0,255,0.06)", color: "#B400FF" },
-  both:   { bg: "rgba(22,135,54,0.10)",  color: "#168736" },
-};
-
-function ActivityLevelChoiceSection() {
-  const [activeFilter, setActiveFilter] = useState<"prompt" | "agent" | "both" | null>(null);
-
-  const toggleFilter = (key: "prompt" | "agent" | "both") => {
-    setActiveFilter((prev) => (prev === key ? null : key));
-  };
-
-  const rowVisible = (type: "prompt" | "agent" | "both") =>
-    activeFilter === null || activeFilter === type;
-
-  return (
-    <section
-      id="use-case-map"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-        background: "rgba(0,163,255,0.05)",
-        padding: `${spacing.sectionPaddingY} 0`,
-        width: "100%",
-      }}
-    >
-      <style>{`
-        @keyframes ey-row-step-back {
-          from { opacity: 1; transform: translateX(0); }
-          to   { opacity: 0.45; transform: translateX(-4px); }
-        }
-        @keyframes ey-row-step-forward {
-          from { opacity: 0.45; transform: translateX(-4px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
-
-      <div style={{ ...contentRailStyle }}>
-
-        {/* Eyebrow + heading */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <p style={{
-            fontFamily: fonts.bold, fontSize: typeScale.label.size, letterSpacing: typeScale.label.tracking,
-            textTransform: "uppercase", color: colors.eyebrowGold, margin: "0 0 12px",
-          }}>
-            Activity-Level Choice
-          </p>
-          <h2 style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(22px, 3.5vw, 36px)",
-            color: colors.offBlack,
-            margin: "0 0 8px",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.1,
-          }}>
-            One Process. Different Activities. Different Solutions.
-          </h2>
-          <p style={{
-            fontFamily: fonts.regular, fontSize: "clamp(13px, 1.4vw, 15px)",
-            color: colors.gray01, margin: 0, lineHeight: 1.5,
-          }}>
-            Illustrative advance-tax mapping from the workbook: classify each activity separately.
-          </p>
-        </div>
-
-        {/* Legend cards */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 12,
-          marginBottom: 20,
-        }}>
-          {LEGEND_CARDS.map((card) => {
-            const isActive = activeFilter === card.key;
-            return (
-              <button
-                key={card.key}
-                onClick={() => toggleFilter(card.key)}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "120px 1fr",
+            }}
+          >
+            <div
+              style={{
+                background: colors.confidentBlack,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "32px 0",
+              }}
+            >
+              <span
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  textAlign: "left",
-                  padding: 0,
-                  background: colors.white,
-                  border: `1px solid ${isActive ? card.accentColor : colors.gray02}`,
-                  borderTop: isActive ? `1px solid ${card.accentColor}` : `3px solid ${card.accentColor}`,
-                  borderRadius: 6,
-                  cursor: "pointer",
-                  transition: "border-color 180ms",
-                  userSelect: "none",
-                  overflow: "hidden",
-                  boxShadow: isActive ? `0 2px 12px ${card.accentColor}28` : "none",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive) (e.currentTarget as HTMLElement).style.background = `${card.accentColor}08`;
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) (e.currentTarget as HTMLElement).style.background = colors.white;
+                  fontFamily: fonts.bold,
+                  fontSize: 56,
+                  lineHeight: 1,
+                  color: colors.onDark,
+                  letterSpacing: "-0.04em",
                 }}
               >
-                {/* Header band — only when active */}
-                {isActive && (
-                  <div style={{
-                    background: card.accentColor,
-                    padding: "10px 18px",
-                    borderRadius: "5px 5px 0 0",
-                  }}>
-                    <p style={{
-                      fontFamily: fonts.bold, fontSize: 13,
-                      color: colors.white, margin: 0,
-                      letterSpacing: "-0.01em",
-                    }}>
-                      {card.title}
-                    </p>
-                  </div>
-                )}
-
-                {/* Body */}
-                <div style={{ padding: isActive ? "14px 18px" : "16px 18px" }}>
-                  {!isActive && (
-                    <p style={{
-                      fontFamily: fonts.bold, fontSize: 13,
-                      color: card.accentColor, margin: "0 0 10px",
-                      letterSpacing: "-0.01em",
-                    }}>
-                      {card.title}
-                    </p>
-                  )}
-                  <ul style={{ margin: 0, padding: "0 0 0 14px", listStyle: "disc" }}>
-                    {card.bullets.map((b) => (
-                      <li key={b} style={{
-                        fontFamily: fonts.regular, fontSize: 12,
-                        color: colors.offBlack, lineHeight: 1.55,
-                        marginBottom: 3,
-                      }}>
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Table */}
-        <div style={{
-          border: `1px solid ${colors.gray02}`,
-          borderRadius: 8,
-          overflow: "hidden",
-          background: colors.white,
-          marginBottom: 16,
-        }}>
-          {/* Header row */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "2fr 2fr 1.2fr",
-            background: colors.offBlack,
-            padding: "10px 20px",
-          }}>
-            {["Activity", "Current Pain Point", "Possible Response"].map((h) => (
-              <p key={h} style={{
-                fontFamily: fonts.bold, fontSize: 11,
-                color: colors.yellow, margin: 0,
-                letterSpacing: "0.06em", textTransform: "uppercase",
-              }}>
-                {h}
+                03
+              </span>
+            </div>
+            <div
+              style={{
+                padding: "32px 36px 16px",
+                background: colors.eyBgCard,
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-flex",
+                  border: `1px solid ${colors.yellow}`,
+                  borderRadius: 100,
+                  padding: "3px 10px",
+                  marginBottom: 14,
+                  fontFamily: fonts.bold,
+                  fontSize: 10,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: colors.yellow,
+                }}
+              >
+                Deliverable 3
+              </span>
+              <h2
+                style={{
+                  fontFamily: fonts.bold,
+                  fontSize: 20,
+                  color: colors.onDark,
+                  margin: "0 0 10px",
+                  lineHeight: 1.2,
+                }}
+              >
+                Workshop Reference Library
+              </h2>
+              <p
+                style={{
+                  fontFamily: fonts.regular,
+                  fontSize: 14,
+                  color: colors.onDarkMuted,
+                  margin: 0,
+                  lineHeight: 1.6,
+                }}
+              >
+                After the process maps and recommendation note, open a Prompt or Agent book on the shelf for worked examples.
               </p>
-            ))}
+              <WorkshopLibraryShareActions />
+            </div>
           </div>
 
-          {/* Data rows */}
-          {ACTIVITY_ROWS.map((row, i) => {
-            const visible = rowVisible(row.type);
-            const isLast = i === ACTIVITY_ROWS.length - 1;
-            const badge = BADGE_CONFIG[row.type];
-            return (
-              <div
-                key={row.activity}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 2fr 1.2fr",
-                  padding: "12px 20px",
-                  borderBottom: isLast ? "none" : `1px solid ${colors.gray02}`,
-                  borderLeft: activeFilter !== null && visible ? `3px solid ${badge.color}` : "3px solid transparent",
-                  alignItems: "center",
-                  background: activeFilter !== null && visible ? badge.bg : "transparent",
-                  animation: activeFilter !== null
-                    ? visible
-                      ? "ey-row-step-forward 160ms ease-out forwards"
-                      : "ey-row-step-back 160ms ease-out forwards"
-                    : "none",
-                  opacity: activeFilter !== null && !visible ? 0.45 : 1,
-                  transition: "opacity 160ms, background 160ms, border-left-color 160ms",
-                }}
-              >
-                <p style={{
-                  fontFamily: fonts.regular, fontSize: 13,
-                  color: colors.offBlack, margin: 0, lineHeight: 1.5,
-                  paddingRight: 16,
-                }}>
-                  {row.activity}
-                </p>
-                <p style={{
-                  fontFamily: fonts.regular, fontSize: 13,
-                  color: colors.gray01, margin: 0, lineHeight: 1.5,
-                  paddingRight: 16,
-                }}>
-                  {row.pain}
-                </p>
-                <span style={{
-                  display: "inline-block",
-                  justifySelf: "start",
-                  fontFamily: fonts.bold, fontSize: 12,
-                  color: badge.color,
-                  background: badge.bg,
-                  borderRadius: 20,
-                  padding: "4px 10px",
-                  lineHeight: 1.4,
-                }}>
-                  {row.response}
-                </span>
-              </div>
-            );
-          })}
+          <div style={{ padding: "16px 16px 16px" }}>
+            <PromptBookshelfLibrary />
+          </div>
         </div>
-
-        {/* Key message bar */}
-        <div style={{
-          background: colors.yellow,
-          borderRadius: 6,
-          padding: "14px 20px",
-        }}>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(13px, 1.4vw, 15px)",
-            color: colors.offBlack,
-            margin: 0,
-            lineHeight: 1.5,
-          }}>
-            Do not classify an entire tax process as "Prompt" or "Agent." Assess each activity separately.
-          </p>
-        </div>
-
       </div>
     </section>
   );
 }
+
 
 // ── Live Brainstorm Section ──────────────────────────────────────────────────
-
-const BRAINSTORM_ITEMS = [
-  {
-    key: "A",
-    title: "PROCESS",
-    accent: "#0076A8",
-    bullets: [
-      "Process selected",
-      "Business objective",
-      "Trigger and final output",
-      "Frequency",
-    ],
-  },
-  {
-    key: "B",
-    title: "CURRENT ACTIVITIES",
-    accent: "#2DB5A0",
-    bullets: [
-      "Key steps and owners",
-      "Documents and data",
-      "Systems and repositories",
-    ],
-  },
-  {
-    key: "C",
-    title: "FRICTION",
-    accent: "#FF6D22",
-    bullets: [
-      "Time and follow-ups",
-      "Repeated searching",
-      "Errors, inconsistencies or delays",
-      "Professional judgment points",
-    ],
-  },
-  {
-    key: "D",
-    title: "OPPORTUNITY",
-    accent: "#B400FF",
-    bullets: [
-      "Prompt",
-      "M365 Agent",
-      "Prompt + Agent",
-      "Process improvement",
-      "Human-led activity",
-    ],
-  },
-  {
-    key: "E",
-    title: "CONTROL QUESTIONS",
-    accent: "#E8506B",
-    bullets: [
-      "Permitted information and sources",
-      "Qualified reviewer",
-      "Stop or escalation points",
-      "What remains human-led",
-    ],
-  },
-  {
-    key: "F",
-    title: "INITIAL PRIORITY",
-    accent: "#168736",
-    bullets: [
-      "Relevance and friction",
-      "Repeatability",
-      "Inputs and sources",
-      "Human review",
-      "Practicality",
-    ],
-  },
-] as const;
-
-function LiveBrainstormSection() {
-  const [activeKey, setActiveKey] = useState<string>("A");
-  const activeItem = BRAINSTORM_ITEMS.find((i) => i.key === activeKey)!;
-  const activeIdx = BRAINSTORM_ITEMS.findIndex((i) => i.key === activeKey);
-
-  return (
-    <section
-      id="live-brainstorm"
-      style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN,
-        background: colors.confidentBlack,
-        padding: "80px 0",
-      }}
-    >
-      <div style={{ ...contentRailStyle }}>
-        {/* Eyebrow + heading + subhead — centered per section pattern */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <p style={{
-          color: colors.yellow,
-          fontFamily: fonts.bold,
-          fontSize: typeScale.label.size,
-          letterSpacing: typeScale.label.tracking,
-          textTransform: "uppercase",
-          margin: "0 0 14px",
-        }}>
-          Live Brainstorm
-        </p>
-        <h2 style={{
-          color: colors.white,
-          fontFamily: fonts.bold,
-          fontSize: "clamp(26px, 3.2vw, 40px)",
-          margin: "0 0 14px",
-          letterSpacing: "-0.02em",
-          lineHeight: 1.1,
-        }}>
-          Your Tax Process. Your Pain Points. Your Opportunities.
-        </h2>
-        </div>
-
-        {/* Subhead */}
-        <p style={{
-          color: "rgba(255,255,255,0.72)",
-          fontFamily: fonts.regular,
-          fontSize: "clamp(13px, 1.4vw, 15px)",
-          margin: "0 0 32px",
-          lineHeight: 1.6,
-          maxWidth: 640,
-          marginLeft: "auto",
-          marginRight: "auto",
-          textAlign: "center",
-        }}>
-          EY's guided samples open the conversation. The client's validated process and pain points determine the opportunity.
-        </p>
-
-        {/* Main panel */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "220px 1fr",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 10,
-          overflow: "hidden",
-          minHeight: 340,
-        }}>
-          {/* Left nav */}
-          <nav
-            aria-label="Brainstorm framework"
-            style={{
-              borderRight: "1px solid rgba(255,255,255,0.1)",
-              display: "flex",
-              flexDirection: "column",
-              padding: "8px 0",
-            }}
-          >
-            {BRAINSTORM_ITEMS.map((item) => {
-              const isActive = activeKey === item.key;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setActiveKey(item.key)}
-                  aria-current={isActive ? "true" : undefined}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 16px",
-                    background: isActive ? "rgba(255,255,255,0.07)" : "transparent",
-                    border: "none",
-                    borderLeft: isActive
-                      ? `3px solid ${colors.yellow}`
-                      : "3px solid transparent",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "background 150ms",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.04)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.background = "transparent";
-                  }}
-                >
-                  {/* Letter badge */}
-                  <span style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    flexShrink: 0,
-                    background: isActive ? item.accent : `${item.accent}38`,
-                    border: isActive ? "none" : `1px solid ${item.accent}70`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontFamily: fonts.bold,
-                    fontSize: 12,
-                    color: colors.white,
-                    transition: "background 150ms",
-                  }}>
-                    {item.key}
-                  </span>
-                  {/* Title */}
-                  <span style={{
-                    fontFamily: fonts.bold,
-                    fontSize: 10,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: isActive ? colors.white : "rgba(255,255,255,0.5)",
-                    lineHeight: 1.4,
-                    transition: "color 150ms",
-                  }}>
-                    {item.title}
-                  </span>
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Right detail pane */}
-          <div
-            key={activeKey}
-            style={{
-              padding: "32px 40px",
-              display: "flex",
-              flexDirection: "column",
-              animation: "ey-slide-up 200ms cubic-bezier(.22,.68,0,1.05) both",
-            }}
-          >
-            {/* Title only — letter lives in the nav */}
-            <h3 style={{
-              fontFamily: fonts.bold,
-              fontSize: 18,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: colors.white,
-              margin: "0 0 20px",
-            }}>
-              {activeItem.title}
-            </h3>
-
-            {/* Accent rule */}
-            <div style={{
-              height: 3,
-              width: 36,
-              borderRadius: 2,
-              background: activeItem.accent,
-              marginBottom: 22,
-            }} />
-
-            {/* Bullet list */}
-            <ul style={{ margin: 0, padding: "0 0 0 18px", listStyle: "disc" }}>
-              {activeItem.bullets.map((b) => (
-                <li
-                  key={b}
-                  style={{
-                    fontFamily: fonts.regular,
-                    fontSize: 15,
-                    color: "rgba(255,255,255,0.85)",
-                    lineHeight: 1.75,
-                    marginBottom: 4,
-                  }}
-                >
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Key message bar */}
-        <div style={{
-          marginTop: 20,
-          background: colors.yellow,
-          borderRadius: 6,
-          padding: "14px 20px",
-        }}>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: 14,
-            color: colors.offBlack,
-            margin: 0,
-            lineHeight: 1.55,
-          }}>
-            Select one tax process. Map the activities. Name the friction. Then choose the response—Prompt, Agent, both, process change or human-led.
-          </p>
-        </div>
-
-      </div>
-    </section>
-  );
-}
 
 // ── Deliverables Section ─────────────────────────────────────────────────────
 
@@ -1795,7 +1122,7 @@ const D2_ACCENT = "#7B5EA7";
 function DeliverablesSection({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <>
-      <section id="deliverables" style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN, background: "#F4F4F8", padding: "80px 0 0" }}>
+      <section id="deliverables" style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN, background: colors.white, padding: "80px 0 0" }}>
         <div style={{ ...contentRailStyle }}>
           {/* Eyebrow + heading — centered per section pattern */}
           <div style={{ textAlign: "center", marginBottom: 8 }}>
@@ -1821,7 +1148,7 @@ function DeliverablesSection({ onNavigate }: { onNavigate: (path: string) => voi
             lineHeight: 1.6, maxWidth: 600, textAlign: "center",
             marginLeft: "auto", marginRight: "auto",
           }}>
-            The workshop converts validated client inputs into two practical Phase 2 deliverables.
+            The workshop converts validated client inputs into three practical Phase 2 deliverables.
           </p>
 
           {/* Deliverable 1 — horizontal strip */}
@@ -1926,7 +1253,7 @@ function DeliverablesSection({ onNavigate }: { onNavigate: (path: string) => voi
             border: `1px solid ${colors.gray02}`,
             borderRadius: 10,
             overflow: "hidden",
-            marginBottom: 36,
+            marginBottom: 0,
           }}>
             {/* Number column */}
             <div style={{
@@ -2007,19 +1334,12 @@ function DeliverablesSection({ onNavigate }: { onNavigate: (path: string) => voi
         </div>
       </section>
 
-      {/* What's Next CTA */}
-      <EYWhatsNext
-        id="next-steps"
-        style={{ scrollMarginTop: SUBNAV_SCROLL_MARGIN }}
-        title={
-          <>
-            Phase 2 complete.{" "}
-            <br />
-            Time to <EYWhatsNextHighlight>design the solution.</EYWhatsNextHighlight>
-          </>
-        }
-        ctaLabel="Return to Learning Journey"
-        onContinue={() => onNavigate("/phased")}
+      <WorkshopLibrarySection />
+
+      {/* What's Next — Journey Map */}
+      <AscentModuleProgressSection
+        moduleKey="m2"
+        onNextStepCta={() => onNavigate("/guidance-implementation")}
       />
     </>
   );
@@ -2049,21 +1369,15 @@ function PlaceholderSection({ id, label }: { id: string; label: string }) {
 
 // ── Quick Recall section ──────────────────────────────────────────────────────
 function QuickRecallSection() {
-  const [agentsRevealed, setAgentsRevealed] = useState(false);
-  const [btnDissolving, setBtnDissolving] = useState(false);
-
-  const reveal = () => {
-    setBtnDissolving(true);
-    setTimeout(() => setAgentsRevealed(true), 280);
-  };
+  const [openExample, setOpenExample] = useState<RecallExampleDetail | null>(null);
 
   const cardBase: React.CSSProperties = {
     background: colors.white,
     border: `1px solid ${colors.gray02}`,
     borderRadius: 10,
     padding: "clamp(20px, 2.5vw, 32px)",
-    flex: 1,
-    minWidth: 0,
+    flex: "1 0 260px",
+    minWidth: 260,
   };
 
   return (
@@ -2078,7 +1392,7 @@ function QuickRecallSection() {
       <div style={{ ...contentRailStyle }}>
 
         {/* Eyebrow + heading — centered per section pattern */}
-        <div style={{ textAlign: "center", marginBottom: 8 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
         <p style={{
           fontFamily: fonts.bold,
           fontSize: typeScale.label.size,
@@ -2093,45 +1407,21 @@ function QuickRecallSection() {
           fontFamily: fonts.bold,
           fontSize: "clamp(22px, 3.5vw, 36px)",
           color: colors.offBlack,
-          margin: "0 0 8px",
+          margin: 0,
           letterSpacing: "-0.02em",
           lineHeight: 1.1,
         }}>
-          Prompt or M365 Agent? Start with the Nature of the Activity.
+          Prompt or M365 Agent?
         </h2>
         </div>
-        <p style={{
-          fontFamily: fonts.regular,
-          fontSize: "clamp(14px, 1.5vw, 16px)",
-          color: colors.gray01,
-          margin: "0 0 40px",
-          lineHeight: 1.5,
-          textAlign: "center",
-          maxWidth: 620,
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}>
-          {agentsRevealed ? (
-            <>
-              One tax process may contain both Prompt activities and Agent activities.
-              <br />
-              The right tool depends on what the activity demands — not on which technology sounds more&nbsp;advanced.
-            </>
-          ) : (
-            <>
-              One tax process may contain Prompt activities, Agent activities, or both.
-              <br />
-              Before brainstorming, recall the building blocks for each.
-            </>
-          )}
-        </p>
 
-        {/* Cards container — always side-by-side grid */}
+        {/* Cards — single row; scroll sideways on small screens */}
         <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+          display: "flex",
+          flexWrap: "nowrap",
           gap: "clamp(16px, 2vw, 24px)",
           alignItems: "stretch",
+          overflowX: "auto",
         }}>
 
           {/* ── Prompts card ── */}
@@ -2196,75 +1486,51 @@ function QuickRecallSection() {
                 </li>
               ))}
             </ul>
+
+            <div style={{ height: 1, background: colors.gray02, margin: "16px 0" }} />
+            <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 10px" }}>
+              Examples
+            </p>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+              {RECALL_PROMPT_EXAMPLES.map((ex) => (
+                <li key={ex.name} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: colors.yellow, flexShrink: 0, marginTop: 6,
+                  }} />
+                  <button
+                    type="button"
+                    onClick={() => setOpenExample({
+                      kind: "prompt",
+                      name: ex.name,
+                      fields: [
+                        { label: "Purpose", body: ex.purpose },
+                        { label: "Approach", body: ex.approach },
+                        { label: "Outcome", body: ex.outcome },
+                      ],
+                    })}
+                    style={{
+                      fontFamily: fonts.regular,
+                      fontSize: 13,
+                      color: colors.offBlack,
+                      lineHeight: 1.4,
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      textAlign: "left",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                    }}
+                  >
+                    {ex.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {/* ── Agents card: ghost/locked → revealed ── */}
-          {!agentsRevealed ? (
-            <div
-              style={{
-                ...cardBase,
-                borderTop: `3px solid ${colors.gray02}`,
-                border: `1px dashed ${colors.gray02}`,
-                borderTopStyle: "solid",
-                borderTopWidth: 3,
-                borderTopColor: colors.gray02,
-                background: colors.offWhite,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 16,
-                animation: btnDissolving
-                  ? "ey-fade-dissolve 280ms cubic-bezier(.4,0,.2,1) both"
-                  : "ey-slide-right 420ms cubic-bezier(.22,.68,0,1.05) 80ms both",
-                minHeight: 200,
-              }}
-            >
-              <div style={{
-                width: 44, height: 44, borderRadius: "50%",
-                background: colors.white, border: `1px solid ${colors.gray02}`,
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
-                <Lock size={20} color={colors.gray01} strokeWidth={1.75} aria-hidden="true" />
-              </div>
-
-              <div style={{ textAlign: "center" }}>
-                <span style={{
-                  fontFamily: fonts.bold,
-                  fontSize: 11,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: colors.gray01,
-                  background: colors.gray02,
-                  borderRadius: 4,
-                  padding: "3px 10px",
-                  display: "inline-block",
-                  marginBottom: 8,
-                }}>
-                  M365 Agent
-                </span>
-                <p style={{ fontFamily: fonts.regular, fontSize: 12, color: colors.gray01, margin: 0 }}>
-                  A reusable assistant for a defined business scenario
-                </p>
-              </div>
-
-              <button
-                onClick={reveal}
-                style={{
-                  fontFamily: fonts.bold, fontSize: 13,
-                  color: colors.confidentBlack, background: colors.yellow,
-                  border: "none", borderRadius: 24, padding: "10px 24px",
-                  cursor: "pointer", letterSpacing: "-0.01em",
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  boxShadow: "0 2px 12px rgba(255,230,0,0.35)",
-                }}
-              >
-                Reveal M365 Agent
-                <ArrowRight size={15} aria-hidden="true" />
-              </button>
-            </div>
-          ) : (
-            /* Revealed agents card */
+          {/* ── Agents card ── */}
             <div
               className="ey-recall-agents"
               style={{
@@ -2322,34 +1588,138 @@ function QuickRecallSection() {
                   </li>
                 ))}
               </ul>
+
+              <div style={{ height: 1, background: colors.gray02, margin: "16px 0" }} />
+              <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 10px" }}>
+                Examples
+              </p>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+                {RECALL_AGENT_EXAMPLES.map((ex) => (
+                  <li key={ex.name} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: colors.framePurple, flexShrink: 0, marginTop: 6,
+                    }} />
+                    <button
+                      type="button"
+                      onClick={() => setOpenExample({
+                        kind: "agent",
+                        name: ex.name,
+                        fields: agentRecallFields(ex),
+                      })}
+                      style={{
+                        fontFamily: fonts.regular,
+                        fontSize: 13,
+                        color: colors.offBlack,
+                        lineHeight: 1.4,
+                        background: "none",
+                        border: "none",
+                        padding: 0,
+                        textAlign: "left",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        textUnderlineOffset: 3,
+                      }}
+                    >
+                      {ex.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
+
+          {/* ── Pro Code card ── */}
+          <div
+            className="ey-recall-procode"
+            style={{
+              ...cardBase,
+              borderTop: `3px solid ${colors.frameBlue}`,
+              animation: "ey-slide-up 420ms cubic-bezier(.22,.68,0,1.05) 120ms both",
+            }}
+          >
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{
+                fontFamily: fonts.bold,
+                fontSize: 11,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: colors.white,
+                background: colors.frameBlue,
+                borderRadius: 4,
+                padding: "3px 10px",
+              }}>
+                Pro Code
+              </span>
+            </div>
+            <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.gray01, margin: "0 0 20px", lineHeight: 1.4 }}>
+              Developer-built solutions for complex, scalable tax workflows
+            </p>
+
+            <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 10px" }}>
+              Typically useful when work requires:
+            </p>
+            <ul style={{ margin: "0 0 20px", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+              {PROCODE_TASKS.map((task) => (
+                <li key={task} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: colors.frameBlue, flexShrink: 0, marginTop: 6,
+                  }} />
+                  <span style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.offBlack, lineHeight: 1.4 }}>{task}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div style={{ height: 1, background: colors.gray02, margin: "0 0 16px" }} />
+
+            <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 10px" }}>
+              The solution
+            </p>
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 7 }}>
+              {PROCODE_ROLE.map((role) => (
+                <li key={role} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <span style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: colors.frameBlue, flexShrink: 0, marginTop: 6,
+                  }} />
+                  <span style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.offBlack, lineHeight: 1.4 }}>{role}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div style={{ height: 1, background: colors.gray02, margin: "16px 0" }} />
+            <p style={{ fontFamily: fonts.bold, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase", color: colors.gray01, margin: "0 0 10px" }}>
+              Examples
+            </p>
+            <p style={{ fontFamily: fonts.regular, fontSize: 13, color: colors.gray01, margin: 0, lineHeight: 1.4 }}>
+              Examples will be added later.
+            </p>
+          </div>
         </div>
 
-        {/* Post-reveal summary — verbatim from PDF slide 2 */}
-        {agentsRevealed && (
-          <div style={{
-            marginTop: 32,
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            animation: "ey-hero-fade-up 400ms 200ms both",
+        <div style={{
+          marginTop: 32,
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+        }}>
+          <div style={{ flex: 1, height: 1, background: colors.gray02 }} />
+          <p style={{
+            fontFamily: fonts.bold,
+            fontSize: 14,
+            color: colors.offBlack,
+            margin: 0,
+            whiteSpace: "nowrap",
+            letterSpacing: "-0.01em",
           }}>
-            <div style={{ flex: 1, height: 1, background: colors.gray02 }} />
-            <p style={{
-              fontFamily: fonts.bold,
-              fontSize: 14,
-              color: colors.offBlack,
-              margin: 0,
-              whiteSpace: "nowrap",
-              letterSpacing: "-0.01em",
-            }}>
-              Prompts assist specific tasks. Agents support repeatable workflows.
-            </p>
-            <div style={{ flex: 1, height: 1, background: colors.gray02 }} />
-          </div>
-        )}
+            Prompts assist specific tasks. Agents support repeatable workflows.
+          </p>
+          <div style={{ flex: 1, height: 1, background: colors.gray02 }} />
+        </div>
       </div>
+      {openExample && (
+        <RecallExampleModal detail={openExample} onClose={() => setOpenExample(null)} />
+      )}
     </section>
   );
 }
@@ -2454,7 +1824,7 @@ function HeroSection() {
   );
 }
 
-// ── Hero context — challenge + FROM→TO (separated from dark hero per pattern) ─
+// ── Hero context — FROM→TO (separated from dark hero per pattern) ─────────────
 function HeroContextSection() {
   return (
     <section
@@ -2465,38 +1835,6 @@ function HeroContextSection() {
       }}
     >
       <div style={{ ...contentRailStyle }}>
-
-        {/* Challenge card — light-theme */}
-        <div style={{
-          background: colors.offWhite,
-          border: `1px solid ${colors.gray02}`,
-          borderTop: `3px solid ${colors.yellow}`,
-          borderRadius: 10,
-          padding: "clamp(20px, 3vw, 32px)",
-          marginBottom: 32,
-        }}>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: typeScale.label.size,
-            letterSpacing: typeScale.label.tracking,
-            textTransform: "uppercase",
-            color: colors.eyebrowGold,
-            margin: "0 0 12px",
-          }}>
-            Today's Challenge
-          </p>
-          <p style={{
-            fontFamily: fonts.bold,
-            fontSize: "clamp(16px, 2vw, 22px)",
-            color: colors.offBlack,
-            margin: 0,
-            lineHeight: 1.4,
-            letterSpacing: "-0.01em",
-          }}>
-            Which activities consume time, create friction, or depend heavily on repeated
-            searching, reviewing, drafting, coordination or follow-up?
-          </p>
-        </div>
 
         {/* FROM → TO orientation strip */}
         <div style={{
@@ -2592,26 +1930,20 @@ export default function BrainstormingUseCases({
 
   return (
     <div
-      className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0 overflow-x-hidden"
+      className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0"
       data-name="EY.ai Tax Labs - Phase 2"
     >
-      {/* ── Sticky chrome ── */}
-      <div
-        className="content-stretch flex flex-col items-stretch relative shrink-0 w-full sticky top-0 z-[300]"
-        data-name="Top Navigation"
-      >
-        <SiteHeader variant="learning" onNavigate={onNavigate} skipLinkTarget="#phase2-content" />
-        <ModuleHeader
-          mode="phase-overview"
-          hideModuleDropdown
-          phaseLabel={PHASE2_LABEL}
-          phaseNumber={PHASE2_NUMBER}
-          subPhaseLabel="2.1"
-          sections={PHASE2_SECTIONS}
-          onNavigate={onNavigate}
-          onBack={onBack}
-        />
-      </div>
+      <SiteHeader variant="learning" onNavigate={onNavigate} skipLinkTarget="#phase2-content" />
+      <ModuleHeader
+        mode="phase-overview"
+        hideModuleDropdown
+        phaseLabel={PHASE2_LABEL}
+        phaseNumber={PHASE2_NUMBER}
+        subPhaseLabel="2.1"
+        sections={PHASE2_SECTIONS}
+        onNavigate={onNavigate}
+        onBack={onBack}
+      />
 
       {/* ── Main content ── */}
       <main id="phase2-content">
@@ -2622,17 +1954,11 @@ export default function BrainstormingUseCases({
 
         <QuickRecallSection />
 
-        <MemoryRefreshSection />
-
         <ProblemFirstSection />
 
-        <GuidedExamplesSection />
+        {/* Guided Examples carousel hidden for now — Prompt details live in Quick Recall modals. */}
 
-        <AgentExamplesSection />
-
-        <ActivityLevelChoiceSection />
-
-        <LiveBrainstormSection />
+        <UseCaseBucketsSection />
 
         <DeliverablesSection onNavigate={onNavigate} />
 

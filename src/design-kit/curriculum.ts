@@ -44,7 +44,7 @@ export interface CurriculumPhase {
   modules: CurriculumModule[];
 }
 
-export const PHASE_LABEL = "Phase 1: Foundational Training Workshops";
+export const PHASE_LABEL = "Module 1: Foundational Workshop";
 export const PHASE_PATH = "/phase1";
 /**
  * Current top-level unit in the Tax Labs journey (user-facing label: "Module").
@@ -52,7 +52,7 @@ export const PHASE_PATH = "/phase1";
  */
 export const PHASE_NUMBER = 1;
 export const TOTAL_PHASES = 4;
-export const BRAND_LABEL = "EY.ai Tax Labs";
+export const BRAND_LABEL = "AI for Tax Excellence";
 
 export const PHASE2_LABEL = "Phase 2: Brainstorming Tax Use Cases";
 export const PHASE2_PATH = "/phase2";
@@ -61,7 +61,7 @@ export const PHASE2_NUMBER = 2;
 export const MODULES: CurriculumModule[] = [
   {
     id: "foundational",
-    title: "Foundational Concepts of AI",
+    title: "Fundamentals of AI",
     path: "/foundational",
     order: 1,
     estimatedTime: "~45 min",
@@ -70,8 +70,8 @@ export const MODULES: CurriculumModule[] = [
       { id: "act-now", label: "Act Now", group: "learn" },
       { id: "rise-of-ai", label: "Understanding AI", group: "learn" },
       { id: "evolution", label: "Evolution", group: "learn" },
-      { id: "terminology", label: "Guided Demo", group: "learn" },
-      { id: "cheatsheet", label: "Cheat Sheet", group: "apply" },
+      { id: "terminology", label: "Gen AI Convo", group: "learn" },
+      { id: "cheatsheet", label: "Thinking Partner", group: "learn" },
       { id: "genai-vs-agents", label: "GenAI vs Agents", group: "learn" },
       { id: "quiz", label: "Quiz", group: "apply" },
     ],
@@ -87,21 +87,23 @@ export const MODULES: CurriculumModule[] = [
       { id: "pipeline", label: "Prompt Basics", group: "learn" },
       { id: "elements", label: "Elements", group: "learn" },
       { id: "advanced", label: "Techniques", group: "learn" },
-      { id: "match-activity", label: "Activity", group: "apply" },
-      { id: "dos-donts", label: "Do's & Don'ts", group: "apply" },
+      { id: "match-activity", label: "Quiz", group: "apply" },
+      { id: "dos-donts", label: "Dos and Don'ts", group: "apply" },
       // "Cheat Sheet" tab hidden — links to RecapInNutshellSection in AiTaxPrompting.tsx, which is currently disabled.
       // { id: "recap", label: "Cheat Sheet", group: "apply" },
     ],
   },
   {
     id: "copilot-hub",
-    title: "M365 Copilot Dashboard",
+    title: "M365 Copilot Hub",
     path: "/copilot-hub",
     order: 3,
     estimatedTime: "~60 min",
     supportsInPageNav: true,
     subModules: [
-      { id: "prompt-repository", label: "M365 Apps", group: "learn" },
+      { id: "prompt-repository", label: "M365 in MS Apps", group: "learn" },
+      // Agent is a Learn sibling of Apps — not a prompt-type pill in the repository.
+      { id: "m365-agent", label: "M365 Agent", group: "learn" },
       { id: "useful-links", label: "Useful Links", group: "apply" },
       { id: "security", label: "Security & Governance", group: "apply" },
     ],

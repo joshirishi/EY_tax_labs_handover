@@ -2,13 +2,15 @@
  * SiteHeader — shared top chrome. Two variants:
  *
  *   variant="hub" (default) — Home + Phased Engagement only.
- *     Yellow strip, EY mark + "India AI Tax Hub", then the site-section row
- *     ("About EY India AI Tax Hub" | "EY.ai Tax Labs").
+ *     Same brand bar as learning; optional rightSlot for hub actions.
  *
  *   variant="learning" — Phase 1 overview and every module page (Figma 3508:4135).
- *     Brand block "EY.ai Tax Labs" / "INDIA TAX HUB".
+ *     Brand block "AI for Tax Excellence" + tagline.
  *     No site-section row — breadcrumb navigation lives in <ModuleHeader/> below.
  */
+
+export const PRODUCT_TITLE = "AI for Tax Excellence";
+export const PRODUCT_TAGLINE = "Practical AI skills for the modern tax professional";
 
 import { colors, fonts } from "./tokens";
 import { EYLogo } from "./EYLogo";
@@ -82,75 +84,91 @@ export function SiteHeader({
   );
 }
 
+const learningBrandBarStyle: React.CSSProperties = {
+  background: colors.offBlack,
+  borderBottom: `1px solid ${colors.confidentBlack}`,
+};
+
+const hubBrandBarStyle: React.CSSProperties = {
+  background: colors.confidentBlack,
+  borderBottom: `1px solid ${colors.borderOnDark}`,
+};
+
+function BrandBarHomeButton({
+  onNavigate,
+  ariaLabel,
+}: {
+  onNavigate: (path: string) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      onClick={() => onNavigate("/")}
+      className="flex items-center gap-3 md:gap-4 min-w-0"
+      style={{
+        background: "none",
+        border: "none",
+        cursor: "pointer",
+        padding: 0,
+        borderRadius: 4,
+      }}
+      aria-label={ariaLabel}
+      onFocus={applyFocusRing}
+      onBlur={clearFocusRing}
+    >
+      <div
+        style={{
+          background: colors.offBlack,
+          width: 40,
+          height: 40,
+          borderRadius: 4,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ transform: "scale(0.68)", transformOrigin: "center" }}>
+          <EYLogo variant="mark-only" theme="dark" />
+        </div>
+      </div>
+      <div className="flex flex-col gap-0.5 items-start min-w-0">
+        <span
+          className="text-[16px] md:text-[20px] truncate"
+          style={{ color: "#FFFFFF", fontFamily: fonts.bold, lineHeight: 1.2 }}
+        >
+          {PRODUCT_TITLE}
+        </span>
+        <span
+          className="text-[11px] md:text-[12px] truncate"
+          style={{
+            color: colors.gray02,
+            fontFamily: fonts.regular,
+            lineHeight: 1.3,
+          }}
+        >
+          {PRODUCT_TAGLINE}
+        </span>
+      </div>
+    </button>
+  );
+}
+
 /** Figma Level 1 — brand bar (Phase 1 + modules). */
 function LearningBrandBar({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <div
       className="flex items-center gap-3 w-full px-4 sm:px-6 md:px-10 py-3 md:py-4"
-      style={{
-        background: colors.confidentBlack,
-        borderBottom: "1px solid #2E2E38",
-      }}
+      style={learningBrandBarStyle}
     >
-      <button
-        onClick={() => onNavigate("/phased")}
-        className="flex items-center gap-3 md:gap-4 min-w-0"
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          padding: 0,
-          borderRadius: 4,
-        }}
-        aria-label={`${BRAND_LABEL} — back to Tax Labs overview`}
-        onFocus={applyFocusRing}
-        onBlur={clearFocusRing}
-      >
-        <div
-          style={{
-            background: colors.offBlack,
-            width: 40,
-            height: 40,
-            borderRadius: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ transform: "scale(0.68)", transformOrigin: "center" }}>
-            <EYLogo variant="mark-only" theme="dark" />
-          </div>
-        </div>
-        <div className="flex flex-col gap-0.5 items-start min-w-0">
-          <span
-            className="text-[16px] md:text-[20px] truncate"
-            style={{ color: "#FFFFFF", fontFamily: fonts.bold, lineHeight: 1.2 }}
-          >
-            EY.ai <span style={{ fontFamily: fonts.regular }}>Tax Labs</span>
-          </span>
-          <span
-            className="text-[9px] md:text-[10px]"
-            style={{
-              color: colors.yellow,
-              fontFamily: fonts.bold,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              whiteSpace: "nowrap",
-            }}
-          >
-            India Tax Hub
-          </span>
-        </div>
-      </button>
+      <BrandBarHomeButton onNavigate={onNavigate} ariaLabel={`${BRAND_LABEL} — back to overview`} />
     </div>
   );
 }
 
-/** Hub chrome for Home + Phased Engagement. */
+/** Hub chrome for Home + Phased Engagement — deeper black bar than learning pages. */
 function HubBrandBar({
   onNavigate,
-  activeSection,
   rightSlot,
 }: {
   onNavigate: (path: string) => void;
@@ -158,84 +176,12 @@ function HubBrandBar({
   rightSlot?: React.ReactNode;
 }) {
   return (
-    <>
-      <div style={{ background: colors.yellow, height: 3, width: "100%" }} />
-      <div
-        style={{
-          background: colors.offBlack,
-          height: 64,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 16px",
-        }}
-      >
-        <button
-          onClick={() => onNavigate("/")}
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 4, borderRadius: 4, display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}
-          aria-label={`${BRAND_LABEL} — go to home`}
-          onFocus={applyFocusRing}
-          onBlur={clearFocusRing}
-        >
-          <EYLogo variant="mark-only" theme="dark" />
-          <span
-            style={{
-              color: "#FFFFFF",
-              fontFamily: fonts.regular,
-              fontSize: 13,
-              borderLeft: "1px solid rgba(255,255,255,0.3)",
-              paddingLeft: 12,
-              whiteSpace: "nowrap",
-            }}
-          >
-            India AI Tax Hub
-          </span>
-        </button>
-        {rightSlot}
-      </div>
-
-      <nav aria-label="Site sections" style={{ background: colors.confidentBlack, display: "flex", alignItems: "center", padding: "0 16px", overflowX: "auto" }}>
-        <SiteNavLink
-          label="About EY India AI Tax Hub"
-          isActive={activeSection === "home"}
-          onClick={() => onNavigate("/")}
-        />
-        <SiteNavLink
-          label="EY.ai Tax Labs"
-          isActive={activeSection === "tax-labs"}
-          onClick={() => onNavigate("/phased")}
-        />
-      </nav>
-    </>
-  );
-}
-
-function SiteNavLink({ label, isActive, onClick }: { label: string; isActive: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={isActive ? undefined : onClick}
-      aria-current={isActive ? "page" : undefined}
-      style={{
-        background: "none",
-        border: "none",
-        cursor: isActive ? "default" : "pointer",
-        padding: "10px 14px",
-        fontFamily: fonts.regular,
-        fontSize: 13,
-        color: isActive ? colors.yellow : colors.gray02,
-        whiteSpace: "nowrap",
-        transition: "color 0.15s",
-      }}
-      onMouseEnter={(e) => {
-        if (!isActive) e.currentTarget.style.color = "#FFFFFF";
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) e.currentTarget.style.color = colors.gray02;
-      }}
-      onFocus={applyFocusRing}
-      onBlur={clearFocusRing}
+    <div
+      className="flex items-center justify-between gap-3 w-full px-4 sm:px-6 md:px-10 py-3 md:py-4"
+      style={hubBrandBarStyle}
     >
-      {label}
-    </button>
+      <BrandBarHomeButton onNavigate={onNavigate} ariaLabel={`${BRAND_LABEL} — go to home`} />
+      {rightSlot}
+    </div>
   );
 }

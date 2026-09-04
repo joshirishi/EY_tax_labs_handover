@@ -859,7 +859,7 @@ function Frame5() {
   const navigate = useNavigate();
   return (
     <button
-      onClick={() => navigate("/phased")}
+      onClick={() => navigate("/")}
       className="content-stretch flex items-center justify-center p-[10px] relative shrink-0"
       style={{ background: "none", border: "none", cursor: "pointer" }}
     >
@@ -917,7 +917,7 @@ export default function Home() {
         <SiteHeader variant="hub" activeSection="home" onNavigate={navigate} skipLinkTarget="#home-content" />
       </div>
       <div id="home-content" className="w-full min-w-0">
-        <Body onOpenTaxLabs={() => navigate("/phased")} />
+        <Body onOpenTaxLabs={() => navigate("/")} />
       </div>
     </div>
   );

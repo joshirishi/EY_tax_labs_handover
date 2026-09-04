@@ -71,7 +71,7 @@ export default function TimelineCard({ className, expanded = true, onProceed }: 
             </div>
           </div>
           <div className="[word-break:break-word] content-stretch flex flex-col gap-[12px] items-start not-italic relative shrink-0 w-full" data-name="Card-Body">
-            <p className="font-['EYInterstate:Bold',sans-serif] leading-[30px] relative shrink-0 text-[#2e2e38] text-[24px] w-full">Foundational Training Workshops</p>
+            <p className="font-['EYInterstate:Bold',sans-serif] leading-[30px] relative shrink-0 text-[#2e2e38] text-[24px] w-full">Foundational Workshop</p>
             <p className="font-['EYInterstate:Regular',sans-serif] font-normal leading-[22px] relative shrink-0 text-[#747480] text-[14px] w-full">Covers essential generative AI structures, tax workflows prompt architecture, and M365 Copilot productivity.</p>
           </div>
           <div className="content-stretch flex gap-[40px] items-start relative shrink-0 w-full" data-name="Card-Details">
@@ -158,7 +158,7 @@ export default function TimelineCard({ className, expanded = true, onProceed }: 
       )}
       {isNotExpanded && (
         <>
-          <p className="[word-break:break-word] flex-[1_0_0] font-['EYInterstate:Bold',sans-serif] h-full leading-[30px] min-w-px not-italic relative text-[#2e2e38] text-[24px]">Foundational Training Workshops</p>
+          <p className="[word-break:break-word] flex-[1_0_0] font-['EYInterstate:Bold',sans-serif] h-full leading-[30px] min-w-px not-italic relative text-[#2e2e38] text-[24px]">Foundational Workshop</p>
           <StatusIndicator className="bg-[#F6F6FA] content-stretch flex items-start px-[10px] py-[4px] relative rounded-[12px] shrink-0" />
           <div className="content-stretch flex h-[24px] items-center justify-center overflow-clip relative shrink-0 w-[13px]" data-name="Expand-Icon">
             <p className="[word-break:break-word] font-['EYInterstate:Regular',sans-serif] font-medium leading-[normal] not-italic relative shrink-0 text-[#747480] text-[12px] whitespace-nowrap">▼</p>

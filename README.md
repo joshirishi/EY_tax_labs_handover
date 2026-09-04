@@ -2,7 +2,9 @@
 
 Interactive learning hub for EY tax professionals. Learners move through AI foundations, prompting, Microsoft 365 Copilot, and responsible-use practice.
 
-This is the working application only.
+This repository contains the working application only (no internal design tooling, reference assets, or review SDK).
+
+**Built from:** `joshirishi/EY_landing_mockup` @ `feature/phases-2-3-4-content-updates` (Sep 2026).
 
 ## Run locally
 
@@ -25,8 +27,8 @@ pnpm typecheck  # TypeScript check
 | Path | What it is |
 |------|------------|
 | `/` | Four-phase journey home |
-| `/phase1` | Module 1 hub — Foundational Training |
-| `/foundational` | Foundational Concepts of AI |
+| `/phase1` | Module 1 hub — Foundational Workshop |
+| `/foundational` | Fundamentals of AI |
 | `/ai-tax-prompting` | AI Tax Prompting |
 | `/copilot-hub` | M365 Copilot Hub |
 | `/phase2` | Phase 2 — Brainstorming use cases |
@@ -36,7 +38,7 @@ pnpm typecheck  # TypeScript check
 
 ## Deploy
 
-The app is a Vite single-page app. `vercel.json` already rewrites unknown paths to `/` so in-app routes work on [Vercel](https://vercel.com).
+The app is a Vite single-page app. `vercel.json` rewrites unknown paths to `/` so in-app routes work on [Vercel](https://vercel.com).
 
 ## Stack
 

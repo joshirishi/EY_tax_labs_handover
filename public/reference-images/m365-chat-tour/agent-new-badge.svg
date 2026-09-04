@@ -1,0 +1,12 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Add Agent Badge">
+<rect width="16" height="16" rx="8" fill="url(#paint0_linear_0_4)"/>
+<path id="+" d="M6.73588 13V3H9.26412V13H6.73588ZM3 9.26412V6.73588H13V9.26412H3Z" fill="white"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_4" x1="3.96484" y1="1" x2="11.9648" y2="16.5" gradientUnits="userSpaceOnUse">
+<stop offset="0.0101426" stop-color="#9B75F8"/>
+<stop offset="0.676982" stop-color="#2E1D6B"/>
+</linearGradient>
+</defs>
+</svg>

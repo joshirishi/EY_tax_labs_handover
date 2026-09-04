@@ -48,7 +48,7 @@ const COPILOT_PROMPTS: Record<string, [string, string][]> = {
     ["Reconcile Two Ledgers", "Compare the GST returns and books data in these two sheets and flag every mismatch above ₹10,000."],
     ["Explain This Formula", "Explain what this VLOOKUP + IFERROR formula in column F is actually doing, in plain language."],
     ["Spot Withholding Gaps", "Scan this vendor payment sheet and flag any transaction where TDS appears under-deducted."],
-    ["Build a Compliance Dashboard", "Turn this data into a one-page dashboard showing filing status, ageing, and open exposures by entity."],
+    ["Build a Compliance Summary", "Turn this data into a one-page summary showing filing status, ageing, and open exposures by entity."],
     ["Forecast the Effective Tax Rate", "Using this P&L, calculate the projected effective tax rate for FY26 factoring in surcharge and cess."],
   ],
   PowerPoint: [
@@ -85,7 +85,7 @@ const TAX_USE_CASES: Record<string, [string, string][]> = {
     ["Analyse Tax Data", "Summarise large datasets and identify key trends, gaps, mismatches and exceptions."],
     ["Build Reconciliations", "Create formulas and logic checks to compare books, returns and working papers."],
     ["Spot Exceptions", "Detect anomalies such as missing details, rate mismatches or duplicates."],
-    ["Visualise Compliance", "Create dashboards to show status, exposures, ageing and risk movement."],
+    ["Visualise Compliance", "Create summary views to show status, exposures, ageing and risk movement."],
   ],
   PowerPoint: [
     ["Create Client Decks", "Convert tax analysis into structured, visually clean, client-ready presentations."],

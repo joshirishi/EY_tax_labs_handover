@@ -1,0 +1,18 @@
+<svg preserveAspectRatio="xMidYMid meet" overflow="visible" style="display: block;" width="86" height="86" viewBox="0 0 86 86" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="M365 Agent Icon">
+<path d="M43 12L14 43L43 74Z" fill="url(#agentLeft)"/>
+<path d="M43 12L72 43L43 74Z" fill="url(#agentRight)"/>
+</g>
+<defs>
+<linearGradient id="agentLeft" x1="14" y1="12" x2="43" y2="74" gradientUnits="userSpaceOnUse">
+<stop stop-color="#B48CFF"/>
+<stop offset="0.45" stop-color="#7C5CFF"/>
+<stop offset="1" stop-color="#5A2FD4"/>
+</linearGradient>
+<linearGradient id="agentRight" x1="43" y1="12" x2="72" y2="74" gradientUnits="userSpaceOnUse">
+<stop stop-color="#FF6B9D"/>
+<stop offset="0.45" stop-color="#FF3C7E"/>
+<stop offset="1" stop-color="#FF7043"/>
+</linearGradient>
+</defs>
+</svg>

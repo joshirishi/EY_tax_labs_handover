@@ -3,11 +3,13 @@ import { useNavigate } from "react-router";
 import svgPaths from "./svg-p7dq2iziwz";
 import { SiteHeader } from "../../design-kit/SiteHeader";
 import { ModuleHeader } from "../../design-kit/LearningNav";
+import { colors, contentRailStyle, fonts, typeScale } from "../../design-kit/tokens";
 import cardSvg from "../ContentArea/svg-1dplfat9j5";
 import imgBackgroundMotif from "./f5e2e2f2ea31280810b6cbd46b1af92fee8b344c.png";
 import { imgGroup, imgBackground, imgBackground1, imgBackground2, imgBackground3 } from "./svg-cx48y";
 import TimelineCard from "../TimelineCard/index";
 import AscentJourneyInfographic from "./AscentJourneyInfographic";
+import { buildHubLandingProps } from "./ascentCurriculum";
 
 function Div() {
   return <div className="bg-[#ffe600] h-[3px] relative shrink-0 w-full" data-name="div" />;
@@ -189,7 +191,7 @@ function Frame36() {
     <div className="bg-[#ffe600] relative shrink-0 w-full">
       <div className="[word-break:break-word] content-stretch flex flex-col items-start not-italic px-[24px] py-[8px] relative size-full text-[#2e2e38] whitespace-nowrap">
         <p className="[text-underline-position:from-font] decoration-from-font decoration-solid font-['EYInterstate:Bold',sans-serif] leading-[32px] relative shrink-0 text-[20px] underline">{`AI PIPELINE & CONTEXT`}</p>
-        <p className="font-['EYInterstate:Light',sans-serif] leading-[22px] relative shrink-0 text-[14px]">© 2026 EY.ai Tax Labs. Secure Workspace Architecture.</p>
+        <p className="font-['EYInterstate:Light',sans-serif] leading-[22px] relative shrink-0 text-[14px]">© 2026 AI for Tax Excellence. Secure Workspace Architecture.</p>
       </div>
     </div>
   );
@@ -789,32 +791,65 @@ function Frame38() {
   );
 }
 
-function AiMs365Schematic() {
+function AiMs365Schematic({ ascentOverrides }: { ascentOverrides?: Parameters<typeof AscentJourneyInfographic>[0] }) {
   return (
     <div
       className="relative shrink-0 w-full overflow-clip"
       style={{ background: "var(--ey-bg-body)" }}
       data-name="ai-ms365-schematic"
     >
-      <AscentJourneyInfographic />
+      <AscentJourneyInfographic {...ascentOverrides} />
     </div>
   );
 }
 
 function Frame2() {
   return (
-    <div className="[word-break:break-word] content-stretch flex flex-col gap-[8px] items-start not-italic relative shrink-0 text-[#2e2e38] w-full" data-name="Frame">
-      <p className="font-['EYInterstate:Bold',sans-serif] font-bold leading-[1.2] relative shrink-0 text-[24px] sm:text-[28px] md:text-[32px] md:leading-[40px]">Step by Step Approach</p>
-      <p className="font-['EYInterstate:Regular',sans-serif] leading-[24px] relative shrink-0 text-[15px] md:text-[16px] w-full">{`A progressive journey from understanding to application.`}</p>
+    <div
+      className="flex min-w-0 flex-1 flex-col items-start gap-2 w-full"
+      data-name="Frame"
+      style={{ color: colors.offBlack, fontFamily: fonts.regular }}
+    >
+      <p
+        className="min-w-0 w-full leading-[1.2] text-[24px] sm:text-[28px] lg:text-[32px] lg:leading-[40px]"
+        style={{ fontFamily: fonts.bold, fontWeight: typeScale.h2.weight }}
+      >
+        Step by Step Approach
+      </p>
+      <p
+        className="min-w-0 w-full text-[15px] lg:text-[16px]"
+        style={{ fontFamily: fonts.regular, fontWeight: typeScale.body.weight, lineHeight: `${typeScale.body.size + 8}px` }}
+      >
+        A progressive journey from understanding to application.
+      </p>
     </div>
   );
 }
 
 function Frame3() {
   return (
-    <div className="bg-[#F6F6FA] content-stretch flex items-start px-[16px] sm:px-[20px] py-[12px] relative rounded-[4px] shrink-0 max-w-full" data-name="Frame">
-      <div aria-hidden className="absolute border border-[#C4C4CD] border-solid inset-0 pointer-events-none rounded-[4px]" />
-      <p className="[word-break:break-word] font-['EYInterstate:Bold',sans-serif] font-bold leading-[20px] not-italic relative shrink-0 text-[#2e2e38] text-[13px] sm:text-[14px]">5-6 Weeks | ~10 Participants | M365 Copilot Licensed</p>
+    <div
+      className="relative flex w-full min-w-0 self-stretch rounded px-4 py-3 sm:px-5 lg:w-auto lg:max-w-[min(100%,28rem)] lg:self-center"
+      data-name="Frame"
+      style={{ background: colors.offWhite }}
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded border border-solid"
+        style={{ borderColor: colors.gray02 }}
+      />
+      <p
+        className="min-w-0 w-full text-[13px] sm:text-[14px]"
+        style={{
+          color: colors.offBlack,
+          fontFamily: fonts.bold,
+          fontWeight: typeScale.label.weight,
+          lineHeight: "20px",
+          wordBreak: "break-word",
+        }}
+      >
+        5-6 Weeks | ~10 Participants | M365 Copilot Licensed
+      </p>
     </div>
   );
 }
@@ -830,9 +865,13 @@ function Frame1() {
 
 function Frame39() {
   return (
-    <div className="bg-[#c4c4cd] relative shrink-0 w-full">
-      <div className="content-stretch flex flex-col items-start px-4 sm:px-8 md:px-[64px] py-[24px] relative size-full">
-        <Frame1 />
+    <div className="relative w-full min-w-0 shrink-0" style={{ background: colors.gray02 }}>
+      <div
+        className="flex w-full min-w-0 flex-col gap-4 py-6 lg:flex-row lg:items-center lg:justify-between"
+        style={contentRailStyle}
+      >
+        <Frame2 />
+        <Frame3 />
       </div>
     </div>
   );
@@ -896,7 +935,7 @@ function TimelinePhase() {
         <div aria-hidden className="absolute border border-[#C4C4CD] border-solid inset-0 pointer-events-none rounded-[12px]" />
         <div className="flex flex-row items-center size-full">
           <div className="content-stretch flex gap-[16px] items-center p-[32px] relative size-full">
-            <p className="[word-break:break-word] flex-[1_0_0] font-['EYInterstate:Bold',sans-serif] h-full leading-[30px] min-w-px not-italic relative text-[#2e2e38] text-[24px]">Foundational Training Workshops</p>
+            <p className="[word-break:break-word] flex-[1_0_0] font-['EYInterstate:Bold',sans-serif] h-full leading-[30px] min-w-px not-italic relative text-[#2e2e38] text-[24px]">Foundational Workshop</p>
             <div className="bg-[#F6F6FA] content-stretch flex items-start px-[10px] py-[4px] relative rounded-[12px] shrink-0" data-name="Status-Indicator">
               <div aria-hidden className="absolute border border-[#ffe600] border-solid inset-0 pointer-events-none rounded-[12px]" />
               <p className="[word-break:break-word] font-['EYInterstate:Regular',sans-serif] leading-[20px] not-italic relative shrink-0 text-[#2e2e38] text-[14px] whitespace-nowrap">ACTIVE PHASE</p>
@@ -1170,7 +1209,7 @@ const PHASE_CARDS = [
   {
     week: "Week 1-2",
     number: 1,
-    title: "Foundational Training Workshops",
+    title: "Foundation Workshops",
     description: "2 workshops x 1.5 hours each",
     locked: false,
     completed: false,
@@ -1187,7 +1226,7 @@ const PHASE_CARDS = [
     locked: false,
     completed: false,
     coverage: ["Identify 5–7 tax processes for AI", "Use cases across current tax workflow", "Agent vs Prompt classification"],
-    deliverables: ["AI first process maps for 5-7 tax use cases", "Recommendation note for Prompt vs M365 Agent"],
+    deliverables: ["AI first process maps for 5-7 tax use cases", "Recommendation Note with Sample Prompt and No-code Agent templates"],
     outcome: "AI first process maps with clarity on agents vs prompts",
   },
   {
@@ -1199,8 +1238,8 @@ const PHASE_CARDS = [
     locked: false,
     completed: false,
     coverage: ["Advanced prompt engineering (hands-on)", "M365 Copilot Agent design (hands-on)", "Guided Prompt Library Development"],
-    deliverables: ["Sample Prompt Templates", "Instructions for M365 Agents"],
-    outcome: "Power users capable of building no-code agents independently",
+    deliverables: ["Self-developed Prompts", "5-10 self-developed No-code agents"],
+    outcome: "Power users capable of building No-code agents independently",
   },
   {
     week: "Week 6",
@@ -1210,7 +1249,7 @@ const PHASE_CARDS = [
     description: "1 call/meeting x 2 hours",
     locked: false,
     completed: false,
-    coverage: ["AI Readiness Assessment", "Viva Insights Dashboard", "AI governance guidance"],
+    coverage: ["AI governance guidance", "Viva Insights Dashboard", "AI Readiness Assessment"],
     deliverables: ["Governance Playbook", "Copilot Monitoring Guidance"],
     outcome: "Real-time visibility into AI adoption, aligned with responsible AI",
   },
@@ -1258,7 +1297,7 @@ function CardCheckIcon() {
 
 function PhaseCard({ phase, onProceed, onNavigate }: { phase: typeof PHASE_CARDS[0]; onProceed?: () => void; onNavigate?: () => void }) {
   return (
-    <div className="bg-white drop-shadow-[0px_4px_6px_rgba(0,0,0,0.05)] h-full min-w-px relative rounded-[8px] grid grid-rows-subgrid row-span-6 gap-y-[20px] p-[24px] xl:p-[28px] w-full min-h-0">
+    <div className="bg-white drop-shadow-[0px_4px_6px_rgba(0,0,0,0.05)] h-full min-w-0 max-w-[300px] relative rounded-[8px] grid grid-rows-subgrid row-span-6 gap-y-[20px] p-[24px] xl:p-[28px] w-full min-h-0">
       <div aria-hidden className="absolute border border-[#C4C4CD] border-solid inset-0 pointer-events-none rounded-[8px]" />
       {/* Row 1: Phase number + week */}
       <div className="content-stretch flex items-center justify-between gap-[8px] relative w-full min-w-0">
@@ -1277,7 +1316,7 @@ function PhaseCard({ phase, onProceed, onNavigate }: { phase: typeof PHASE_CARDS
         <p className="[word-break:break-word] font-['EYInterstate:Bold',sans-serif] leading-[normal] not-italic relative shrink-0 text-[#2e2e38] text-[12px] uppercase whitespace-nowrap">Coverage</p>
         <div className="content-stretch flex flex-col gap-[6px] items-start relative w-full">
           {phase.coverage.map((item) => (
-            <div key={item} className="content-stretch flex gap-[8px] items-start relative w-full">
+            <div key={item} className="content-stretch flex gap-[8px] items-center relative w-full">
               <BulletCircle />
               <p className="[word-break:break-word] font-['EYInterstate:Regular',sans-serif] leading-[normal] not-italic relative min-w-0 text-[#2e2e38] text-[14px]">{item}</p>
             </div>
@@ -1289,17 +1328,17 @@ function PhaseCard({ phase, onProceed, onNavigate }: { phase: typeof PHASE_CARDS
         <p className="[word-break:break-word] font-['EYInterstate:Bold',sans-serif] leading-[normal] not-italic relative shrink-0 text-[#2e2e38] text-[12px] uppercase whitespace-nowrap">Deliverables</p>
         <div className="content-stretch flex flex-col gap-[6px] items-start relative w-full">
           {phase.deliverables.map((item) => (
-            <div key={item} className="content-stretch flex gap-[8px] items-start relative w-full">
+            <div key={item} className="content-stretch flex gap-[8px] items-center relative w-full">
               <BulletCircle />
               <p className="[word-break:break-word] font-['EYInterstate:Regular',sans-serif] leading-[normal] not-italic relative min-w-0 text-[#2e2e38] text-[14px]">{item}</p>
             </div>
           ))}
         </div>
       </div>
-      {/* Row 5: Outcome */}
-      <div className="content-stretch flex flex-col gap-[8px] items-start relative w-full min-h-0">
+      {/* Row 5: Outcome — yellow box fills the shared subgrid row so all four match height */}
+      <div className="content-stretch flex flex-col gap-[8px] items-stretch relative w-full min-h-0 h-full">
         <p className="[word-break:break-word] font-['EYInterstate:Bold',sans-serif] leading-[normal] not-italic relative shrink-0 text-[#2e2e38] text-[12px] uppercase whitespace-nowrap">Outcome</p>
-        <div className="bg-[#FFFBE0] border border-[#FFE600] rounded-[6px] px-[12px] py-[8px] relative w-full">
+        <div className="bg-[#FFFBE0] border border-[#FFE600] rounded-[6px] px-[12px] py-[8px] relative w-full flex-1 h-full min-h-0 box-border">
           <p className="[word-break:break-word] font-['EYInterstate:Regular',sans-serif] leading-[18px] not-italic relative text-[#2e2e38] text-[13px]">{phase.outcome}</p>
         </div>
       </div>
@@ -1338,7 +1377,7 @@ function CardGrid({ onProceed, onNavigateToBrainstorming, onNavigateToImplementa
   return (
     <div className="relative shrink-0 w-full min-w-0">
       <div className="content-stretch flex flex-col gap-[24px] items-stretch px-4 sm:px-8 md:px-[64px] relative size-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-[24px] items-stretch relative shrink-0 w-full max-w-[85%] mx-auto">
+        <div className="grid grid-cols-4 gap-[24px] items-stretch justify-items-center relative shrink-0 w-full max-w-[85%] mx-auto min-w-0">
           <PhaseCard phase={PHASE_CARDS[0]} onProceed={onProceed} />
           <PhaseCard phase={PHASE_CARDS[1]} onNavigate={onNavigateToBrainstorming} />
           <PhaseCard phase={PHASE_CARDS[2]} onNavigate={onNavigateToImplementation} />
@@ -1782,7 +1821,7 @@ function Hero() {
   return (
     <div className="content-stretch flex flex-col gap-[16px] items-start relative shrink-0 w-full min-w-0">
       <p className="font-['EYInterstate:Bold',sans-serif] font-bold leading-[1.15] relative shrink-0 text-[#2e2e38] text-[28px] sm:text-[36px] md:text-[48px] md:leading-[56px] w-full max-w-full">
-        Phase 1 — Foundational Training
+        Foundational Workshop
       </p>
       <p className="font-['EYInterstate:Regular',sans-serif] font-normal leading-[24px] min-w-full relative shrink-0 text-[#747480] text-[16px] w-[min-content]">
         Select card below to begin
@@ -1857,11 +1896,9 @@ function CourseCard({ onOpen, icon, title, description, estimatedTime }: {
   );
 }
 
-// Two-step unlock card:
-//   Click 1 → transitions from locked → active (visual unlock animation)
-//   Click 2 → calls onNavigate() to go to the destination page
-// icon       = gray version shown in locked state
-// activeIcon = dark version shown after unlock (on yellow circle bg)
+// Course card — unlocked and clickable by default (navigates on first click).
+// icon       = gray version shown in locked state (kept for optional re-lock)
+// activeIcon = dark version shown when unlocked (on yellow circle bg)
 function UnlockableCourseCard({ onNavigate, icon, activeIcon, title, description, estimatedTime }: {
   onNavigate?: () => void;
   icon: React.ReactNode;
@@ -1870,14 +1907,14 @@ function UnlockableCourseCard({ onNavigate, icon, activeIcon, title, description
   description: string;
   estimatedTime?: string;
 }) {
-  const [unlocked, setUnlocked] = useState(false);
+  const [unlocked, setUnlocked] = useState(true);
   const [hovered, setHovered] = useState(false);
 
   const handleClick = () => {
     if (!unlocked) {
-      setUnlocked(true); // Step 1: visually unlock the card
+      setUnlocked(true); // Optional: unlock if ever shown locked
     } else {
-      onNavigate?.();    // Step 2: navigate to the page
+      onNavigate?.();    // Navigate to the page
     }
   };
 
@@ -1948,14 +1985,10 @@ function UnlockableCourseCard({ onNavigate, icon, activeIcon, title, description
       onKeyDown={e => (e.key === "Enter" || e.key === " ") && handleClick()}
       aria-label={`Begin ${title}`}
     >
-      {/* Yellow left accent + unlock badge */}
-      <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: hovered ? 6 : 4, background: "#ffe600", borderRadius: "8px 0 0 8px", transition: "width 0.1s" }} />
-      {/* "Unlocked" toast badge top-right */}
-      <div style={{ position: "absolute", top: 12, right: 12, background: "#ffe600", color: "#1a1a24", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, fontFamily: "'EYInterstate:Bold',sans-serif", letterSpacing: "0.05em" }}>
-        ✓ UNLOCKED
-      </div>
+      {/* Yellow left accent */}
+      <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: hovered ? 6 : 4, background: colors.yellow, borderRadius: "8px 0 0 8px", transition: "width 0.1s" }} />
       <div className="content-stretch flex flex-col gap-[20px] items-start p-[32px] relative size-full">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 48, height: 48, borderRadius: 24, background: "#ffe600", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 48, height: 48, borderRadius: 24, background: colors.yellow, flexShrink: 0 }}>
           {/* Use activeIcon (dark stroke) if provided, else fall back to icon */}
           {activeIcon ?? icon}
         </div>
@@ -1963,12 +1996,13 @@ function UnlockableCourseCard({ onNavigate, icon, activeIcon, title, description
           <p className="font-['EYInterstate:Bold',sans-serif] font-bold text-[#2e2e38] text-[22px]" style={{ lineHeight: "1.2", margin: 0 }}>{title}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
+          {/* Default: black Begin; hover: EY yellow (card hover drives state) */}
           <div style={{
             marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 6,
-            background: hovered ? "#2e2e38" : "#ffe600",
-            color: hovered ? "#ffffff" : "#1A1A24",
+            background: hovered ? colors.yellow : colors.offBlack,
+            color: hovered ? colors.confidentBlack : colors.white,
             padding: "8px 16px", borderRadius: 4,
-            fontFamily: "'EYInterstate:Bold',sans-serif", fontWeight: 700, fontSize: 13,
+            fontFamily: fonts.bold, fontWeight: 700, fontSize: 13,
             transition: "background 0.15s ease-out, color 0.15s ease-out",
           }}>
             Begin →
@@ -1985,12 +2019,12 @@ function CourseGrid({ onOpenFoundational, onOpenAiTaxPrompting, onOpenCopilotHub
   onOpenCopilotHub?: () => void;
 }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 relative shrink-0 w-full min-w-0">
+    <div className="grid grid-cols-3 gap-6 relative shrink-0 w-full min-w-0">
       <UnlockableCourseCard
         onNavigate={onOpenFoundational}
         icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4c4cd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>}
         activeIcon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>}
-        title="Foundational Concepts of AI"
+        title="Fundamentals of AI"
         description="Understanding AI fundamentals and their application in tax workflows."
         estimatedTime="~45 min"
       />
@@ -2004,9 +2038,9 @@ function CourseGrid({ onOpenFoundational, onOpenAiTaxPrompting, onOpenCopilotHub
       />
       <UnlockableCourseCard
         onNavigate={onOpenCopilotHub}
-        icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c4c4cd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>}
-        activeIcon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1A1A24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>}
-        title="M365 Copilot Dashboard"
+        icon={<img src="/pipeline/copilot-icon.svg" alt="" aria-hidden width={22} height={22} style={{ objectFit: "contain", opacity: 0.6 }} />}
+        activeIcon={<img src="/pipeline/copilot-icon.svg" alt="" aria-hidden width={22} height={22} style={{ objectFit: "contain" }} />}
+        title="M365 Copilot Hub"
         description="Hands-on exploration of Microsoft 365 Copilot capabilities across tax use cases."
         estimatedTime="~60 min"
       />
@@ -2349,7 +2383,7 @@ export default function Frame43() {
 // ── Interactive timeline replacing the static TimelineStack ──────────────────
 
 const PHASES = [
-  { week: "Week 1-2", number: 1, title: "Foundational Training Workshops", locked: false },
+  { week: "Week 1-2", number: 1, title: "Foundational Workshop", locked: false },
   { week: "Week 3-4", number: 2, title: "Brainstorming Tax Use Cases", locked: true },
   { week: "Week 5-6", number: 3, title: "Guidance in Prompts & AI Agents", locked: true },
   { week: "Week 8",   number: 4, title: "Governance & AI Reinforcement",   locked: true },
@@ -2371,6 +2405,7 @@ function InteractiveContentArea({ onProceed, onNavigateToBrainstorming, onNaviga
 
 export function PhasedEngagementView({ onNavigateToPhase1, onNavigateToBrainstorming, onNavigateToImplementation, onNavigateToClosure }: { onNavigateToPhase1?: () => void; onNavigateToBrainstorming?: () => void; onNavigateToImplementation?: () => void; onNavigateToClosure?: () => void } = {}) {
   const navigate = useNavigate();
+  const hubAscentProps = buildHubLandingProps();
 
   return (
     <div className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0 overflow-x-hidden" data-name="EY.ai Tax Labs - Phased Engagement">
@@ -2378,7 +2413,7 @@ export function PhasedEngagementView({ onNavigateToPhase1, onNavigateToBrainstor
         <SiteHeader variant="hub" activeSection="tax-labs" onNavigate={navigate} skipLinkTarget="#phased-content" />
       </div>
       <div id="phased-content" className="content-stretch flex flex-col items-stretch relative shrink-0 w-full min-w-0">
-        <AiMs365Schematic />
+        <AiMs365Schematic ascentOverrides={hubAscentProps} />
         <InteractiveContentArea onProceed={onNavigateToPhase1} onNavigateToBrainstorming={onNavigateToBrainstorming} onNavigateToImplementation={onNavigateToImplementation} onNavigateToClosure={onNavigateToClosure} />
       </div>
       <div className="bg-white content-stretch flex flex-col items-stretch justify-center px-4 sm:px-8 md:px-[64px] py-10 md:py-14 relative shrink-0 w-full overflow-hidden" data-name="Footer Final">
@@ -2405,14 +2440,11 @@ export function Phase1View({
   const go = onNavigate ?? ((path: string) => navigate(path));
 
   return (
-    <div className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0 overflow-x-hidden" data-name="EY.ai Tax Labs - Phase 1">
+    <div className="relative bg-white content-stretch flex flex-col items-stretch w-full max-w-full min-w-0" data-name="EY.ai Tax Labs - Phase 1">
       <BackgroundMotif />
-      {/* Learning chrome — full viewport width; content below may still scroll horizontally on very small screens */}
-      <div className="content-stretch flex flex-col items-stretch relative shrink-0 w-full sticky top-0 z-[300]" data-name="Top Navigation">
-        <SiteHeader variant="learning" onNavigate={go} skipLinkTarget="#phase1-content" />
-        <ModuleHeader mode="phase-overview" hideModuleDropdown onNavigate={go} onBack={() => go("/phased")} />
-      </div>
-      <div id="phase1-content" className="content-stretch flex flex-col items-stretch relative shrink-0 w-full min-w-0 overflow-x-hidden">
+      <SiteHeader variant="learning" onNavigate={go} skipLinkTarget="#phase1-content" />
+      <ModuleHeader mode="phase-overview" hideModuleDropdown onNavigate={go} onBack={() => go("/")} />
+      <div id="phase1-content" className="content-stretch flex flex-col items-stretch relative shrink-0 w-full min-w-0">
         <ContentArea1 onOpenFoundational={onNavigateToFoundational} onOpenAiTaxPrompting={onNavigateToAiTaxPrompting} onOpenCopilotHub={onNavigateToCopilotHub} />
       </div>
       <div className="bg-white relative shrink-0 w-full overflow-hidden" data-name="Footer Final">

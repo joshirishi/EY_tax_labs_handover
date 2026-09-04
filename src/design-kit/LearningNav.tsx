@@ -16,7 +16,7 @@
  *
  * Usage (Phase 1 overview):
  *   <SiteHeader variant="learning" onNavigate={navigate} />
- *   <ModuleHeader mode="phase-overview" onNavigate={navigate} onBack={() => navigate("/phased")} />
+ *   <ModuleHeader mode="phase-overview" onNavigate={navigate} onBack={() => navigate("/")} />
  *
  * Usage (module page):
  *   <ModuleHeader currentModuleId="ai-tax-prompting" onNavigate={navigate} onBack={onBack} />
@@ -30,6 +30,7 @@ import {
   PHASE_NUMBER,
   PHASE_PATH,
   TOTAL_PHASES,
+  BRAND_LABEL,
   getAdjacentModules,
   getCurrentPhase,
   getModule,
@@ -54,7 +55,7 @@ function syncSubnavScrollOffset(height: number) {
 }
 
 const FOCUS_RING = `2px solid ${colors.yellow}`;
-const WORKSHOP_LABEL = getCurrentPhase().label.replace(/^Phase \d+: /, "");
+const WORKSHOP_LABEL = getCurrentPhase().label.replace(/^(Phase|Module) \d+: /, "");
 
 function applyFocusRing(e: React.FocusEvent<HTMLElement>) {
   e.currentTarget.style.outline = FOCUS_RING;
@@ -124,12 +125,12 @@ export function ModuleHeader(props: ModuleHeaderProps) {
     : false;
 
   const workshopDisplayLabel = overridePhaseLabel
-    ? overridePhaseLabel.replace(/^Phase \d+: /, "")
+    ? overridePhaseLabel.replace(/^(Phase|Module) \d+: /, "")
     : WORKSHOP_LABEL;
 
   const current = currentModuleId ? getModule(currentModuleId) : null;
   const pageTitle = isPhaseOverview
-    ? (overridePhaseLabel ? overridePhaseLabel.replace(/^Phase \d+: /, "") : "Foundational AI Training")
+    ? (overridePhaseLabel ? overridePhaseLabel.replace(/^(Phase|Module) \d+: /, "") : "Foundational AI Training")
     : current!.title;
   // Picker button shows WHERE YOU ARE: the current module on module pages, the
   // workshop name on the phase-overview page. The trailing page-title span was
@@ -196,12 +197,16 @@ export function ModuleHeader(props: ModuleHeaderProps) {
   }, [pickerOpen]);
 
   return (
-    <div ref={stickyRef} style={{ position: "sticky", top: 0, zIndex: 200 }}>
+    <div
+      ref={stickyRef}
+      className="ey-module-header-sticky"
+      style={{ position: "sticky", top: 0, zIndex: 300, width: "100%" }}
+    >
       {/* ── Level 2: breadcrumb + progress — fluid padding, collapses on narrow screens ── */}
       <div
         className="flex flex-wrap items-center justify-between gap-3 md:gap-4 px-4 sm:px-6 md:px-10 py-3"
         style={{
-          background: colors.offBlack,
+          background: colors.confidentBlack,
           borderBottom: `1px solid ${colors.offBlack}`,
         }}
       >
@@ -216,7 +221,7 @@ export function ModuleHeader(props: ModuleHeaderProps) {
               padding: 0,
               borderRadius: 4,
             }}
-            aria-label="Back to Tax Labs"
+            aria-label={`Back to ${BRAND_LABEL}`}
             onFocus={applyFocusRing}
             onBlur={clearFocusRing}
           >
@@ -225,7 +230,7 @@ export function ModuleHeader(props: ModuleHeaderProps) {
               className="hidden sm:inline"
               style={{ fontFamily: fonts.bold, fontSize: 14, color: colors.yellow, whiteSpace: "nowrap" }}
             >
-              Tax Labs
+              {BRAND_LABEL}
             </span>
           </button>
 
@@ -348,7 +353,7 @@ export function ModuleHeader(props: ModuleHeaderProps) {
       {showSectionTabs && (
         <nav
           aria-label={`${pageTitle} sections`}
-          className="flex items-end gap-6 md:gap-8 overflow-x-auto px-4 sm:px-6 md:px-10 pt-2.5"
+          className="flex items-end gap-6 md:gap-8 overflow-x-auto px-4 sm:px-6 md:px-10 pt-2.5 pb-1"
           style={{
             background: colors.offWhite,
             borderBottom: "1px solid rgba(46,46,56,0.1)",
@@ -628,7 +633,7 @@ function ModulePickerMenu({
           minHeight: 0,
         }}
       >
-        {phase.modules.map((mod) => (
+        {phase.modules.filter(isModuleAvailable).map((mod) => (
           <PickerItem
             key={mod.id}
             label={mod.title}
@@ -743,7 +748,23 @@ function TabCluster({
   activeSectionId: string | null;
   onSectionClick?: (sectionId: string) => void;
 }) {
-  const isApply = label.toLowerCase() === "apply";
+  const clusterLabelStyle: React.CSSProperties = {
+    display: "inline-flex",
+    alignItems: "center",
+    flexShrink: 0,
+    fontFamily: fonts.bold,
+    fontSize: 13,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: colors.offBlack,
+    background: colors.white,
+    border: `1px solid ${colors.gray02}`,
+    borderRadius: 999,
+    padding: "6px 14px",
+    lineHeight: 1.2,
+    marginBottom: 10,
+    boxShadow: "0 1px 2px rgba(26, 26, 36, 0.06)",
+  };
 
   return (
     <div
@@ -755,26 +776,7 @@ function TabCluster({
         flexShrink: 0,
       }}
     >
-      <span
-        aria-hidden="true"
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          flexShrink: 0,
-          fontFamily: fonts.bold,
-          fontSize: 11,
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-          color: colors.offBlack,
-          background: isApply ? colors.yellowAlpha12 : colors.white,
-          border: `1px solid ${isApply ? "rgba(255, 230, 0, 0.4)" : "rgba(46, 46, 56, 0.16)"}`,
-          borderRadius: 999,
-          padding: "5px 12px",
-          lineHeight: 1.2,
-          marginBottom: 10,
-          boxShadow: "0 1px 2px rgba(26, 26, 36, 0.06)",
-        }}
-      >
+      <span aria-hidden="true" style={clusterLabelStyle}>
         {label}
       </span>
       <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
@@ -790,12 +792,13 @@ function TabCluster({
             border: "none",
             color: isActive ? colors.offBlack : colors.gray01,
             fontFamily: isActive ? fonts.bold : fonts.regular,
+            fontWeight: isActive ? 700 : 400,
             fontSize: 14,
             whiteSpace: "nowrap",
             textDecoration: "none",
             cursor: "pointer",
-            borderBottom: isActive ? `3px solid ${colors.yellow}` : "3px solid transparent",
-            transition: "color 0.15s, border-color 0.15s",
+            boxShadow: isActive ? `inset 0 -3px 0 ${colors.yellow}` : "inset 0 -3px 0 transparent",
+            transition: "color 0.15s, box-shadow 0.15s",
           };
           return onSectionClick ? (
             <button
@@ -825,9 +828,29 @@ function TabCluster({
   );
 }
 
+function sectionIdFromHash(sectionIds: string[]): string | null {
+  const hash = window.location.hash.replace(/^#/, "");
+  return hash && sectionIds.includes(hash) ? hash : null;
+}
+
 /** Highlights the section tab whose content is currently most visible under the sticky header. */
 function useScrollSpy(sectionIds: string[], scrollOffset: number): string | null {
-  const [activeId, setActiveId] = useState<string | null>(sectionIds[0] ?? null);
+  const [activeId, setActiveId] = useState<string | null>(
+    () => sectionIdFromHash(sectionIds) ?? sectionIds[0] ?? null
+  );
+  const pinnedUntil = useRef(0);
+
+  useEffect(() => {
+    const applyHash = () => {
+      const fromHash = sectionIdFromHash(sectionIds);
+      if (!fromHash) return;
+      pinnedUntil.current = Date.now() + 900;
+      setActiveId(fromHash);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [sectionIds.join(",")]);
 
   useEffect(() => {
     if (sectionIds.length === 0) return;
@@ -838,6 +861,7 @@ function useScrollSpy(sectionIds: string[], scrollOffset: number): string | null
 
     const observer = new IntersectionObserver(
       (entries) => {
+        if (Date.now() < pinnedUntil.current) return;
         const visible = entries.filter((e) => e.isIntersecting);
         if (visible.length > 0) {
           const topMost = visible.reduce((a, b) =>
