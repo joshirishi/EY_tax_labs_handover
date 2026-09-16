@@ -35,6 +35,17 @@ export { ModuleHeader, ModulePrevNext, SUBNAV_SCROLL_MARGIN, SUBNAV_SCROLL_OFFSE
 export { EYWhatsNext, EYWhatsNextHighlight } from './EYWhatsNext';
 export { TabRail } from './TabRail';
 export {
+  DSCard,
+  DSCardHeader,
+  DSCardBody,
+  MetricCard,
+  Chip,
+  PageHeader,
+  MotifProgressBar,
+  MotifBadge,
+  MotifButton,
+} from './motif';
+export {
   MODULES,
   PHASES,
   PHASE_LABEL,

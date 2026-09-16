@@ -4,7 +4,7 @@ Interactive learning hub for EY tax professionals. Learners move through AI foun
 
 This repository contains the working application only (no internal design tooling, reference assets, or review SDK).
 
-**Built from:** `joshirishi/EY_landing_mockup` @ `feature/phases-2-3-4-content-updates` (Sep 2026).
+**Built from:** `joshirishi/EY_landing_mockup` @ `d8518ad` (`feature/phases-2-3-4-content-updates`, 16 Sep 2026).
 
 ## Run locally
 
@@ -15,7 +15,7 @@ pnpm install
 pnpm dev
 ```
 
-Open the URL Vite prints (port **5174**).
+Open the URL Vite prints (port **5174**). Every visit starts on a blank **session setup** form (client, session, date, duration, facilitator, location, participants, online / in person) before the hub unlocks.
 
 ```bash
 pnpm build      # production build
@@ -33,6 +33,7 @@ pnpm typecheck  # TypeScript check
 | `/copilot-hub` | M365 Copilot Hub |
 | `/phase2` | Phase 2 — Brainstorming use cases |
 | `/guidance-implementation` | Phase 3 — Guidance for implementation |
+| `/report-card` | Module 4 — Report Card |
 | `/closure-ai-reinforcement` | Phase 4 — Closure and AI reinforcement |
 | `/control-room.html` | Responsible AI Control Room (10-scenario assessment) |
 

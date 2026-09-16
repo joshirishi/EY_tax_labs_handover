@@ -2834,19 +2834,19 @@ function AgentWeakStrongCard({ weak, strong }: { weak: string; strong: string })
 const AGENT_DARK_RAIL_TITLE: React.CSSProperties = {
   margin: 0,
   fontFamily: F.regular,
-  fontSize: 16,
+  fontSize: typeScale.subheading.size,
   lineHeight: 1.25,
-  letterSpacing: "-0.01em",
+  letterSpacing: typeScale.subheading.tracking,
   color: C.offWhite,
 };
 
 const AGENT_DARK_RAIL_BODY: React.CSSProperties = {
   margin: 0,
   fontFamily: F.light,
-  fontSize: 12,
-  fontWeight: 300,
+  fontSize: typeScale.body.size,
+  fontWeight: typeScale.body.weight,
   lineHeight: 1.4,
-  letterSpacing: "-0.01em",
+  letterSpacing: typeScale.body.tracking,
   color: C.offWhite,
 };
 
@@ -3451,15 +3451,52 @@ function AgentWhenToUseCard({ items }: { items: readonly string[] }) {
   );
 }
 
+function TechniqueTickBadge() {
+  return (
+    <span
+      role="img"
+      aria-label="Try"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: 24,
+        height: 24,
+        borderRadius: "50%",
+        border: `1.5px solid ${C.success}`,
+        background: C.success + "14",
+        color: C.success,
+        flexShrink: 0,
+      }}
+    >
+      <Check size={14} strokeWidth={2} aria-hidden />
+    </span>
+  );
+}
+
 function AgentTechniqueInstructionsPreview({
+  taxExample,
   text,
   pulseStrong,
   footer,
 }: {
-  text: string;
+  taxExample?: string;
+  text?: string;
   pulseStrong?: boolean;
   footer?: ReactNode;
 }) {
+  const parsed = taxExample ? parseTaxExample(taxExample) : null;
+  const showTick = Boolean(parsed?.dont && parsed.doLines.length > 0);
+  const previewText = text ?? (taxExample ? formatTechniqueInstructionPreview(taxExample) : "");
+  const preStyle: React.CSSProperties = {
+    margin: 0,
+    fontFamily: F.regular,
+    fontSize: 13,
+    lineHeight: 1.55,
+    color: C.offBlack,
+    whiteSpace: "pre-wrap",
+  };
+
   return (
     <div
       className={pulseStrong ? "agent-tech-strong-pulse" : undefined}
@@ -3502,18 +3539,19 @@ function AgentTechniqueInstructionsPreview({
           overflowY: "auto",
         }}
       >
-        <pre
-          style={{
-            margin: 0,
-            fontFamily: F.regular,
-            fontSize: 13,
-            lineHeight: 1.55,
-            color: C.offBlack,
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          {text}
-        </pre>
+        {showTick && parsed ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p style={preStyle}>{parsed.dont}</p>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+              <TechniqueTickBadge />
+              <pre style={preStyle}>
+                {parsed.doLines.map((line, i) => `${i + 1}. ${line}`).join("\n")}
+              </pre>
+            </div>
+          </div>
+        ) : (
+          <pre style={preStyle}>{previewText}</pre>
+        )}
       </div>
       {footer}
     </div>
@@ -3525,6 +3563,7 @@ function AgentTechniqueFigmaSplit({
   headline,
   body,
   whenItems,
+  taxExample,
   instructionText,
   pulseStrong,
   footer,
@@ -3532,7 +3571,8 @@ function AgentTechniqueFigmaSplit({
   headline: string;
   body: string;
   whenItems: readonly string[];
-  instructionText: string;
+  taxExample?: string;
+  instructionText?: string;
   pulseStrong?: boolean;
   footer?: ReactNode;
 }) {
@@ -3560,7 +3600,12 @@ function AgentTechniqueFigmaSplit({
         <AgentWhenToUseCard items={whenItems} />
       </div>
       <AgentBuilderConfigurePreview>
-        <AgentTechniqueInstructionsPreview text={instructionText} pulseStrong={pulseStrong} footer={footer} />
+        <AgentTechniqueInstructionsPreview
+          taxExample={taxExample}
+          text={instructionText}
+          pulseStrong={pulseStrong}
+          footer={footer}
+        />
       </AgentBuilderConfigurePreview>
     </div>
   );
@@ -3575,14 +3620,14 @@ function AgentTechniqueSplitContent({
 }) {
   const { headline, body } = parseSummaryParts(pattern.summary);
   const whenItems = parseWhenToUse(pattern.whenToUse);
-  const instructionText = formatTechniqueInstructionPreview(pattern.taxExample);
 
   return (
     <AgentTechniqueFigmaSplit
       headline={headline}
       body={body}
       whenItems={whenItems}
-      instructionText={instructionText}
+      taxExample={pattern.taxExample}
+      instructionText={formatTechniqueInstructionPreview(pattern.taxExample)}
       pulseStrong={pulseStrong}
     />
   );

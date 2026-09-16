@@ -538,6 +538,34 @@ body {
   object-position: center top;
   display: block;
 }
+.clip-shot-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--ey-dark, #1A1A24) 82%, transparent);
+  z-index: 1;
+}
+.clip-shot-source {
+  font-family: 'EYInterstate:Bold', Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ey-yellow);
+}
+.clip-shot-date {
+  font-family: 'EYInterstate:Regular', Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--off-white, #F6F6FA);
+  white-space: nowrap;
+}
 .rise-card-body {
   padding: 20px 20px 24px;
   display: flex;
@@ -3181,9 +3209,66 @@ document.getElementById('hero-video').addEventListener('ended', function() {
       </button>
       <div class="news-carousel-viewport">
         <div class="news-carousel-track">
+    <article class="rise-card news-carousel-slide" onclick="openLightbox('/gov.uk.png','GOV.UK — Britain powers ahead on AI · 12 June 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
+      <div class="rise-card-top rise-card-top--img">
+        <img src="/gov.uk.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">GOV.UK</span><span class="clip-shot-date">12 June 2026</span></span>
+      </div>
+      <div class="rise-card-body">
+        <div class="rise-card-meta">
+          <span class="source">GOV.UK — Press Release</span>
+        </div>
+        <p>Britain powers ahead on AI with billions of pounds of new investment and thousands of jobs secured as London Tech Week wraps up</p>
+        <span class="date">12 June 2026</span>
+      </div>
+    </article>
+
+    <article class="rise-card news-carousel-slide" onclick="openLightbox('/nvidia.png','Times of India — Nvidia tops $5 trillion · 26 April 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
+      <div class="rise-card-top rise-card-top--img">
+        <img src="/nvidia.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Times of India</span><span class="clip-shot-date">26 April 2026</span></span>
+      </div>
+      <div class="rise-card-body">
+        <div class="rise-card-meta">
+          <span class="source">Times of India</span>
+        </div>
+        <p>Nvidia tops $5 trillion market cap as AI rally lifts chip stocks</p>
+        <span class="date">26 April 2026</span>
+      </div>
+    </article>
+
+    <article class="rise-card news-carousel-slide" onclick="openLightbox('/indian%20date%20center.png','Kotak News Desk — AI-Linked Indian Firms · 12 June 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
+      <div class="rise-card-top rise-card-top--img">
+        <img src="/indian%20date%20center.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Kotak News Desk</span><span class="clip-shot-date">12 June 2026</span></span>
+      </div>
+      <div class="rise-card-body">
+        <div class="rise-card-meta">
+          <span class="source">Kotak News Desk</span>
+        </div>
+        <p>Lesser-Known AI-Linked Indian Firms Add $48 Billion In Market Value</p>
+        <span class="date">12 June 2026</span>
+      </div>
+    </article>
+
+    <article class="rise-card news-carousel-slide" onclick="openLightbox('/tcs.png','Reuters — TCS partners with Anthropic · 11 June 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
+      <div class="rise-card-top rise-card-top--img">
+        <img src="/tcs.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Reuters</span><span class="clip-shot-date">11 June 2026</span></span>
+      </div>
+      <div class="rise-card-body">
+        <div class="rise-card-meta">
+          <span class="source">Reuters</span>
+        </div>
+        <p>India's TCS partners with Anthropic to drive enterprise AI scaling</p>
+        <span class="date">11 June 2026</span>
+      </div>
+    </article>
+
     <article class="rise-card news-carousel-slide" onclick="openLightbox('/rise-lenovo.png','Business Standard — Lenovo India Q1 result · August 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="rise-card-top rise-card-top--img">
         <img src="/rise-lenovo.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Business Standard</span><span class="clip-shot-date">August 2026</span></span>
       </div>
       <div class="rise-card-body">
         <div class="rise-card-meta">
@@ -3197,6 +3282,7 @@ document.getElementById('hero-video').addEventListener('ended', function() {
     <article class="rise-card news-carousel-slide" onclick="openLightbox('/rise-databricks.png','The Economic Times — Databricks Secures $5 Billion Funding · August 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="rise-card-top rise-card-top--img">
         <img src="/rise-databricks.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">The Economic Times</span><span class="clip-shot-date">August 2026</span></span>
       </div>
       <div class="rise-card-body">
         <div class="rise-card-meta">
@@ -3210,6 +3296,7 @@ document.getElementById('hero-video').addEventListener('ended', function() {
     <article class="rise-card news-carousel-slide" onclick="openLightbox('/rise-lt-ai-factory.png','The Economic Times — L&amp;T AI Factory order · August 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="rise-card-top rise-card-top--img">
         <img src="/rise-lt-ai-factory.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">The Economic Times</span><span class="clip-shot-date">August 2026</span></span>
       </div>
       <div class="rise-card-body">
         <div class="rise-card-meta">
@@ -3223,6 +3310,7 @@ document.getElementById('hero-video').addEventListener('ended', function() {
     <article class="rise-card news-carousel-slide" onclick="openLightbox('/rise-ai-ma.png','The Economic Times — AI M&amp;As near $1-billion mark · August 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="rise-card-top rise-card-top--img">
         <img src="/rise-ai-ma.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">The Economic Times</span><span class="clip-shot-date">August 2026</span></span>
       </div>
       <div class="rise-card-body">
         <div class="rise-card-meta">
@@ -3501,6 +3589,7 @@ initSectionNewsCarousels();
     <article class="wrong-card news-carousel-slide" onclick="openLightbox('/reality-ai-safety.png','Business Insider — The World\'s Leading AI Companies Struggle to Contain Latest Models · August 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="wrong-card-top">
         <img src="/reality-ai-safety.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Business Insider</span><span class="clip-shot-date">August 2026</span></span>
       </div>
       <div class="wrong-card-body">
         <p class="wrong-card-title">The World's Leading AI Companies Struggle to Contain Latest Models</p>
@@ -3516,6 +3605,7 @@ initSectionNewsCarousels();
     <article class="wrong-card news-carousel-slide" onclick="openLightbox('/reality-pullback.png','The Economic Times — Companies pull back on AI · July 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="wrong-card-top">
         <img src="/reality-pullback.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">The Economic Times</span><span class="clip-shot-date">July 2026</span></span>
       </div>
       <div class="wrong-card-body">
         <p class="wrong-card-title">Companies pull back on AI as weak workplace collaboration hurts results</p>
@@ -3531,6 +3621,7 @@ initSectionNewsCarousels();
     <article class="wrong-card news-carousel-slide" onclick="openLightbox('/reality-95.png','Times of India — 95% companies have seen zero return · September 2025')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="wrong-card-top">
         <img src="/reality-95.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Times of India</span><span class="clip-shot-date">September 2025</span></span>
       </div>
       <div class="wrong-card-body">
         <p class="wrong-card-title">95% companies have seen zero return on their AI investments and the reason is …, says study</p>
@@ -3546,6 +3637,7 @@ initSectionNewsCarousels();
     <article class="wrong-card news-carousel-slide" onclick="openLightbox('/reality-500m.png','Times of India — $500 million monthly bill · May 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="wrong-card-top">
         <img src="/reality-500m.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">Times of India</span><span class="clip-shot-date">May 2026</span></span>
       </div>
       <div class="wrong-card-body">
         <p class="wrong-card-title">How AI startup's $500 million monthly bill may be a wakeup call for tech companies using AI freely</p>
@@ -3561,6 +3653,7 @@ initSectionNewsCarousels();
     <article class="wrong-card news-carousel-slide" onclick="openLightbox('/reality-sanctioned.png','The Wall Street Journal — Corporate America Is Starting to Ration AI · May 2026')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click();}">
       <div class="wrong-card-top">
         <img src="/reality-sanctioned.png" alt="">
+        <span class="clip-shot-caption"><span class="clip-shot-source">The Wall Street Journal</span><span class="clip-shot-date">May 2026</span></span>
       </div>
       <div class="wrong-card-body">
         <p class="wrong-card-title">Corporate America Is Starting to Ration AI as Cost Skyrockets</p>

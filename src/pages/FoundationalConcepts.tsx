@@ -122,6 +122,11 @@ const TOKEN_BRIDGE = `
   border-top: none;
   color: ${colors.gray02};
 }
+#module-content .clip-shot-caption {
+  background: color-mix(in srgb, ${colors.confidentBlack} 82%, transparent);
+}
+#module-content .clip-shot-source { color: ${colors.yellow}; }
+#module-content .clip-shot-date { color: ${colors.onDark}; }
 
 /* Reality Check — dark news cards (Figma 3646:4189 / 3519:3125, rise-card device) */
 #module-content .wrong-card,

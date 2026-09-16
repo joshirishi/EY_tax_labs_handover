@@ -7,7 +7,9 @@ import M365CopilotHub from "../pages/M365CopilotHub";
 import BrainstormingUseCases from "../pages/BrainstormingUseCases";
 import GuidanceImplementation from "../pages/GuidanceImplementation";
 import ClosureAiReinforcement from "../pages/ClosureAiReinforcement";
+import ReportCard from "../pages/ReportCard";
 import WorkshopLibraryStandalone from "../pages/WorkshopLibraryStandalone";
+import { SessionIntakeGate } from "../components/SessionIntakeGate";
 
 // ── /  (phased engagement is the landing page) ───────────────────────────────
 function PhasedRoute() {
@@ -21,7 +23,7 @@ function PhasedRoute() {
         onNavigateToPhase1={() => navigate("/phase1")}
         onNavigateToBrainstorming={() => navigate("/phase2")}
         onNavigateToImplementation={() => navigate("/guidance-implementation")}
-        onNavigateToClosure={() => navigate("/closure-ai-reinforcement")}
+        onNavigateToClosure={() => navigate("/report-card")}
       />
     </div>
   );
@@ -95,6 +97,16 @@ function FoundationalRoute() {
   );
 }
 
+// ── /report-card  ────────────────────────────────────────────────────────────
+function ReportCardRoute() {
+  const navigate = useNavigate();
+  return (
+    <div className="size-full">
+      <ReportCard onBack={() => navigate("/")} onNavigate={navigate} />
+    </div>
+  );
+}
+
 // ── /closure-ai-reinforcement  ───────────────────────────────────────────────
 function ClosureAiReinforcementRoute() {
   const navigate = useNavigate();
@@ -136,10 +148,12 @@ function ScrollToTop({ containerRef }: { containerRef: RefObject<HTMLDivElement 
 function Root() {
   const scrollRef = useRef<HTMLDivElement>(null);
   return (
-    <div ref={scrollRef} className="size-full overflow-auto bg-white">
-      <ScrollToTop containerRef={scrollRef} />
-      <Outlet />
-    </div>
+    <SessionIntakeGate>
+      <div ref={scrollRef} className="size-full overflow-auto bg-white">
+        <ScrollToTop containerRef={scrollRef} />
+        <Outlet />
+      </div>
+    </SessionIntakeGate>
   );
 }
 
@@ -158,6 +172,7 @@ export const router = createBrowserRouter([
       { path: "foundational", Component: FoundationalRoute },
       { path: "copilot-hub", Component: CopilotHubRoute },
       { path: "guidance-implementation", Component: GuidanceImplementationRoute },
+      { path: "report-card", Component: ReportCardRoute },
       { path: "closure-ai-reinforcement", Component: ClosureAiReinforcementRoute },
       { path: "workshop-library.html", Component: WorkshopLibraryStandalone },
     ],

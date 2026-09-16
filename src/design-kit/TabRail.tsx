@@ -1,4 +1,5 @@
 import { colors, fonts } from './tokens';
+import type { CSSProperties } from 'react';
 
 /** Light segmented control used on Phase 3 (and optional on-dark variant). */
 export function TabRail<T extends string>({
@@ -6,11 +7,14 @@ export function TabRail<T extends string>({
   active,
   onChange,
   onDark = false,
+  style,
 }: {
   tabs: { id: T; label: string }[];
   active: T;
   onChange: (id: T) => void;
   onDark?: boolean;
+  /** Optional override — e.g. drop the default 24px bottom margin inside a form. */
+  style?: CSSProperties;
 }) {
   const focusRing = `2px solid ${colors.yellow}`;
   return (
@@ -24,6 +28,7 @@ export function TabRail<T extends string>({
         padding: 4,
         gap: 4,
         marginBottom: 24,
+        ...style,
       }}
     >
       {tabs.map((tab) => {

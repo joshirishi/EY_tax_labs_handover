@@ -1,8 +1,47 @@
 # Changelog
 
-All notable updates to **EY.ai Tax Labs** from **25 August 2026** through **4 September 2026**.
+All notable updates to **EY.ai Tax Labs** from **25 August 2026** through **16 September 2026**.
 
 Format: grouped by date, then by module or area. Echo reviewer notes from Gayatri (and team) are called out where they drove a change.
+
+---
+
+## 16 September 2026
+
+### Session setup gate
+
+- Every visit starts on a blank session setup form before the landing page can be used: client name, session name, date, duration, facilitator, location, participant count, and online / in person. Previous answers are not kept.
+- Facilitator and location are dropdowns. A small **Change session** control (top right) lets a facilitator update the current visit only.
+
+### Module 4 Report Card
+
+- New `/report-card` page: Motif DS cards, metrics, chips, and progress bars with the HTML report-card copy unchanged.
+- Home Phase 4 card now opens the Report Card. Closure stays on the Guidance Implementation trek button; Control Room stays on the Closure trek button.
+
+---
+
+## 15 September 2026
+
+### Reviewer content pass (Echo — Gayatri 6 Sep, Priya 9–15 Sep)
+
+**M365 Copilot Hub (`/copilot-hub`)**
+
+- **Techniques Instructions preview:** Instead of / Try now uses a red cross and green tick, matching Agent Best Practices (not a plain paragraph).
+- **Dark rail type:** Title 19px and body 16px (`typeScale.subheading` / `body`) on Techniques and Elements.
+
+**AI Tax Prompting (`/ai-tax-prompting`)**
+
+- Removed Team Briefing helper line and both **Better brief** labels.
+- Lazy vs Pro: new weak/strong quotes, Role / Context / Format / Length tags, and list-form results.
+- Stack builder helper split onto two lines.
+- All seven Elements **What it is / Why it matters / Without / With** updated from Gayatri’s Prompting elements document.
+
+**Foundational (`/foundational`)**
+
+- Rise of AI carousel restores the earlier four clippings (GOV.UK, Nvidia, Kotak, TCS) **and** keeps the Sep 2026 set.
+- Rise and Reality Check screenshots now show **source + publish date** on the clipping.
+
+**Held:** What-tab tour cutoff (Priya) until the last slide is confirmed. Echo threads left open for reviewer close-out.
 
 ---
 
@@ -126,8 +165,8 @@ Format: grouped by date, then by module or area. Echo reviewer notes from Gayatr
 
 | Item | Detail |
 |------|--------|
-| **Handover snapshot** | `808e921` (4 Sep 2026) |
-| **Built from** | `joshirishi/EY_landing_mockup` @ `3c3aac3` |
+| **Handover snapshot** | 16 Sep 2026 |
+| **Built from** | `joshirishi/EY_landing_mockup` @ `d8518ad` |
 
 ---
 

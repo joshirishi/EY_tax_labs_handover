@@ -1017,12 +1017,9 @@ function TeamBriefingSection() {
     <section id="team-briefing" style={{ background: SURFACE.light.bg, padding: `${spacing.sectionPaddingY} 0`, scrollMarginTop: SUBNAV_SCROLL_MARGIN }} data-node-id="3978:2179">
       <div style={{ ...contentRailStyle }}>
         <SectionAnchorTitle align="center">Team Briefing</SectionAnchorTitle>
-        <h2 style={{ fontSize: 36, fontWeight: 700, color: C.confidentBlack, textAlign: "center", marginBottom: 8, fontFamily: F.bold }}>
+        <h2 style={{ fontSize: 36, fontWeight: 700, color: C.confidentBlack, textAlign: "center", marginBottom: 40, fontFamily: F.bold }}>
           Brief AI Like You Brief Your Team
         </h2>
-        <p style={{ fontSize: 16, color: C.gray01, textAlign: "center", lineHeight: 1.7, marginBottom: 40, fontFamily: F.light }}>
-          The more context you provide, the better the outcome.
-        </p>
 
         <div
           data-brief-grid
@@ -1063,11 +1060,6 @@ function TeamBriefingSection() {
               <span style={{ color: C.destructive, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
                 WEAK BRIEF
               </span>
-              {showMissing && (
-                <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: F.bold }}>
-                  Better brief
-                </span>
-              )}
             </div>
 
             <div
@@ -1263,9 +1255,6 @@ function TeamBriefingSection() {
                 <span style={{ color: C.success, fontSize: 11, fontWeight: 700, letterSpacing: "1px", fontFamily: F.bold }}>
                   STRONG BRIEF
                 </span>
-                <span style={{ color: C.gray01, fontSize: 11, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", fontFamily: F.bold }}>
-                  Better brief
-                </span>
               </div>
 
               <div
@@ -1411,7 +1400,7 @@ function AiLazyProSection() {
             </div>
             <div style={{ padding: 22, flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
               <div style={{ background: C.surfaceOnDark, borderRadius: 8, padding: "12px 16px", borderLeft: `3px solid ${C.destructive}`, minHeight: 72, display: "flex", alignItems: "flex-start" }}>
-                <p style={{ color: s.heading, fontSize: 15, fontStyle: "italic", lineHeight: 1.65, fontFamily: F.light, margin: 0 }}>&ldquo;Summarise this document&rdquo;</p>
+                <p style={{ color: s.heading, fontSize: 15, fontStyle: "italic", lineHeight: 1.65, fontFamily: F.light, margin: 0 }}>&ldquo;Summarise these tax audit observations.&rdquo;</p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, minHeight: 76 }}>
                 {["No role", "No context", "No format", "No limits"].map(t => (
@@ -1423,7 +1412,13 @@ function AiLazyProSection() {
               </div>
               <div style={{ background: C.destructive + "0a", border: `1px dashed ${C.destructive}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
                 <div style={{ color: C.destructive, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ WHAT YOU GET BACK</div>
-                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A generic 300-word wall of text. Wrong tone. Wrong audience. Needs complete rewriting. <strong style={{ color: C.destructive }}>30 minutes lost.</strong></p>
+                <ul style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0, paddingLeft: 18 }}>
+                  <li>A wall of text.</li>
+                  <li>Mixed priorities.</li>
+                  <li>No clear next steps.</li>
+                  <li>You still have to identify what matters most.</li>
+                  <li>Time spent sorting through the output.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -1442,13 +1437,13 @@ function AiLazyProSection() {
             <div style={{ padding: 22, flex: 1, display: "flex", flexDirection: "column", gap: 18 }}>
               <div style={{ background: C.surfaceOnDark, borderRadius: 8, padding: "12px 16px", borderLeft: `3px solid ${C.success}`, minHeight: 72, display: "flex", alignItems: "flex-start" }}>
                 <p style={{ color: s.heading, fontSize: 14, fontStyle: "italic", lineHeight: 1.65, fontFamily: F.light, margin: 0 }}>
-                  &ldquo;You are a <PromptInlineTag accent={C.yellow}>tax advisor</PromptInlineTag>. Summarise the key <PromptInlineTag accent={C.frameBlue}>transfer pricing changes</PromptInlineTag> in this circular for a <PromptInlineTag accent={C.frameOrange}>client memo</PromptInlineTag>. Use <PromptInlineTag accent={C.framePurple}>bullet points</PromptInlineTag>. Keep it under <PromptInlineTag accent={C.success}>200 words</PromptInlineTag>.&rdquo;
+                  &ldquo;You are a <PromptInlineTag accent={C.yellow}>CORPORATE TAX MANAGER</PromptInlineTag>. Review these observations for an <PromptInlineTag accent={C.frameBlue}>INDIAN MANUFACTURING COMPANY</PromptInlineTag>. List HIGH-RISK ITEMS in a <PromptInlineTag accent={C.framePurple}>TABLE</PromptInlineTag> with recommended actions. Keep it under <PromptInlineTag accent={C.success}>10 ROWS</PromptInlineTag>.&rdquo;
                 </p>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, minHeight: 76 }}>
                 {[
                   { label: "Role defined", accent: C.yellow },
-                  { label: "Task clear", accent: C.frameBlue },
+                  { label: "Context set", accent: C.frameBlue },
                   { label: "Format set", accent: C.framePurple },
                   { label: "Length capped", accent: C.success },
                 ].map(({ label, accent }) => {
@@ -1477,7 +1472,14 @@ function AiLazyProSection() {
               </div>
               <div style={{ background: C.success + "0a", border: `1px dashed ${C.success}33`, borderRadius: 8, padding: 14, marginTop: "auto" }}>
                 <div style={{ color: C.success, fontSize: 10, fontWeight: 700, letterSpacing: "1px", marginBottom: 6, fontFamily: F.bold }}>↓ WHAT YOU GET BACK</div>
-                <p style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0 }}>A client-ready bullet list. Right tone. Right scope. Drop it straight into the email. <strong style={{ color: C.success }}>Done in 30 seconds.</strong></p>
+                <ul style={{ color: s.body, fontSize: 12, lineHeight: 1.6, fontFamily: F.regular, margin: 0, paddingLeft: 18 }}>
+                  <li>A focused risk tracker</li>
+                  <li>Actions already mapped.</li>
+                  <li>Clear priorities.</li>
+                  <li>Consistent format.</li>
+                  <li>Ready to use.</li>
+                  <li>Time spent acting, not rewriting.</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -3623,7 +3625,8 @@ export default function AiTaxPrompting({
             Build a Perfect Prompt — Piece by Piece
           </h2>
           <p style={{ fontSize: 16, color: C.gray01, textAlign: "center", lineHeight: 1.7, marginBottom: 32, fontFamily: F.light, maxWidth: 650, marginLeft: "auto", marginRight: "auto" }}>
-            Click each ingredient below to add it to the prompt. Watch it come together like assembling a client brief.
+            Click each ingredient below to add it to the prompt.<br />
+            Watch it come together like assembling a client brief.
           </p>
           <PromptStackBuilder />
         </div>

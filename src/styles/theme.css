@@ -44,6 +44,37 @@
   --sidebar-accent-foreground: #1A1A24;
   --sidebar-border: #C4C4CD;
   --sidebar-ring: #747480;
+
+  /* Motif DS 4.17 — aliases and chip/status tokens for dashboard surfaces */
+  --ey-yellow: #FFE600;
+  --border-header: #C3C3CB;
+  --border-button: #C3C3CB;
+  --text-h1: 32px;
+  --text-h2: 28px;
+  --text-h3: 22px;
+  --text-h4: 18px;
+  --text-base: 16px;
+  --text-sm: 14px;
+  --font-weight-light: 300;
+  --radius-card: 8px;
+  --chip-success-bg: #E7FCE8;
+  --chip-success-text: #197335;
+  --chip-success-dot: #26A04B;
+  --chip-warning-bg: #FCF5F0;
+  --chip-warning-text: #975100;
+  --chip-warning-dot: #D07200;
+  --chip-critical-bg: #FCF5F3;
+  --chip-critical-text: #C70117;
+  --chip-critical-dot: #FF4336;
+  --chip-info-bg: #F4F7FC;
+  --chip-info-text: #0F69AE;
+  --chip-info-dot: #188CE5;
+  --chip-accent1-bg: #F8F6FA;
+  --chip-accent1-text: #724BC3;
+  --chip-default-border: #D7D7DC;
+  --status-success: #197335;
+  --status-warning: #BF9000;
+  --status-critical: #C70117;
 }
 
 .dark {
