@@ -4,7 +4,7 @@ Interactive learning hub for EY tax professionals. Learners move through AI foun
 
 This repository contains the working application only (no internal design tooling, reference assets, or review SDK).
 
-**Built from:** `joshirishi/EY_landing_mockup` @ `d8518ad` (`feature/phases-2-3-4-content-updates`, 16 Sep 2026).
+**Built from:** `joshirishi/EY_landing_mockup` @ `c57fdfb` (`feature/phases-2-3-4-content-updates`, 18 Sep 2026).
 
 ## Run locally
 

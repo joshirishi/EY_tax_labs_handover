@@ -23,7 +23,7 @@ interface SiteHeaderProps {
   variant?: "hub" | "learning";
   activeSection?: SiteSection;
   onNavigate: (path: string) => void;
-  /** Right-aligned content on the hub brand bar (learning variant has no right slot). */
+  /** Right-aligned content on the hub brand bar. */
   rightSlot?: React.ReactNode;
   /** When set, renders an invisible-until-focused "Skip to content" link pointing at this id. */
   skipLinkTarget?: string;
@@ -154,14 +154,28 @@ function BrandBarHomeButton({
   );
 }
 
+/** Empty mount point for the session pencil in the brand bar. */
+export const SESSION_HEADER_SLOT_ID = "ey-session-header-slot";
+
+function SessionHeaderSlot() {
+  return (
+    <div
+      id={SESSION_HEADER_SLOT_ID}
+      className="shrink-0"
+      style={{ display: "flex", justifyContent: "flex-end" }}
+    />
+  );
+}
+
 /** Figma Level 1 — brand bar (Phase 1 + modules). */
 function LearningBrandBar({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
     <div
-      className="flex items-center gap-3 w-full px-4 sm:px-6 md:px-10 py-3 md:py-4"
+      className="flex items-center justify-between gap-3 w-full px-4 sm:px-6 md:px-10 py-3 md:py-4"
       style={learningBrandBarStyle}
     >
       <BrandBarHomeButton onNavigate={onNavigate} ariaLabel={`${BRAND_LABEL} — back to overview`} />
+      <SessionHeaderSlot />
     </div>
   );
 }
@@ -181,7 +195,10 @@ function HubBrandBar({
       style={hubBrandBarStyle}
     >
       <BrandBarHomeButton onNavigate={onNavigate} ariaLabel={`${BRAND_LABEL} — go to home`} />
-      {rightSlot}
+      <div className="flex items-center gap-3 shrink-0 ml-auto">
+        <SessionHeaderSlot />
+        {rightSlot}
+      </div>
     </div>
   );
 }

@@ -12,13 +12,14 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
-import { Pencil } from "lucide-react";
+import { createPortal } from "react-dom";
+import { useLocation } from "react-router";
+import { Building2, ChevronDown } from "lucide-react";
 import {
   EYBody,
   EYButton,
-  EYEyebrow,
   EYHeading,
-  EYLogo,
+  SESSION_HEADER_SLOT_ID,
   TabRail,
   colors,
   fonts,
@@ -141,23 +142,47 @@ function ChangeSessionChip({
   session: SessionIntake;
   onClick: () => void;
 }) {
+  const { pathname } = useLocation();
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const label = [session.clientName, session.sessionName].filter(Boolean).join(" · ");
-  return (
+
+  useEffect(() => {
+    setSlot(document.getElementById(SESSION_HEADER_SLOT_ID));
+  }, [pathname]);
+
+  if (!slot) return null;
+
+  return createPortal(
     <button
       type="button"
+      className="report-card-print-hide"
       onClick={onClick}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
       aria-label={`Change session: ${label}`}
+      title={`Change session: ${label}`}
+      onFocus={(e) => {
+        setExpanded(true);
+        e.currentTarget.style.outline = FOCUS_RING;
+        e.currentTarget.style.outlineOffset = "2px";
+      }}
+      onBlur={(e) => {
+        setExpanded(false);
+        e.currentTarget.style.outline = "none";
+      }}
       style={{
-        position: "fixed",
-        top: 18,
-        right: 20,
-        zIndex: 400,
+        boxSizing: "border-box",
         display: "inline-flex",
         alignItems: "center",
-        gap: 8,
-        maxWidth: "min(42vw, 280px)",
-        padding: "8px 12px",
-        paddingLeft: 10,
+        justifyContent: expanded ? "flex-start" : "center",
+        gap: expanded ? 8 : 0,
+        height: 32,
+        width: expanded ? "auto" : 32,
+        minWidth: 32,
+        maxWidth: expanded ? 280 : 32,
+        padding: expanded ? "0 12px 0 9px" : 0,
+        overflow: "hidden",
         background: colors.offWhite,
         color: colors.offBlack,
         border: "none",
@@ -166,27 +191,30 @@ function ChangeSessionChip({
         fontFamily: fonts.regular,
         fontSize: 12,
         lineHeight: 1.3,
-      }}
-      onFocus={(e) => {
-        e.currentTarget.style.outline = FOCUS_RING;
-        e.currentTarget.style.outlineOffset = "2px";
-      }}
-      onBlur={(e) => {
-        e.currentTarget.style.outline = "none";
+        flexShrink: 0,
+        whiteSpace: "nowrap",
+        transition: "max-width 220ms ease, padding 220ms ease, gap 220ms ease",
       }}
     >
-      <Pencil size={14} strokeWidth={1.75} aria-hidden />
+      <Building2 size={15} strokeWidth={1.75} aria-hidden style={{ flexShrink: 0, display: "block" }} />
       <span
         style={{
+          minWidth: 0,
+          maxWidth: expanded ? 220 : 0,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           fontFamily: fonts.bold,
+          fontSize: 12,
+          lineHeight: 1.3,
+          opacity: expanded ? 1 : 0,
+          transition: "opacity 180ms ease, max-width 220ms ease",
         }}
       >
         {label}
       </span>
-    </button>
+    </button>,
+    slot,
   );
 }
 
@@ -305,16 +333,44 @@ function SessionIntakeModal({
       >
         <div style={{ height: 4, background: colors.yellow }} aria-hidden />
         <form onSubmit={onSubmit} style={{ padding: "28px 28px 24px" }} noValidate>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-            <EYLogo variant="mark-only" theme="light" />
-            <EYEyebrow style={{ marginBottom: 0 }}>Session setup</EYEyebrow>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              marginBottom: 20,
+              padding: "14px 16px",
+              background: colors.confidentBlack,
+              borderLeft: `3px solid ${colors.yellow}`,
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: colors.surfaceOnDark,
+                color: colors.yellow,
+              }}
+              aria-hidden
+            >
+              <Building2 size={20} strokeWidth={1.75} />
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <EYHeading level={3} id={titleId} theme="dark">
+                Session setup
+              </EYHeading>
+              <EYBody
+                theme="dark"
+                style={{ margin: "3px 0 0", color: colors.onDarkMuted, maxWidth: "none", lineHeight: 1.4 }}
+              >
+                Record this workshop so the hub is tagged to the right client.
+              </EYBody>
+            </div>
           </div>
-          <EYHeading level={3} id={titleId} style={{ marginBottom: 8 }}>
-            Before we begin
-          </EYHeading>
-          <EYBody style={{ marginBottom: 22, maxWidth: "none", color: colors.gray01 }}>
-            Record this workshop so the hub is tagged to the right client.
-          </EYBody>
 
           <div
             style={{
@@ -452,29 +508,44 @@ function FieldControl({
         {label}
       </span>
       {type === "select" ? (
-        <select
-          id={id}
-          name={fieldKey}
-          value={value}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy}
-          onChange={(e) => onChange(e.target.value)}
-          style={controlStyle}
-          onFocus={(e) => {
-            e.currentTarget.style.outline = FOCUS_RING;
-            e.currentTarget.style.outlineOffset = "1px";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.outline = "none";
-          }}
-        >
-          <option value="">Select {label.toLowerCase()}</option>
-          {(options ?? []).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div style={{ position: "relative" }}>
+          <select
+            id={id}
+            name={fieldKey}
+            value={value}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
+            onChange={(e) => onChange(e.target.value)}
+            style={{ ...controlStyle, appearance: "none", paddingRight: 44, cursor: "pointer" }}
+            onFocus={(e) => {
+              e.currentTarget.style.outline = FOCUS_RING;
+              e.currentTarget.style.outlineOffset = "1px";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.outline = "none";
+            }}
+          >
+            <option value="">Select {label.toLowerCase()}</option>
+            {(options ?? []).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={18}
+            strokeWidth={1.75}
+            aria-hidden
+            style={{
+              position: "absolute",
+              top: "50%",
+              right: 14,
+              color: colors.gray01,
+              pointerEvents: "none",
+              transform: "translateY(-50%)",
+            }}
+          />
+        </div>
       ) : (
         <input
           ref={inputRef}

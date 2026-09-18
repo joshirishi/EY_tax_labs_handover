@@ -29,7 +29,7 @@ export { EYNavbar } from './EYNavbar';
 export { EYFooter } from './EYFooter';
 export { EYCard, StepBadge } from './EYCard';
 export { EYFrame } from './EYFrame';
-export { SiteHeader } from './SiteHeader';
+export { SiteHeader, SESSION_HEADER_SLOT_ID } from './SiteHeader';
 export type { SiteSection } from './SiteHeader';
 export { ModuleHeader, ModulePrevNext, SUBNAV_SCROLL_MARGIN, SUBNAV_SCROLL_OFFSET, useModuleSectionHashScroll } from './LearningNav';
 export { EYWhatsNext, EYWhatsNextHighlight } from './EYWhatsNext';

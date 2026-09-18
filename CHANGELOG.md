@@ -1,8 +1,25 @@
 # Changelog
 
-All notable updates to **EY.ai Tax Labs** from **25 August 2026** through **16 September 2026**.
+All notable updates to **EY.ai Tax Labs** from **25 August 2026** through **18 September 2026**.
 
 Format: grouped by date, then by module or area. Echo reviewer notes from Gayatri (and team) are called out where they drove a change.
+
+---
+
+## 18 September 2026
+
+### Module 4 Report Card
+
+- Reworked Knowledge and Process sections into aligned three-card layouts and Responsible Use into a five-column assessment matrix.
+- Added score progress bars and a dedicated A4 print layout using white and off-white sections.
+- Print pagination keeps headings, cards, quiz rows, process rows, and Responsible Use question blocks together.
+- Changed the report hero image while preserving the existing content and scores.
+
+### Session and handover assets
+
+- Moved the session editor into the shared header as a compact organisation icon that expands to show the client and session name.
+- Added the Tax Knowledge Retrieval Agent preview image and downloadable Word template.
+- Corrected Foundational Concepts font references to use the packaged `.woff` files instead of missing `.woff2` files.
 
 ---
 
@@ -165,8 +182,8 @@ Format: grouped by date, then by module or area. Echo reviewer notes from Gayatr
 
 | Item | Detail |
 |------|--------|
-| **Handover snapshot** | 16 Sep 2026 |
-| **Built from** | `joshirishi/EY_landing_mockup` @ `d8518ad` |
+| **Handover snapshot** | 18 Sep 2026 |
+| **Built from** | `joshirishi/EY_landing_mockup` @ `c57fdfb` |
 
 ---
 
